@@ -1,0 +1,27 @@
+# Shared TLS edge for every OpenQZ environment on the CSE server.
+# Run once:  docker compose -f deploy/edge/compose.yaml up -d
+# First certificate: see docs/runbook.md ("TLS").
+name: openqz-edge
+
+services:
+  proxy:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    network_mode: host # reaches 127.0.0.1:8081 (prod) and :8082 (staging)
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - letsencrypt:/etc/letsencrypt:ro
+      - acme:/var/www/acme:ro
+
+  certbot:
+    image: certbot/certbot:v3.0.1
+    restart: unless-stopped
+    volumes:
+      - letsencrypt:/etc/letsencrypt
+      - acme:/var/www/acme
+    # renew twice a day; nginx picks up new certs on its daily reload below
+    entrypoint: ["sh", "-c", "trap exit TERM; while :; do certbot renew --webroot -w /var/www/acme --quiet; sleep 12h & wait $${!}; done"]
+
+volumes:
+  letsencrypt:
+  acme:

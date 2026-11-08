@@ -1,0 +1,28 @@
+# Optional dev override: send email through the real mail server instead of Mailpit.
+# Use it on top of the dev files, with the Cloudflare tunnel running on this machine:
+#
+#   cloudflared access tcp --hostname smtp-tunnel.webuildnow.in --url localhost:1587
+#   docker compose -f compose.yaml -f compose.dev.yaml -f compose.mail.yaml up -d
+#
+# SMTP_HOST must be the mail server's real name (it must match its TLS certificate).
+# extra_hosts points that name at this machine, where the tunnel listens on SMTP_PORT.
+# See docs/email.md.
+
+x-real-smtp: &real-smtp
+  SMTP_HOST: ${SMTP_HOST:?set SMTP_HOST in .env}
+  SMTP_PORT: ${SMTP_PORT:-1587}
+  SMTP_USER: ${SMTP_USER:-}
+  SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+  SMTP_STARTTLS: ${SMTP_STARTTLS:-true}
+  SMTP_SSL: ${SMTP_SSL:-false}
+
+services:
+  api:
+    environment: *real-smtp
+    extra_hosts:
+      - "${SMTP_HOST}:host-gateway"
+
+  worker:
+    environment: *real-smtp
+    extra_hosts:
+      - "${SMTP_HOST}:host-gateway"

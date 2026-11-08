@@ -1,0 +1,160 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: openqz
+          POSTGRES_PASSWORD: openqz
+          POSTGRES_DB: openqz_test
+        ports: ['5432:5432']
+        options: --health-cmd "pg_isready -U openqz" --health-interval 5s --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: --health-cmd "redis-cli ping" --health-interval 5s --health-retries 20
+    env:
+      TEST_DATABASE_URL: postgresql+asyncpg://openqz:openqz@localhost:5432/openqz_test
+      DATABASE_URL: postgresql+asyncpg://openqz:openqz@localhost:5432/openqz_test
+      REDIS_URL: redis://localhost:6379/0
+      JWT_SECRET: ci-secret-ci-secret-ci-secret-ci
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: uv pip install --system -e ".[dev]" pip-audit
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: mypy app
+      - name: Migrations apply, roll back and match the models
+        run: alembic upgrade head && alembic downgrade base && alembic upgrade head && alembic check
+      - run: pytest --cov=app --cov-report=term --cov-fail-under=85
+      - name: API reference is up to date (docs/api/openapi.json)
+        run: |
+          python scripts/export_openapi.py > /tmp/openapi.json
+          diff -u ../docs/api/openapi.json /tmp/openapi.json || {
+            echo "::error::Run scripts/export_openapi.py and commit docs/api/openapi.json"; exit 1; }
+      - name: Dependency audit (blocking)
+        run: pip-audit --progress-spinner off
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: frontend/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+      - name: User guides are up to date (docs/guides -> public/guides)
+        run: |
+          pnpm guides
+          git diff --exit-code public/guides || {
+            echo "::error::Run 'pnpm guides' and commit frontend/public/guides"; exit 1; }
+      - name: Dependency audit (blocking)
+        run: pnpm audit --prod
+
+  e2e:
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start the stack (with Mailpit for email journeys)
+        run: |
+          cp .env.example .env
+          sed -i "s/^JWT_SECRET=.*/JWT_SECRET=$(openssl rand -hex 32)/; s/^HTTP_PORT=.*/HTTP_PORT=8088/; s#^PUBLIC_URL=.*#PUBLIC_URL=http://localhost:8088#; s/^SMTP_HOST=.*/SMTP_HOST=mailpit/; s/^SMTP_PORT=.*/SMTP_PORT=1025/; s/^SMTP_STARTTLS=.*/SMTP_STARTTLS=false/" .env
+          docker compose -f compose.yaml -f deploy/ci/compose.mailpit.yaml up -d --build --wait
+          docker compose exec -T api python -m app.cli create-admin --from-env
+          bash scripts/seed_demo.sh http://localhost:8088
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: frontend/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - working-directory: frontend
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm exec playwright install --with-deps chromium
+          pnpm test:e2e
+      - if: failure()
+        run: docker compose logs --tail 200
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: frontend/test-results
+
+  images:
+    needs: [backend, frontend]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        include:
+          - name: api
+            context: backend
+            target: runtime
+          - name: web
+            context: frontend
+            target: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/openqz-${{ matrix.name }}
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=sha,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+      - uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          target: ${{ matrix.target }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}

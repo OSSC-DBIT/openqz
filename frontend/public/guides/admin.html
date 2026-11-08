@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>OpenQZ admin guide | OpenQZ</title>
+<style>
+  :root { --brand:#5b3fd6; --ink:#1d1b2c; --muted:#6b6880; --bg:#f6f5fb; --card:#fff; --line:#e6e4ef; }
+  @media (prefers-color-scheme: dark) { :root { --ink:#ecebf5; --muted:#a29fb8; --bg:#12111a; --card:#1c1a27; --line:#2c2a3a; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.65 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  main { max-width:760px; margin:0 auto; padding:24px 16px 64px; }
+  header { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+  header a { color:var(--brand); font-weight:700; text-decoration:none; }
+  h1 { font-size:1.9rem; line-height:1.2; } h2 { margin-top:2rem; border-bottom:1px solid var(--line); padding-bottom:.3rem; }
+  a { color:var(--brand); } code { background:var(--card); border:1px solid var(--line); border-radius:6px; padding:1px 5px; }
+  table { border-collapse:collapse; width:100%; display:block; overflow-x:auto; }
+  th, td { border:1px solid var(--line); padding:6px 10px; text-align:left; vertical-align:top; }
+  th { background:var(--card); }
+  blockquote { margin:1rem 0; padding:.6rem 1rem; border-left:4px solid var(--brand); background:var(--card); border-radius:8px; }
+</style>
+</head>
+<body><main>
+<header><a href="/login">&larr; OpenQZ</a></header>
+<h1>OpenQZ admin guide</h1>
+<p>The admin sets up departments, classes and accounts, imports the office sheets, and looks after sign-in problems. Server tasks (deploy, TLS, backups) are in the <a href="https://github.com/ossc-dbit/openqz/blob/main/docs/runbook.md">runbook</a>.</p>
+<h2>1. First sign-in</h2>
+<p>Use the admin email and temporary password from the server setup, then choose your own password. Every page is in the left menu.</p>
+<h2>2. Bring everyone in (start of term)</h2>
+<p>Import in this order from <strong>Imports</strong>:</p>
+<ol>
+<li><strong>Faculty</strong>: Employee ID, Full Name, Email, Department.</li>
+<li><strong>Students</strong>: USN, Full Name, Email, Department, Semester, Section.</li>
+<li><strong>Faculty-section-subject mapping</strong>: Employee ID, Department, Semester, Section, Subject Code, Subject Name.</li>
+</ol>
+<p>Download the templates on the Imports page. Column names are matched loosely (&quot;Roll No&quot; works for USN, &quot;Emp ID&quot; for Employee ID). <strong>Everyone needs a unique email</strong>: it is how they sign in.</p>
+<p>For each upload:</p>
+<ol>
+<li>Pick the type and the <strong>academic year</strong>, choose the <code>.csv</code> or <code>.xlsx</code> file, press <strong>Upload and preview</strong>.</li>
+<li>Check the <strong>Column mapping</strong> and fix any column OpenQZ could not match, then <strong>Re-check</strong>.</li>
+<li>Rows with problems are listed with the reason (missing field, invalid email, duplicate USN or email, email already used by someone else, faculty not found). They will be skipped. Fix them in the sheet and import again later if needed.</li>
+<li>Press <strong>Import N valid rows</strong>.</li>
+<li>Download <strong>Credential slips (PDF)</strong>: one slip per new account with the email and temporary password, grouped by section. Print them, give them to class teachers, then press <strong>Delete PDF from server</strong>.</li>
+</ol>
+<p>Re-importing the same sheet is safe: existing people are updated, nobody is duplicated, and no new passwords are made for existing accounts. A student who moved section is moved.</p>
+<h2>3. Day-to-day tasks</h2>
+<table>
+<thead>
+<tr>
+<th>Task</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Add one person</td>
+<td><strong>Users</strong>, then <strong>Add user</strong> (gives a temporary password to hand over).</td>
+</tr>
+<tr>
+<td>Reset a password</td>
+<td><strong>Users</strong>, key icon. Gives a new temporary password; they must change it at next sign-in.</td>
+</tr>
+<tr>
+<td>Unlock an account</td>
+<td><strong>Users</strong>, lock icon (accounts lock for 15 minutes after 5 wrong passwords).</td>
+</tr>
+<tr>
+<td>Change someone&#39;s sign-in email</td>
+<td><strong>Users</strong>, mail icon. Their old Google link is removed.</td>
+</tr>
+<tr>
+<td>Disable / enable an account</td>
+<td><strong>Users</strong>, <strong>Disable</strong>. Disabled people cannot sign in; their work is kept.</td>
+</tr>
+<tr>
+<td>Departments and sections</td>
+<td><strong>Sections</strong>. Sections belong to an academic year (for example 2026-27).</td>
+</tr>
+<tr>
+<td>Subjects</td>
+<td><strong>Subjects</strong>.</td>
+</tr>
+<tr>
+<td>Who teaches what</td>
+<td><strong>Faculty mapping</strong>. Faculty only see and assign to sections mapped here. Map a teacher to sections of several branches (for example first-year maths for CSE and ECE) and they can pick any of them.</td>
+</tr>
+<tr>
+<td>Club accounts</td>
+<td><strong>Users</strong>, then <strong>Add user</strong>, role <strong>Club organiser</strong>. Use the club&#39;s shared email (for example <code>techclub@...</code>).</td>
+</tr>
+</tbody></table>
+<h3>Club organisers</h3>
+<p>A club organiser (tech club, cultural committee, placement cell) can build activities and <strong>host rooms</strong> with a join code, which any signed-in student can join. They cannot assign to classes, see class lists, import people or open other people&#39;s activities and reports. Disable the account when the club&#39;s term ends; its results are kept.</p>
+<h2>4. Sign-in options</h2>
+<ul>
+<li><strong>Email and password</strong> always works.</li>
+<li><strong>Continue with Google</strong> appears when the server has a Google client id. It only signs in people whose email you imported. See the runbook section <em>Google sign-in</em>.</li>
+<li><strong>Forgot your password?</strong> appears when the server has email (SMTP) set up. Otherwise people ask you to reset it.</li>
+</ul>
+<h2>5. Watching over things</h2>
+<ul>
+<li><strong>Integrity log</strong>: tab switches, Back presses, reloads during quizzes.</li>
+<li><strong>Audit log</strong>: sign-ins, failed sign-ins, lockouts, password resets, imports, credential downloads, score releases. Filter by action or search by person.</li>
+<li><strong>Dashboard</strong>: counts of students, faculty, sections and teaching assignments for the current academic year.</li>
+</ul>
+<p>Admins can also open the faculty <strong>Library</strong> and <strong>Reports</strong> to see every activity.</p>
+<h2>6. Privacy</h2>
+<ul>
+<li>Credential slips contain passwords: print, hand out, then delete the PDF from the server.</li>
+<li>Passwords are stored as one-way hashes; nobody, including the admin, can see them.</li>
+<li>Export only what you need, and keep downloaded files on college devices.</li>
+</ul>
+
+</main></body>
+</html>

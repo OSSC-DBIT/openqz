@@ -1,0 +1,5 @@
+Employee ID,Department,Semester,Section,Subject Code,Subject Name
+EMP101,CSE,5,A,BCS501,Software Engineering
+EMP102,CSE,5,B,BCS502,Computer Networks
+EMP201,ISE,3,A,BIS301,Data Structures
+EMP999,CSE,5,A,BCS503,Unknown Faculty Row

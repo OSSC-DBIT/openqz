@@ -1,0 +1,10 @@
+Roll No,Student Name,Branch,Sem,Section,Email ID
+1DB23CS001,Asha K,CSE,5,A,asha@example.com
+1DB23CS002,Bharath M,CSE,5th,A,bharath@example.com
+1DB23CS003,Chitra N,CSE,5,B,chitra@example.com
+1DB23CS003,Duplicate Row,CSE,5,B,dup@example.com
+1DB23CS004,,CSE,5,B,nobody@example.com
+1DB23IS001,Deepak S,ISE,3,A,deepak@example
+1DB23IS002,Esha P,ISE,3,A,esha@example.com
+1DB23IS003,No Email,ISE,3,A,
+1DB23IS004,Same Email,ISE,3,A,esha@example.com

@@ -1,0 +1,48 @@
+# Production / staging overrides. One project per environment on the same server:
+#   docker compose -f compose.yaml -f compose.prod.yaml -p openqz-prod    --env-file .env.prod    up -d
+#   docker compose -f compose.yaml -f compose.prod.yaml -p openqz-staging --env-file .env.staging up -d
+# Each project gets its own volumes. The web container listens only on 127.0.0.1:${HTTP_PORT};
+# the shared TLS edge proxy (deploy/edge) routes each sub-domain to the right port.
+
+x-prod: &prod
+  restart: unless-stopped
+  env_file: ${ENV_FILE:-.env}
+  logging:
+    driver: json-file
+    options: { max-size: "20m", max-file: "5" }
+
+services:
+  db:
+    <<: *prod
+    shm_size: 256m
+    command: ["postgres", "-c", "max_connections=200", "-c", "shared_buffers=2GB", "-c", "effective_cache_size=6GB"]
+
+  redis:
+    <<: *prod
+
+  migrate:
+    image: ${API_IMAGE:-ghcr.io/ossc-dbit/openqz-api:latest}
+    env_file: ${ENV_FILE:-.env}
+
+  api:
+    <<: *prod
+    image: ${API_IMAGE:-ghcr.io/ossc-dbit/openqz-api:latest}
+    environment:
+      WEB_CONCURRENCY: ${WEB_CONCURRENCY:-8}
+    command: ["sh", "-c", "exec gunicorn app.main:app -k uvicorn.workers.UvicornWorker -w $${WEB_CONCURRENCY} -b 0.0.0.0:8000 --forwarded-allow-ips '*' --access-logfile - --graceful-timeout 30 --timeout 120"]
+    deploy:
+      resources:
+        limits: { cpus: "${API_CPUS:-8}", memory: "${API_MEMORY:-8g}" }
+
+  worker:
+    <<: *prod
+    image: ${API_IMAGE:-ghcr.io/ossc-dbit/openqz-api:latest}
+    deploy:
+      resources:
+        limits: { cpus: "4", memory: 4g }
+
+  nginx:
+    <<: *prod
+    image: ${WEB_IMAGE:-ghcr.io/ossc-dbit/openqz-web:latest}
+    ports: !override
+      - "127.0.0.1:${HTTP_PORT:-8081}:80"
