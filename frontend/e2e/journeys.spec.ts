@@ -14,7 +14,7 @@ async function adminToken(request: APIRequestContext): Promise<string> {
 test('admin signs in and sees the dashboard, users and imports', async ({ page }, info) => {
   await page.goto('/login');
   await page.getByLabel('Email').fill(ADMIN);
-  await page.getByLabel('Password').fill(ADMIN_PW);
+  await page.getByRole('textbox', { name: 'Password', exact: true }).fill(ADMIN_PW);
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page.getByRole('heading', { name: 'Admin dashboard' })).toBeVisible();
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/${info.project.name}-dashboard.png`, fullPage: true });
@@ -45,15 +45,15 @@ test('student first login forces a password change, then shows their section', a
 
   await page.goto('/login');
   await page.getByLabel('Email').fill('ASHA@example.com'); // case does not matter
-  await page.getByLabel('Password').fill(temp);
+  await page.getByRole('textbox', { name: 'Password', exact: true }).fill(temp);
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page.getByRole('heading', { name: 'Set your password' })).toBeVisible();
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/${info.project.name}-set-password.png` });
 
   const newPw = `Student${Date.now() % 100000}Ok`;
-  await page.getByLabel('Current password').fill(temp);
-  await page.getByLabel('New password', { exact: true }).fill(newPw);
-  await page.getByLabel('Confirm new password').fill(newPw);
+  await page.getByRole('textbox', { name: 'Current password', exact: true }).fill(temp);
+  await page.getByRole('textbox', { name: 'New password', exact: true }).fill(newPw);
+  await page.getByRole('textbox', { name: 'Confirm new password', exact: true }).fill(newPw);
   await page.getByRole('button', { name: 'Save password' }).click();
 
   await expect(page.getByRole('heading', { name: /Hi, Asha/ })).toBeVisible();
@@ -69,7 +69,7 @@ test('wrong password shows a clear error', async ({ page }) => {
   await page.goto('/login');
   // An unknown user: never trips the lockout, and the error must match a real user's.
   await page.getByLabel('Email').fill(`nouser${Date.now() % 100000}@example.com`);
-  await page.getByLabel('Password').fill('definitely-wrong');
+  await page.getByRole('textbox', { name: 'Password', exact: true }).fill('definitely-wrong');
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page.getByRole('alert')).toHaveText('Incorrect email or password');
 });

@@ -134,7 +134,7 @@ describe('routing and auth', () => {
     renderApp('/login');
     const user = userEvent.setup();
     await user.type(await screen.findByLabelText('Email'), 'Asha@Example.com ');
-    await user.type(screen.getByLabelText('Password'), 'Secret123');
+    await user.type(screen.getByLabelText('Password', { selector: 'input' }), 'Secret123');
     await user.click(screen.getByRole('button', { name: 'Sign in' }));
     expect(await screen.findByText('student home')).toBeInTheDocument();
     const loginCall = fetchMock.mock.calls.find(([u]) => String(u).endsWith('/auth/login'))!;

@@ -17,7 +17,7 @@ async function audit(page: Page) {
 async function signIn(page: Page, email: string, pw: string) {
   await page.goto('/login');
   await page.getByLabel('Email').fill(email);
-  await page.getByLabel('Password').fill(pw);
+  await page.getByRole('textbox', { name: 'Password', exact: true }).fill(pw);
   await page.getByRole('button', { name: 'Sign in' }).click();
 }
 

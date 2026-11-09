@@ -51,15 +51,15 @@ test('forgot password sends a working one-time link', async ({ page, request }) 
 
   const url = new URL(link);
   await page.goto(`${url.pathname}${url.search}`);
-  await page.getByLabel('New password', { exact: true }).fill('Fresh2026Pass');
-  await page.getByLabel('Confirm new password').fill('Fresh2026Pass');
+  await page.getByRole('textbox', { name: 'New password', exact: true }).fill('Fresh2026Pass');
+  await page.getByRole('textbox', { name: 'Confirm new password', exact: true }).fill('Fresh2026Pass');
   await page.getByRole('button', { name: 'Save password and sign in' }).click();
   await expect(page.getByRole('heading', { name: /Hi, Reset/ })).toBeVisible();
 
   // the link only works once
   await page.goto(`${url.pathname}${url.search}`);
-  await page.getByLabel('New password', { exact: true }).fill('Again2026Pass');
-  await page.getByLabel('Confirm new password').fill('Again2026Pass');
+  await page.getByRole('textbox', { name: 'New password', exact: true }).fill('Again2026Pass');
+  await page.getByRole('textbox', { name: 'Confirm new password', exact: true }).fill('Again2026Pass');
   await page.getByRole('button', { name: 'Save password and sign in' }).click();
   await expect(page.getByRole('alert')).toContainText('invalid or has expired');
 });

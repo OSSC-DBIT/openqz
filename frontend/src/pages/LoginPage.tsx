@@ -5,7 +5,7 @@ import { api } from '../api/client';
 import type { AuthConfig, Me } from '../api/types';
 import { homeFor, useAuth } from '../auth/AuthProvider';
 import { GoogleButton } from '../auth/GoogleButton';
-import { Button, ErrorText, Field, Input } from '../components/ui';
+import { Button, ErrorText, Field, Input, PasswordInput } from '../components/ui';
 import { Logo } from '../layouts/AppShell';
 
 export default function LoginPage() {
@@ -92,7 +92,7 @@ export default function LoginPage() {
               />
             </Field>
             <Field label="Password">
-              <Input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+              <PasswordInput label="Password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
             </Field>
             <ErrorText error={error} />
             <Button type="submit" loading={busy} className="w-full">

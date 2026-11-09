@@ -4,7 +4,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router';
 import { api, setAccessToken } from '../api/client';
 import type { TokenResponse } from '../api/types';
 import { homeFor } from '../auth/AuthProvider';
-import { Button, ErrorText, Field, Input } from '../components/ui';
+import { Button, ErrorText, Field, Input, PasswordInput } from '../components/ui';
 import { Logo } from '../layouts/AppShell';
 import { passwordProblem } from './ChangePasswordPage';
 
@@ -96,10 +96,10 @@ export function ResetPasswordPage() {
         }}
       >
         <Field label="New password" hint={problem ?? '8+ characters with upper, lower case and a digit.'}>
-          <Input type="password" autoComplete="new-password" required value={pw} onChange={(e) => setPw(e.target.value)} />
+          <PasswordInput label="New password" autoComplete="new-password" required value={pw} onChange={(e) => setPw(e.target.value)} />
         </Field>
         <Field label="Confirm new password" hint={mismatch ? 'Passwords do not match.' : undefined}>
-          <Input type="password" autoComplete="new-password" required value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+          <PasswordInput label="Confirm new password" autoComplete="new-password" required value={confirm} onChange={(e) => setConfirm(e.target.value)} />
         </Field>
         <ErrorText error={reset.error} />
         <Button type="submit" className="w-full" loading={reset.isPending} disabled={!!problem || mismatch || !confirm}>

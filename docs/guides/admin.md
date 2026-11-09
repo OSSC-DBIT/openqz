@@ -21,7 +21,7 @@ flowchart TD
 
 ## 1. First sign-in
 
-Use the admin email and temporary password from the server setup, then choose your own password. Every page is in the left menu.
+Use the admin email and temporary password from the server setup, then choose your own password. Every page is in the left menu. Use the eye button next to a password field to show or hide what you typed; the field starts hidden.
 
 ## 2. Bring everyone in (start of term)
 

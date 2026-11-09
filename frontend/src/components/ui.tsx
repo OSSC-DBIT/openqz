@@ -1,4 +1,5 @@
-import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
+import { useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from 'react';
 
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ');
 
@@ -42,6 +43,26 @@ export function Input({ className, ...rest }: InputHTMLAttributes<HTMLInputEleme
       )}
       {...rest}
     />
+  );
+}
+
+type PasswordInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> & { label: string };
+
+export function PasswordInput({ label, className, ...rest }: PasswordInputProps) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <span className="relative block">
+      <Input type={visible ? 'text' : 'password'} className={cx('pr-11', className)} {...rest} />
+      <button
+        type="button"
+        aria-label={visible ? `Hide ${label}` : `Show ${label}`}
+        aria-pressed={visible}
+        onClick={() => setVisible((v) => !v)}
+        className="absolute inset-y-0 right-0 grid w-11 place-items-center rounded-r-xl text-muted outline-none hover:text-ink focus-visible:ring-2 focus-visible:ring-brand-200"
+      >
+        {visible ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
+      </button>
+    </span>
   );
 }
 

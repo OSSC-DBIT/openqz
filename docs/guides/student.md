@@ -31,6 +31,7 @@ flowchart TD
 1. Open the OpenQZ address your college gave you (for example `https://openqz.dbit.co.in`).
 2. Sign in with your **email** and the **temporary password** from the slip your class teacher gave you. Or tap **Continue with Google** if your Google account uses the same email.
 3. The first time you use the temporary password, OpenQZ asks you to **choose your own password**: at least 8 characters, with upper and lower case letters and a digit.
+4. Use the eye button next to a password field to show or hide what you typed; the field starts hidden.
 
 > Signed in with Google before using the slip? The temporary password is cancelled for your safety. Keep using Google, or ask your teacher to reset your password if you want one.
 

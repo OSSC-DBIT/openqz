@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Navigate, useNavigate } from 'react-router';
 import { homeFor, useAuth } from '../auth/AuthProvider';
-import { Button, ErrorText, Field, Input } from '../components/ui';
+import { Button, ErrorText, Field, PasswordInput } from '../components/ui';
 import { Logo } from '../layouts/AppShell';
 
 export function passwordProblem(pw: string): string | null {
@@ -62,13 +62,13 @@ export default function ChangePasswordPage() {
             )}
           </div>
           <Field label="Current password">
-            <Input type="password" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} required />
+            <PasswordInput label="Current password" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} required />
           </Field>
           <Field label="New password" hint={problem ?? '8+ characters with upper, lower case and a digit.'}>
-            <Input type="password" autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} required />
+            <PasswordInput label="New password" autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} required />
           </Field>
           <Field label="Confirm new password" hint={mismatch ? 'Passwords do not match.' : undefined}>
-            <Input type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required />
+            <PasswordInput label="Confirm new password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required />
           </Field>
           <ErrorText error={error} />
           <Button type="submit" loading={busy} disabled={!!problem || mismatch || !confirm} className="w-full">

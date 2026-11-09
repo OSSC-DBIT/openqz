@@ -36,6 +36,7 @@ All notable changes to OpenQZ. Format: [Keep a Changelog](https://keepachangelog
 - Admin Sections page and report tabs no longer scroll sideways on phones (cards with wide tables now shrink to the screen; tab bars scroll).
 
 ### Added
+- Show/hide eye buttons on every password field (sign-in, change password and password reset). Fields start hidden.
 - One narrated walkthrough video: `scripts/walkthrough_voice_online.py` (free Microsoft Edge neural voice) and `scripts/make_walkthrough_video.mjs` (title cards, phone frame, voice-over, generated background music, 1920x1080 MP4 with H.264 and AAC, WebM only where the browser engine cannot write MP4).
 - `scripts/record_walkthrough.mjs`: screen-records the whole flow through the real UI with captions (admin imports, faculty builds and assigns, student takes it on a phone, marking and release, student review, a live join-code room, admin logs) into `recordings/` with a player page.
 - Dark-mode accessibility checks (axe, WCAG 2.1 AA) for the student, faculty and admin screens.
