@@ -51,23 +51,25 @@ async function parseError(res: Response): Promise<ApiError> {
 export async function refreshSession(): Promise<TokenResponse | null> {
   if (!refreshing) {
     refreshing = (async () => {
-      try {
-        const res = await fetch('/api/v1/auth/refresh', { method: 'POST', credentials: 'same-origin' });
-        if (!res.ok) {
-          accessToken = null;
-          listeners.forEach((l) => l(null));
-          return null;
-        }
-        const body = (await res.json()) as TokenResponse;
-        accessToken = body.access_token;
-        listeners.forEach((l) => l(body.user));
-        return body;
-      } finally {
-        setTimeout(() => (refreshing = null), 0);
+      const res = await fetch('/api/v1/auth/refresh', { method: 'POST', credentials: 'same-origin' });
+      if (!res.ok) {
+        accessToken = null;
+        listeners.forEach((l) => l(null));
+        return null;
       }
+      const body = (await res.json()) as TokenResponse;
+      accessToken = body.access_token;
+      listeners.forEach((l) => l(body.user));
+      return body;
     })();
   }
-  return refreshing;
+
+  const current = refreshing;
+  try {
+    return await current;
+  } finally {
+    if (refreshing === current) refreshing = null;
+  }
 }
 
 export interface RequestOptions extends Omit<RequestInit, 'body'> {
