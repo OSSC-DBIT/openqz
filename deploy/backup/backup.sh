@@ -21,9 +21,13 @@ docker exec "${PROJECT}-db-1" sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_D
 
 # Where this project's /data/media lives: the host folder (MEDIA_HOST_DIR) or the Docker volume.
 media_src() {
-  local id src=""
+  local id dest src=""
   id="$(docker ps -aq --filter "label=com.docker.compose.project=$PROJECT" --filter "label=com.docker.compose.service=api" | head -n1)"
-  [ -n "$id" ] && src="$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/data/media"}}{{if eq .Type "bind"}}{{.Source}}{{else}}{{.Name}}{{end}}{{end}}{{end}}' "$id")"
+  if [ -n "$id" ]; then
+    # The app's media path (MEDIA_DIR in its environment, /data/media by default).
+    dest="$(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$id" | sed -n 's/^MEDIA_DIR=//p' | tail -n1)"
+    src="$(docker inspect -f "{{range .Mounts}}{{if eq .Destination \"${dest:-/data/media}\"}}{{if eq .Type \"bind\"}}{{.Source}}{{else}}{{.Name}}{{end}}{{end}}{{end}}" "$id")"
+  fi
   echo "${src:-${PROJECT}_media}"
 }
 

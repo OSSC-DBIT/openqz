@@ -18,6 +18,8 @@ All notable changes to OpenQZ. Format: [Keep a Changelog](https://keepachangelog
 - Lighter queries on the student home page and answer saves.
 
 ### Fixed
+- First start of a new database: the health check now connects over TCP, so migrations no longer start while Postgres is still initialising ("connection refused" on a fresh server).
+- Production: the media folder is mounted at `MEDIA_DIR`, so setting `MEDIA_DIR` to the host path no longer stops the API from starting.
 - `restore.sh` put restored uploads one folder too deep (`media/media`); it now restores into the folder the app reads.
 - A warning that reached the server just after a student pressed Submit (for example leaving full screen as the quiz closes) made the review page say "You left the quiz too many times" although the student submitted normally. The violations reply now carries `submit_reason`, and the player uses it.
 - Dark mode: purple link and label text was too dark to read on dark backgrounds (failed WCAG AA contrast). A theme colour `brand-ink` now switches to a lighter purple in dark mode. The join page cards were fixed white with light text in dark mode; they follow the theme now.
