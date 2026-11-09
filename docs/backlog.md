@@ -3,7 +3,7 @@
 Use these as GitHub issue titles on the project board. [x] = done in this repository.
 
 ## Phase 0: Kick-off and server setup (9 to 11 Nov)
-- [ ] Create GitHub org `ossc-dbit` and repo `openqz` (MIT), branch protection, project board
+- [x] GitHub org `OSSC-DBIT` and repo `openqz` (MIT, private for now); [ ] branch protection, project board
 - [x] Repository skeleton, licence, contributor guide, issue and PR templates
 - [x] Docker Compose stack (dev, staging, prod) and TLS edge config
 - [ ] Install Ubuntu 24.04 + Docker on the CSE workstation; storage layout; fixed IP; sub-domain; TLS (see runbook)
@@ -62,7 +62,7 @@ Use these as GitHub issue titles on the project board. [x] = done in this reposi
 - [ ] Repeat the drill on the 10 TB pool of the CSE server
 - [x] Audit log screen; user guides (student, faculty, admin)
 - [x] UI redesign, first pass (Wayground-style layout)
-- [ ] Code-split the frontend bundle by route
+- [x] Code-split the frontend bundle by route (staff screens load on demand; first visit 149 kB gzipped, see performance.md)
 - [ ] M3 code freeze
 
 ## Pilot, release, rollout

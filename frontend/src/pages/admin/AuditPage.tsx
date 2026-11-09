@@ -59,13 +59,13 @@ export default function AuditPage() {
             <tr key={e.id}>
               <Td className="hidden whitespace-nowrap text-muted sm:table-cell">{new Date(e.at).toLocaleString()}</Td>
               <Td>
-                <div className="font-mono text-xs">{e.action}</div>
+                <div className="break-all font-mono text-xs">{e.action}</div>
                 {/* phones: who and when under the action */}
-                <div className="mt-1 text-sm sm:hidden">{e.actor ?? <span className="text-muted">-</span>}</div>
+                <div className="mt-1 break-all text-sm sm:hidden">{e.actor ?? <span className="text-muted">-</span>}</div>
                 <div className="text-xs text-muted sm:hidden">{new Date(e.at).toLocaleString()}</div>
                 {e.target && <div className="max-w-[16rem] truncate font-mono text-xs text-muted xl:hidden">{e.target}</div>}
               </Td>
-              <Td className="hidden text-sm sm:table-cell">{e.actor ?? <span className="text-muted">-</span>}</Td>
+              <Td className="hidden break-all text-sm sm:table-cell">{e.actor ?? <span className="text-muted">-</span>}</Td>
               <Td className="hidden max-w-48 truncate font-mono text-xs xl:table-cell">{e.target}</Td>
               <Td className="hidden max-w-64 truncate font-mono text-xs text-muted 2xl:table-cell">{e.meta ? JSON.stringify(e.meta) : ''}</Td>
             </tr>

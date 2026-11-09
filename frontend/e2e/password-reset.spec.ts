@@ -28,7 +28,10 @@ test('forgot password sends a working one-time link', async ({ page, request }) 
 
   await page.goto('/login');
   await page.getByRole('link', { name: 'Forgot your password?' }).click();
+  // the sign-in page has an Email box too: wait for the new page before typing
+  await expect(page.getByRole('heading', { name: 'Forgot your password?' })).toBeVisible();
   await page.getByLabel('Email').fill(email);
+  await expect(page.getByLabel('Email')).toHaveValue(email);
   await page.getByRole('button', { name: 'Send reset link' }).click();
   await expect(page.getByRole('status')).toContainText('reset link is on its way');
 
