@@ -113,6 +113,7 @@ cd frontend && pnpm guides
 - **Fixed-colour surfaces need fixed text colours.** The quiz player is always dark and some boxes are always white; theme tokens like `text-ink` flip in dark mode and vanish there. Use explicit colours on those surfaces.
 - **Do not leave test data on the demo accounts.** Scripts that create activities for `faculty@` / `student@openqz.dev` must delete them afterwards; e2e tests use `seedClass()` instead.
 - **Never gzip `/api`** in nginx (tokens in responses; BREACH). Static files only.
+- **GitHub Actions tags:** most actions publish a major tag (`actions/checkout@v7`), but `astral-sh/setup-uv` only has exact tags: pin it like `@v10.3.3`. Check with `gh api repos/<owner>/<action>/git/ref/tags/<tag>` before bumping.
 - **pnpm skips `pre*` / `post*` scripts.** Put setup steps inside the script itself (`dev` and `build` run `scripts/copy-mermaid.mjs` first).
 - **Layout:** a `Card` (or any grid or flex child) holding a wide table needs `min-w-0`, or the whole page grows sideways on phones. `Card` has it built in; wide tables scroll inside `Table`.
 - **Tables on phones:** list tables use `<Table cols={[...]} compact>` with `hidden sm:table-cell` (and the same class on the `<Td>`) to drop secondary columns, and repeat that detail under the main cell with `sm:hidden`. `e2e/responsive.spec.ts` (`tablesFit`) fails if such a table scrolls. Only true data grids (import preview, report participants) may scroll inside their box.
