@@ -62,6 +62,10 @@ test.describe('fits every screen size', () => {
   // eslint-disable-next-line no-empty-pattern -- Playwright requires a destructured fixtures argument
   test.beforeEach(({}, info) => test.skip(info.project.name !== 'desktop', 'runs once, on the desktop project'));
 
+  test('landing page', async ({ page }) => {
+    await fits(page, '/', heading(/Discover a/i));
+  });
+
   test('sign-in pages', async ({ page }) => {
     await fits(page, '/login', heading('Sign in'));
     await fits(page, '/forgot-password', (p) => expect(p.getByRole('button').first()).toBeVisible());
