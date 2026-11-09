@@ -100,7 +100,7 @@ export default function LoginPage() {
             </Button>
           </form>
           {config.data?.password_reset_email ? (
-            <Link to="/forgot-password" className="block text-center text-sm text-brand-600 hover:underline">
+            <Link to="/forgot-password" className="block text-center text-sm text-brand-ink hover:underline">
               Forgot your password?
             </Link>
           ) : (

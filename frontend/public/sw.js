@@ -1,6 +1,6 @@
 // OpenQZ service worker: makes the app installable and keeps the app shell available
 // on flaky campus Wi-Fi. API responses are never cached (always fresh from the server).
-const CACHE = 'openqz-shell-v1';
+const CACHE = 'openqz-shell-v2';
 const SHELL = ['/', '/login', '/favicon.svg', '/manifest.webmanifest'];
 
 self.addEventListener('install', (e) => {
@@ -28,8 +28,12 @@ self.addEventListener('fetch', (e) => {
         (hit) =>
           hit ||
           fetch(req).then((res) => {
-            const copy = res.clone();
-            caches.open(CACHE).then((c) => c.put(req, copy));
+            // Only keep real files: a 404 or an HTML fallback cached here would break the page for good.
+            const type = res.headers.get('content-type') || '';
+            if (res.ok && !type.includes('text/html')) {
+              const copy = res.clone();
+              caches.open(CACHE).then((c) => c.put(req, copy));
+            }
             return res;
           }),
       ),

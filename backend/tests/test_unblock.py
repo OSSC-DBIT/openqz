@@ -101,7 +101,7 @@ async def test_unblock_reopens_attempt_and_gives_time_back(client: AsyncClient) 
 
     # warnings start from zero again
     r1 = (await client.post(f"{A}/attempts/{aid}/violations", headers=c["s1"], json=V)).json()
-    assert r1 == {"violations": 1, "max": 2, "submitted": False}
+    assert r1 == {"violations": 1, "max": 2, "submitted": False, "submit_reason": None}
 
     # and the student can finish normally
     done = await client.post(f"{A}/attempts/{aid}/submit", headers=c["s1"])

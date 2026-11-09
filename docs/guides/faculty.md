@@ -2,11 +2,36 @@
 
 Create quizzes, assignments, polls and flashcards for your classes, assign them, and see results and marks in one place.
 
+## At a glance
+
+```mermaid
+flowchart LR
+    A([Create]) --> B[Pick the type<br/>quiz, assignment, poll, flashcards]
+    B --> C[Pick classes<br/>branch, then semesters and sections]
+    C --> D[Editor: add questions<br/>timer and marks per question]
+    D --> E{Share how?}
+    E -- "Assign to classes" --> F[Set window, rules,<br/>full screen, review]
+    E -- "Host a room" --> G[Show the join code<br/>and QR in the lobby]
+    F --> H[Students take it]
+    G --> H
+    H --> I[Report: marks obtained<br/>per student and question]
+    I --> J[Mark written answers]
+    J --> K[Release marks]
+    I --> L[Unblock a student<br/>auto-submitted for leaving]
+    L --> H
+    I --> M[Export Excel or CSV]
+```
+
 ## 1. Sign in
 
 Sign in with your **email** and the temporary password from your slip, or with **Continue with Google** if your Google account uses the same email. Choose your own password on first sign-in.
 
-Your **Home** page shows the sections and subjects the admin has mapped to you, and your recent assignments. If a class is missing, ask the OpenQZ admin to add the mapping.
+Your **Home** page has:
+
+- one-tap **create** tiles (Quiz, Assignment, Poll, Flashcards) that open straight at the title step;
+- your numbers: classes you teach, activities assigned, how many are open now, and submissions so far;
+- **Recently assigned**, each with its classes, deadline (or join code for a room) and a submitted bar; tap one to open its report;
+- **My classes**: the sections and subjects the admin has mapped to you. If a class is missing, ask the OpenQZ admin to add the mapping.
 
 ## 2. Create an activity
 
@@ -65,7 +90,7 @@ Question types in detail:
 
 Press **Assign or host** in the editor and choose how students get it:
 
-- **Assign to classes**: students of the selected sections see it on their home page. The activity's classes are already selected; add or remove sections as needed.
+- **Assign to classes**: students of the selected sections see it on their home page. The activity's classes are already selected; add or remove sections as needed. Sections you assign to are added to the activity's classes, so the editor and the library filters show them.
 - **Host a room**: OpenQZ makes a 6-digit **join code**. Any signed-in student can join with it, from any class or department (good for extra sessions, guest lectures and events). See section 5.
 
 | Setting | Meaning |

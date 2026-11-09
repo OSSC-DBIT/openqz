@@ -66,6 +66,14 @@ pnpm lint && pnpm typecheck && pnpm test && pnpm build
 npx playwright test                      # desktop + mobile
 E2E_SHOTS_DIR=/some/dir npx playwright test e2e/quiz-loop.spec.ts   # with screenshots
 
+# production setup on this machine + full browser suite (stop the dev stack first)
+bash scripts/prod_smoke.sh            # or: make prod-smoke; KEEP=1 to leave it running
+
+# screen recordings of the whole flow (stack running, admin seeded): recordings/<date-time>/index.html
+node scripts/record_walkthrough.mjs
+python scripts/walkthrough_voice_online.py recordings/<date-time>   # needs: pip install edge-tts
+node scripts/make_walkthrough_video.mjs recordings/<date-time>      # one narrated video
+
 # generated docs (CI fails if stale)
 docker compose exec -T api python scripts/export_openapi.py > docs/api/openapi.json
 cd frontend && pnpm guides
@@ -75,14 +83,15 @@ cd frontend && pnpm guides
 
 1. Backend: ruff, ruff format, mypy, pytest green; coverage stays at or above 85% (currently about 90%).
 2. Frontend: eslint, tsc, vitest, build green.
-3. Playwright suite green on **both** projects (desktop and mobile). New screens get an axe check in `e2e/a11y.spec.ts`.
+3. Playwright suite green on **both** projects (desktop and mobile). New screens get an axe check in `e2e/a11y.spec.ts` and a line in `e2e/responsive.spec.ts` (must fit 320 to 2560 px wide).
 4. Docs updated in the same change:
    - user-visible: the guide in `docs/guides/` and `pnpm guides`;
    - API: regenerate `docs/api/openapi.json`;
    - design / data model: `docs/architecture.md`;
    - tests added: `docs/testing.md` (counts and tables);
    - always: a line in `CHANGELOG.md` under *Unreleased*;
-   - new rules or gotchas: this file.
+   - new rules or gotchas: this file;
+   - flows changed: the Mermaid diagrams in `docs/architecture.md`, the guides and README (check they render: GitHub preview, or `/guides/*.html` after `pnpm guides`).
 
 ## Conventions
 
@@ -95,11 +104,22 @@ cd frontend && pnpm guides
 ## Gotchas
 
 - **New frontend dependency:** the Vite dev container keeps `node_modules` in a volume. After `pnpm add`, run `docker compose -f compose.yaml -f compose.dev.yaml build vite` and `up -d --force-recreate --renew-anon-volumes vite`, or the page goes blank (500 on the import).
+- **Full screen needs a fresh click.** Call `enterFullscreen()` (`src/student/fullscreen.ts`) synchronously in the click handler, before any `await` or API call; browsers refuse it a few seconds after the click.
+- **No Prettier.** The code uses long lines (ESLint only). Running Prettier with defaults rewrites whole files; do not.
+- **Backend tests start with SMTP and Google off** (`tests/conftest.py` blanks them). Turn them on per test with `monkeypatch`.
+- **E2E tests that are not about full screen** assign with `require_fullscreen: false`, so the gate cannot get in the way.
+- **Measure speed on the production build**, never the dev server (unbundled, about 4 MB): `KEEP=1 SKIP_E2E=1 scripts/prod_smoke.sh`, then `node scripts/web_vitals.mjs`.
+- **Brand-coloured text uses `text-brand-ink`**, never `text-brand-600`: `brand-600` is too dark on dark backgrounds (the dark-mode axe test fails). `bg-brand-600` with white text is fine.
+- **Fixed-colour surfaces need fixed text colours.** The quiz player is always dark and some boxes are always white; theme tokens like `text-ink` flip in dark mode and vanish there. Use explicit colours on those surfaces.
+- **Do not leave test data on the demo accounts.** Scripts that create activities for `faculty@` / `student@openqz.dev` must delete them afterwards; e2e tests use `seedClass()` instead.
+- **Never gzip `/api`** in nginx (tokens in responses; BREACH). Static files only.
+- **pnpm skips `pre*` / `post*` scripts.** Put setup steps inside the script itself (`dev` and `build` run `scripts/copy-mermaid.mjs` first).
+- **Layout:** a `Card` (or any grid or flex child) holding a wide table needs `min-w-0`, or the whole page grows sideways on phones. `Card` has it built in; wide tables scroll inside `Table`.
+- **Tables on phones:** list tables use `<Table cols={[...]} compact>` with `hidden sm:table-cell` (and the same class on the `<Td>`) to drop secondary columns, and repeat that detail under the main cell with `sm:hidden`. `e2e/responsive.spec.ts` (`tablesFit`) fails if such a table scrolls. Only true data grids (import preview, report participants) may scroll inside their box.
 - **`.env` changes** reach containers only when they are recreated: `up -d --force-recreate api worker`.
 - **Dev email:** `compose.dev.yaml` sends all mail to Mailpit (http://localhost:8025) and blanks the SMTP login, whatever `.env` says. Real mail needs the Cloudflare tunnel plus `-f compose.mail.yaml` ([docs/email.md](docs/email.md)). Keep `SMTP_HOST=mail.webuildnow.in` (TLS certificate name), and use a `@webuildnow.in` sender: `dbit.co.in` SPF allows only Microsoft 365, so its mail is accepted and then dropped. Run Playwright in Mailpit mode only.
 - **Client address:** only `X-Real-IP` (set by our edge) is trusted for rate limits; never read `X-Forwarded-For`.
 - **Run Playwright from `frontend/`**, not the repo root (it writes `test-results/` where it runs).
-- **Tests and `.env`:** tests that depend on optional settings (Google, SMTP) must set them explicitly with `monkeypatch`, not rely on the developer's `.env`.
 
 ## Commits
 

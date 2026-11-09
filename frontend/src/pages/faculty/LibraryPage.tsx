@@ -21,10 +21,10 @@ export function useClassOptions(enabled = true) {
   return { ...q, semesters };
 }
 
-function CreateDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+function CreateDialog({ open, onClose, initialKind }: { open: boolean; onClose: () => void; initialKind?: ActivityKind | null }) {
   const nav = useNavigate();
   const classes = useClassOptions(open);
-  const [kind, setKind] = useState<ActivityKind | null>(null);
+  const [kind, setKind] = useState<ActivityKind | null>(initialKind ?? null);
   const [title, setTitle] = useState('');
   const [sectionIds, setSectionIds] = useState<number[]>([]);
   const create = useMutation({
@@ -298,7 +298,8 @@ export default function LibraryPage() {
           )}
         </div>
       </div>
-      <CreateDialog open={open} onClose={() => setParams({})} />
+      {/* ?create=1&kind=quiz opens straight at the title step (quick-create tiles on the home page) */}
+      <CreateDialog key={params.get('kind') ?? ''} open={open} onClose={() => setParams({})} initialKind={(Object.keys(KIND_LABEL) as ActivityKind[]).find((k) => k === params.get('kind')) ?? null} />
     </>
   );
 }

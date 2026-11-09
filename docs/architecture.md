@@ -2,17 +2,33 @@
 
 ## Components
 
-```
-browser / PWA
-   |  HTTPS
-edge nginx (TLS, HSTS)                      deploy/edge
-   |
-web nginx (SPA + /api proxy, CSP)           frontend/nginx.conf
-   |                    \
-FastAPI (gunicorn)       static React build
-   |        \
-Postgres 16  Redis 7 <---- ARQ worker (imports, emails, auto-submit sweeper)
-                                \--> SMTP (optional)
+```mermaid
+flowchart TB
+    user["Browser / installed PWA<br/>(phone, laptop, lab PC)"]
+    subgraph server["College server (Docker Compose)"]
+        edge["edge nginx<br/>TLS, HSTS, rate limits<br/>deploy/edge"]
+        web["web nginx<br/>React build + /api proxy, CSP<br/>frontend/nginx.conf"]
+        api["FastAPI on gunicorn<br/>backend/app"]
+        worker["ARQ worker<br/>imports, emails, auto-submit sweeper"]
+        migrate["migrate<br/>alembic upgrade head, one shot"]
+        db[("Postgres 16")]
+        redis[("Redis 7<br/>job queue, rate-limit counters")]
+        media[("media volume<br/>images, credential PDFs")]
+    end
+    google["Google Identity Services"]
+    smtp["SMTP server (optional)"]
+
+    user -- HTTPS --> edge --> web
+    web -- /api --> api
+    user -. ID token .-> google
+    api --> db
+    api --> redis
+    api --> media
+    worker --> db
+    worker --> redis
+    worker --> media
+    worker --> smtp
+    migrate --> db
 ```
 
 | Component | Role |
@@ -26,31 +42,74 @@ Postgres 16  Redis 7 <---- ARQ worker (imports, emails, auto-submit sweeper)
 
 ## Data model
 
+```mermaid
+erDiagram
+    departments ||--o{ sections : has
+    departments ||--o{ subjects : has
+    sections ||--o{ student_sections : "has students"
+    users ||--o{ student_sections : "student in"
+    users ||--o{ faculty_assignments : "faculty teaches"
+    sections ||--o{ faculty_assignments : "taught in"
+    subjects ||--o{ faculty_assignments : "subject"
+    users ||--o{ refresh_tokens : "sessions"
+    users ||--o{ password_reset_tokens : "resets"
+    users ||--o{ audit_log : "actor"
+    users ||--o{ activities : "owns"
+    activities ||--o{ activity_sections : "for classes"
+    sections ||--o{ activity_sections : "class"
+    activities ||--o{ questions : "contains"
+    activities ||--o{ activity_assignments : "assigned as"
+    activity_assignments ||--o{ assignment_targets : "section or student"
+    activity_assignments ||--o{ attempts : "taken as"
+    users ||--o{ attempts : "student takes"
+    attempts ||--o{ attempt_answers : "answers"
+    attempts ||--o{ integrity_events : "events"
 ```
-departments 1--* sections 1--* student_sections *--1 users (student)
-departments 1--* subjects
-users (faculty) 1--* faculty_assignments *--1 sections, *--1 subjects
-users 1--* refresh_tokens, password_reset_tokens, audit_log (actor)
-import_jobs (kind, status, header_map, preview_rows, error_rows, credential_pdf_path)
 
-activities (owner, kind, status, department, subject, timer)
-   1--* activity_sections *--1 sections   (the classes it is for, any semesters)
-   1--* questions (type, stem, options, answer key, marks, explanation, tags, timer, rubric)
-media (uploaded images)
-activities 1--* activity_assignments (window, attempts, shuffle, feedback, review, release, notify, violations,
-                                       join_code, accepting_joins)
-   1--* assignment_targets (section | student; room joiners are added as students)
-   1--* attempts (student, snapshot, deadline_at, linear, late, violations, score, needs_manual)
-           1--* attempt_answers (response, timers, locked, auto / manual score, rubric_scores, feedback)
-integrity_events (user, attempt, session, kind, client time, meta)
-```
+| Table | Key columns |
+| --- | --- |
+| `users` | email (login id), username (USN or employee ID), role, department, password hash, `google_sub`, lockout fields |
+| `import_jobs` | kind, status, header map, preview rows, error rows, credential PDF path |
+| `activities` | owner, kind (quiz, assignment, poll, flashcards), status, department, subject, timer |
+| `questions` | type, stem, options, answer key, marks, explanation, tags, timer, rubric |
+| `activity_assignments` | window, shuffle, feedback, review and marks release rules, notify, violation limit, `require_fullscreen`, `join_code`, `accepting_joins` |
+| `attempts` | student, frozen question snapshot, `deadline_at`, linear mode, late, violations, score, `needs_manual`, `unblocked_count` |
+| `attempt_answers` | response, timers, locked, `submit_locked`, auto and manual score, rubric scores, feedback |
+| `integrity_events` | user, attempt, session, kind, client time, meta |
+| `media` | uploaded images |
 
 - `users.email` is the login id: lower-case, unique (functional index on `lower(email)`). `users.username` is the USN or employee ID, unique case-insensitively, shown in lists and reports. `users.google_sub` pins the linked Google account.
 - Sections belong to an academic year (`2026-27`); a student has one section per year.
-- An activity records the classes it is for (`activity_sections`, any number of sections across semesters and branches). Faculty may pick only sections they teach, in any branch (checked in `activities.resolve_classes`); `/me/classes` returns those classes plus `branches`. `activities.department_id` is the branch of its sections, or null when they mix branches. Admins may pick any sections. Club organisers pick none. The library filters by `department_id`, `semester` and `section_id`.
+- An activity records the classes it is for (`activity_sections`, any number of sections across semesters and branches). Faculty may pick only sections they teach, in any branch (checked in `activities.resolve_classes`); `/me/classes` returns those classes plus `branches`. `activities.department_id` is the branch of its sections, or null when they mix branches. Admins may pick any sections. Club organisers pick none. The library filters by `department_id`, `semester` and `section_id`. Assigning to sections adds them to `activity_sections` (and recomputes the branch), so an activity's classes always include where it was given; migration 0010 back-filled this for older assignments.
 - Marks are `NUMERIC`, never floats.
 
 ## Authentication
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as User
+    participant B as Browser (SPA)
+    participant A as API
+    participant G as Google
+    alt Email and password
+        U->>B: email + password
+        B->>A: POST /auth/login
+        A->>A: Argon2id check, lock after 5 failures
+    else Continue with Google
+        B->>G: Google Identity Services
+        G-->>B: ID token
+        B->>A: POST /auth/google with the ID token
+        A->>A: verify signature, audience, expiry, email_verified, imported user
+    end
+    A-->>B: access JWT (15 min, in memory) + refresh cookie (httpOnly, SameSite=Strict)
+    opt temporary password
+        B->>U: change password first
+    end
+    B->>A: requests with Authorization: Bearer JWT
+    B->>A: POST /auth/refresh with the cookie when the JWT expires
+    A-->>B: new JWT + rotated cookie (reuse revokes the family)
+```
 
 - **Email + password:** Argon2id. Five failures lock the account for 15 minutes. Rate limits per IP (Redis and nginx) and identical errors and timing for unknown emails.
 - **Google:** Google Identity Services gives the browser an ID token; `/auth/google` verifies signature (Google JWKS), audience, issuer, expiry and `email_verified`, then signs in the existing user with that email. First use stores `google_sub`; later logins must match. An unused temporary password is cancelled.
@@ -62,8 +121,53 @@ integrity_events (user, attempt, session, kind, client time, meta)
 
 ## Attempts, timers and integrity
 
+```mermaid
+stateDiagram-v2
+    [*] --> not_started
+    not_started --> in_progress: Start, snapshot frozen, deadline set
+    in_progress --> in_progress: save answer or report a violation
+    in_progress --> submitted: student submits
+    in_progress --> submitted: deadline passed
+    in_progress --> blocked: violation limit reached
+    blocked --> in_progress: teacher unblocks, time given back
+    submitted --> graded: auto-marked or teacher marks written answers
+    graded --> released: marks shown now, after deadline or on release
+    released --> [*]
+    note right of blocked
+        stored as submitted with submit_reason violations
+    end note
+```
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor S as Student
+    participant P as Player (browser)
+    participant A as API
+    participant W as Worker
+    S->>P: Start
+    P->>A: POST /me/assignments/{id}/start
+    A-->>P: attempt state, no answer key
+    opt require_fullscreen and the browser supports it
+        P->>S: Full screen is required
+        S->>P: Enter full screen
+    end
+    loop each question
+        P->>A: GET /attempts/{id}/questions/{n} starts the question timer
+        S->>P: answer (taps saved at once, typing after 1.2 s)
+        P->>A: save answer, rejected after timer + 5 s grace
+    end
+    P-)A: POST /attempts/{id}/violations (tab switch, Back, reload, full-screen exit)
+    A->>A: count, auto-submit at the limit
+    S->>P: Submit
+    P->>A: POST /attempts/{id}/submit
+    A->>A: grade auto-marked questions
+    W->>A: every minute, auto-submit attempts past deadline_at
+```
+
 - On start the questions are **frozen into `attempts.snapshot`** (shuffled per student when enabled). The answer key and rubric never leave the server (`grading.strip_key`). Later edits to the activity do not affect existing attempts.
 - **Server-side timers:** `deadline_at` = start + activity timer, capped by the deadline unless late work is allowed. A question timer starts when the question is first opened. Saves after a timer (plus 5 s grace) are rejected and the question locks. Any request after `deadline_at` auto-submits; the worker's cron sweeps abandoned attempts every minute.
+- **Window:** an assignment is open from `start_at` (counted as open up to 5 s early, `OPEN_EARLY`, so a small server clock step never hides one assigned "now") to `due_at`, or later when late work is allowed.
 - **Linear mode:** if any question has a timer, questions are answered in order with no going back.
 - **Instant feedback:** an answer confirmed with `final: true` is graded at once and locked.
 - **Unblock:** `POST /activity-assignments/attempts/{id}/unblock` reopens an attempt whose `submit_reason` is `violations` (and only if no newer attempt exists). `attempt_answers.submit_locked` marks answers closed only by the submit, so those reopen while timer and instant-feedback locks stay; the deadline and open question timers shift by the blocked time plus `extra_minutes`; violations reset; `attempts.unblocked_count` and the audit log record it.
@@ -71,6 +175,21 @@ integrity_events (user, attempt, session, kind, client time, meta)
 - **Integrity:** the player reports tab or app switch, focus loss (over 1.5 s), Back, reload and fullscreen exit to `POST /attempts/{id}/violations`. The server counts them and auto-submits at the assignment's limit.
 
 ## Rooms (join with a code)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor H as Host (faculty or club)
+    actor S as Student
+    participant A as API
+    H->>A: assign with room: true
+    A-->>H: 6-digit join code and QR on the lobby screen
+    S->>A: GET /join/{code} preview
+    S->>A: POST /join (20 tries per minute per user)
+    A->>A: add an assignment_targets row for the student
+    A-->>S: normal assignment from here: start, timers, review
+    H->>A: stop joins or rotate the code (joined students keep access)
+```
 
 - An assignment created with `room: true` gets a unique 6-digit `join_code` (from `secrets`, retried on collision). It may have no class targets: it is reached only by code.
 - `GET /join/{code}` returns a preview (title, host, question count, timer, deadline, open or not). `POST /join` adds the student as an `assignment_targets` row, after which everything (start, timers, violations, review, reports) is the normal assignment path.
@@ -87,14 +206,35 @@ integrity_events (user, attempt, session, kind, client time, meta)
 
 ## Email
 
-Optional (`SMTP_HOST`). Sent only by the worker, never inside a request. Messages: password reset, "new activity assigned", "marks released". Development and CI use Mailpit.
+Optional (`SMTP_HOST`). Sent only by the worker, never inside a request. Messages: password reset, "new activity assigned", "marks released". Development and CI use Mailpit. Local setup with the real server: [email.md](email.md).
+
+```mermaid
+flowchart LR
+    ev["API event<br/>forgot password, assign, release marks"] --> q[("Redis queue")]
+    q --> w["ARQ worker"]
+    w --> which{"Which stack?"}
+    which -- "dev, default" --> mp["Mailpit<br/>localhost:8025"]
+    which -- "dev + compose.mail.yaml" --> tun["cloudflared tunnel<br/>localhost:1587"] --> pf["Postfix<br/>mail.webuildnow.in"]
+    which -- "staging, prod" --> pf
+    pf --> inbox["Inbox"]
+```
 
 ## Performance-relevant choices
 
 - Hot student endpoints load only what they need (`raiseload` / `defer` on attempt listings and answer saves).
 - The DB pool per process is configurable; keep total connections below Postgres `max_connections`.
 - nginx re-resolves container names every 10 s, so a redeployed API is picked up without 502s.
+- The web nginx gzips app files (main bundle about 430 kB to 136 kB) but **not** `/api` responses, which carry tokens (BREACH). Hashed `/assets/` are cached for a year; the service worker keeps them for repeat visits.
 
 ## Environments
+
+```mermaid
+flowchart LR
+    dev["Developer laptop<br/>compose.dev.yaml, hot reload, Mailpit"] -- "git push" --> ci["GitHub Actions CI<br/>lint, types, pytest, vitest,<br/>Playwright desktop + mobile, image builds"]
+    ci -- "images to GHCR" --> stg["Staging<br/>-p openqz-staging"]
+    stg -- "same image tag" --> prod["Production<br/>-p openqz-prod"]
+    edge["Shared TLS edge"] --> stg
+    edge --> prod
+```
 
 See [runbook.md](runbook.md). Development uses `compose.dev.yaml` (bind mounts, reload, Mailpit). Staging and production use `compose.prod.yaml` with pinned GHCR images on one server, separated by Compose project name, behind the shared TLS edge.

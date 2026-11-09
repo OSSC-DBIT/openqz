@@ -73,7 +73,7 @@ export default function ImportsPage() {
               </Field>
             </div>
             <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-line px-4 py-10 text-center hover:border-brand-500">
-              <FileSpreadsheet className="h-8 w-8 text-brand-600" />
+              <FileSpreadsheet className="h-8 w-8 text-brand-ink" />
               <span className="font-semibold">{file ? file.name : 'Choose a .csv or .xlsx file'}</span>
               <span className="text-xs text-muted">Max 10 MB. First row must be the header.</span>
               <input
@@ -95,7 +95,7 @@ export default function ImportsPage() {
           <ul className="space-y-3">
             {TEMPLATES.map((t) => (
               <li key={t.kind} className="text-sm">
-                <a href={t.file} download className="inline-flex items-center gap-1 font-semibold text-brand-600 hover:underline">
+                <a href={t.file} download className="inline-flex items-center gap-1 font-semibold text-brand-ink hover:underline">
                   <Download className="h-4 w-4" /> {KIND_LABEL[t.kind]}
                 </a>
                 <p className="text-xs text-muted">{t.columns}</p>
@@ -109,23 +109,30 @@ export default function ImportsPage() {
       {jobs.isLoading ? (
         <Spinner />
       ) : jobs.data?.length ? (
-        <Table head={['File', 'Type', 'Year', 'Status', 'Rows', 'When']}>
+        <Table head={['File', 'Type', 'Year', 'Status', 'Rows', 'When']} cols={[undefined, 'hidden md:table-cell', 'hidden md:table-cell', undefined, 'hidden lg:table-cell', 'hidden lg:table-cell']} compact>
           {jobs.data.map((j) => (
             <tr key={j.id}>
               <Td>
-                <Link to={`/admin/imports/${j.id}`} className="font-semibold text-brand-600 hover:underline">
+                <Link to={`/admin/imports/${j.id}`} className="font-semibold text-brand-ink hover:underline">
                   {j.original_filename}
                 </Link>
+                {/* smaller screens: type, year and row counts under the file name */}
+                <div className="mt-1 text-xs text-muted lg:hidden">
+                  <span className="md:hidden">
+                    {KIND_LABEL[j.kind]} | {j.academic_year} |{' '}
+                  </span>
+                  {j.status === 'done' ? `${j.created_count} new, ${j.updated_count} updated` : `${j.valid_rows}/${j.total_rows} valid`}
+                </div>
               </Td>
-              <Td>{KIND_LABEL[j.kind]}</Td>
-              <Td>{j.academic_year}</Td>
+              <Td className="hidden md:table-cell">{KIND_LABEL[j.kind]}</Td>
+              <Td className="hidden md:table-cell">{j.academic_year}</Td>
               <Td>
                 <StatusBadge status={j.status} />
               </Td>
-              <Td className="text-muted">
+              <Td className="hidden text-muted lg:table-cell">
                 {j.status === 'done' ? `${j.created_count} new, ${j.updated_count} updated` : `${j.valid_rows}/${j.total_rows} valid`}
               </Td>
-              <Td className="text-muted">{new Date(j.created_at).toLocaleString()}</Td>
+              <Td className="hidden text-muted lg:table-cell">{new Date(j.created_at).toLocaleString()}</Td>
             </tr>
           ))}
         </Table>

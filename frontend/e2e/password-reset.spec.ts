@@ -7,8 +7,13 @@ const ADMIN_PW = process.env.E2E_ADMIN_PASSWORD ?? 'Admin2026Secure';
 
 test('forgot password sends a working one-time link', async ({ page, request }) => {
   const box = await request.get(`${MAILPIT}/api/v1/messages`).catch(() => null);
-  test.skip(!box?.ok(), 'Mailpit not running');
   const cfg = await (await request.get('/api/v1/auth/config')).json();
+  // CI always has Mailpit: there a missing inbox is a failure, not a reason to skip.
+  if (process.env.CI) {
+    expect(box?.ok(), 'Mailpit must be running in CI').toBe(true);
+    expect(cfg.password_reset_email, 'email must be configured in CI').toBe(true);
+  }
+  test.skip(!box?.ok(), 'Mailpit not running');
   test.skip(!cfg.password_reset_email, 'email not configured');
 
   // a throwaway student created by the admin

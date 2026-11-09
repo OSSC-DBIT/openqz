@@ -13,6 +13,11 @@ os.environ.setdefault("JWT_SECRET", "test-secret-test-secret-test-secret")
 os.environ["MEDIA_DIR"] = "/tmp/openqz-test-media"
 os.environ["COOKIE_SECURE"] = "false"
 os.environ["LOGIN_RATE_PER_MINUTE"] = "1000"
+# Optional integrations start switched off, whatever the developer's .env says; tests that need
+# them turn them on with monkeypatch. (A real SMTP_HOST made every email-sending test wait for
+# a network timeout.)
+for _k in ("SMTP_HOST", "SMTP_USER", "SMTP_PASSWORD", "GOOGLE_CLIENT_ID", "GOOGLE_ALLOWED_DOMAINS"):
+    os.environ[_k] = ""
 
 from collections.abc import AsyncIterator  # noqa: E402
 

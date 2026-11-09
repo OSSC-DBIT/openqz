@@ -12,7 +12,7 @@ function Tile({ label, value, icon: Icon, to }: { label: string; value: number |
       <Card className="transition hover:border-brand-500">
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-muted">{label}</span>
-          <Icon className="h-5 w-5 text-brand-600" aria-hidden />
+          <Icon className="h-5 w-5 text-brand-ink" aria-hidden />
         </div>
         <div className="mt-2 text-3xl font-extrabold">{value}</div>
       </Card>
@@ -46,7 +46,7 @@ export default function DashboardPage() {
         <ol className="mt-3 list-inside list-decimal space-y-1.5 text-sm text-muted">
           <li>
             Import <b>faculty</b>, then <b>students</b>, then the <b>faculty-section-subject mapping</b> from{' '}
-            <Link to="/admin/imports" className="font-semibold text-brand-600">
+            <Link to="/admin/imports" className="font-semibold text-brand-ink">
               <Upload className="mb-0.5 inline h-3.5 w-3.5" /> Imports
             </Link>
             .

@@ -1,5 +1,7 @@
 # Contributing to OpenQZ
 
+Everyone taking part follows the [Code of Conduct](CODE_OF_CONDUCT.md). Report security problems privately as described in [SECURITY.md](SECURITY.md), never in a public issue.
+
 ## Workflow
 
 1. Pick an issue from the project board (Backlog -> Ready -> In progress -> Review -> Done) and assign yourself.

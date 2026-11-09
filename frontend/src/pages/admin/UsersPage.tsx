@@ -161,6 +161,18 @@ function EditEmail({ user, onClose }: { user: User; onClose: () => void }) {
   );
 }
 
+function UserStatus({ u, locked }: { u: User; locked: boolean }) {
+  return (
+    <>
+      {!u.is_active && <Badge tone="red">disabled</Badge>}
+      {locked && <Badge tone="amber">locked</Badge>}
+      {u.must_change_password && <Badge tone="neutral">temp password</Badge>}
+      {u.google_linked && <Badge tone="brand">Google</Badge>}
+      {u.is_active && !locked && !u.must_change_password && <Badge tone="green">active</Badge>}
+    </>
+  );
+}
+
 export default function UsersPage() {
   const qc = useQueryClient();
   const [role, setRole] = useState<Role | ''>('');
@@ -224,6 +236,7 @@ export default function UsersPage() {
         </div>
         <Select
           className="sm:w-44"
+          aria-label="Filter by role"
           value={role}
           onChange={(e) => {
             setRole(e.target.value as Role | '');
@@ -244,48 +257,55 @@ export default function UsersPage() {
       ) : users.data && users.data.items.length === 0 ? (
         <EmptyState title="No users found">Import a sheet from the Imports page or add a user.</EmptyState>
       ) : (
-        <Table head={['User', 'Role', 'Dept', 'Status', 'Last login', '']}>
+        <Table
+          head={['User', 'Role', 'Dept', 'Status', 'Last login', '']}
+          cols={[undefined, 'hidden sm:table-cell', 'hidden md:table-cell', 'hidden sm:table-cell', 'hidden xl:table-cell', 'w-px']}
+          compact
+        >
           {users.data?.items.map((u) => (
             <tr key={u.id}>
               <Td>
                 <div className="font-semibold">{u.full_name}</div>
-                <div className="text-xs text-muted">{u.email ?? <span className="text-red-600">no email</span>}</div>
-                <div className="font-mono text-xs text-muted">{u.username}</div>
-              </Td>
-              <Td>
-                <Badge tone={u.role === 'admin' ? 'brand' : 'neutral'}>{u.role}</Badge>
-              </Td>
-              <Td>{deptCode(u.department_id)}</Td>
-              <Td>
-                <div className="flex flex-wrap gap-1">
-                  {!u.is_active && <Badge tone="red">disabled</Badge>}
-                  {locked(u) && <Badge tone="amber">locked</Badge>}
-                  {u.must_change_password && <Badge tone="neutral">temp password</Badge>}
-                  {u.google_linked && <Badge tone="brand">Google</Badge>}
-                  {u.is_active && !locked(u) && !u.must_change_password && <Badge tone="green">active</Badge>}
+                <div className="break-all text-xs text-muted">{u.email ?? <span className="text-red-600">no email</span>}</div>
+                <div className="break-all font-mono text-xs text-muted">{u.username}</div>
+                {/* phones: role and status under the name (their columns are hidden) */}
+                <div className="mt-1.5 flex flex-wrap gap-1 sm:hidden">
+                  <Badge tone={u.role === 'admin' ? 'brand' : 'neutral'}>{u.role}</Badge>
+                  <UserStatus u={u} locked={locked(u)} />
                 </div>
               </Td>
-              <Td className="text-muted">{u.last_login_at ? new Date(u.last_login_at).toLocaleString() : 'never'}</Td>
+              <Td className="hidden sm:table-cell">
+                <Badge tone={u.role === 'admin' ? 'brand' : 'neutral'}>{u.role}</Badge>
+              </Td>
+              <Td className="hidden md:table-cell">{deptCode(u.department_id)}</Td>
+              <Td className="hidden sm:table-cell">
+                <div className="flex flex-wrap gap-1">
+                  <UserStatus u={u} locked={locked(u)} />
+                </div>
+              </Td>
+              <Td className="hidden text-muted xl:table-cell">{u.last_login_at ? new Date(u.last_login_at).toLocaleString() : 'never'}</Td>
               <Td>
-                <div className="flex justify-end gap-1">
+                {/* phones: a 2 x 2 grid of actions; wider screens: one row */}
+                <div className="grid grid-cols-[auto_auto] justify-end gap-1 sm:flex sm:justify-end">
                   {locked(u) && (
-                    <Button variant="ghost" title="Unlock" onClick={() => unlock.mutate(u)}>
+                    <Button variant="ghost" title="Unlock" aria-label={`Unlock ${u.username}`} onClick={() => unlock.mutate(u)}>
                       <Lock className="h-4 w-4" />
                     </Button>
                   )}
-                  <Button variant="ghost" title="Change email" onClick={() => setEditing(u)}>
+                  <Button variant="ghost" title="Change email" aria-label={`Change email for ${u.username}`} onClick={() => setEditing(u)}>
                     <Mail className="h-4 w-4" />
                   </Button>
                   <Button
                     variant="ghost"
                     title="Reset password"
+                    aria-label={`Reset password for ${u.username}`}
                     onClick={() => {
                       if (confirm(`Reset password for ${u.username}?`)) reset.mutate(u);
                     }}
                   >
                     <KeyRound className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" onClick={() => toggle.mutate(u)}>
+                  <Button variant="ghost" className="col-span-2" onClick={() => toggle.mutate(u)}>
                     {u.is_active ? 'Disable' : 'Enable'}
                   </Button>
                 </div>

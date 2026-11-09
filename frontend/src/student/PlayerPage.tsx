@@ -124,7 +124,7 @@ export default function PlayerPage() {
 
   useIntegrity(attemptId, !!state && state.status === 'in_progress' && state.activity_kind !== 'flashcards', (kind, r) => {
     setState((s) => (s ? { ...s, violations: r.violations } : s));
-    if (r.submitted) return finish('violations');
+    if (r.submitted) return finish(r.submit_reason === 'violations' ? 'violations' : undefined);
     setWarning({ text: violationText(kind), count: r.violations, max: r.max });
   });
 
@@ -324,11 +324,11 @@ export default function PlayerPage() {
         {timeLeft !== null && timeLeft > 0 && timeLeft <= 60_000 ? 'Less than one minute left for the quiz' : ''}
       </div>
 
-      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-3 pb-28 sm:px-5" aria-label={`Question ${index + 1} of ${total}`}>
-        {/* question card: top half */}
-        <div className="mb-3 flex min-h-[28vh] flex-1 flex-col items-center justify-center rounded-2xl bg-[#241f42] p-5 text-center shadow-[inset_0_-4px_0_rgba(0,0,0,0.25)] sm:p-8">
+      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-3 pb-28 sm:px-5 2xl:max-w-7xl" aria-label={`Question ${index + 1} of ${total}`}>
+        {/* question card: top half, never taller than half the screen; a long question scrolls inside it */}
+        <div className="mb-3 flex max-h-[48vh] min-h-[24vh] flex-1 flex-col items-center justify-center-safe overflow-y-auto rounded-2xl bg-[#241f42] p-5 text-center shadow-[inset_0_-4px_0_rgba(0,0,0,0.25)] sm:p-8">
           {t.stem_image_id && <AuthImage id={t.stem_image_id} className="mb-4 max-h-56 rounded-xl" />}
-          <h1 className="whitespace-pre-wrap text-xl font-bold leading-snug sm:text-3xl">{t.stem}</h1>
+          <h1 className="whitespace-pre-wrap text-xl font-bold leading-snug sm:text-3xl 2xl:text-4xl">{t.stem}</h1>
           {t.type === 'multi_select' && (
             <div className="mt-3 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white/80">{t.select_count ? `Select ${t.select_count} answers` : 'Select all correct answers'}</div>
           )}
@@ -517,7 +517,7 @@ function Answers({
               }
             }}
             className={cx(
-              'relative flex min-h-20 flex-col items-center justify-center gap-2 rounded-2xl p-4 text-center text-xl font-bold shadow-[inset_0_-6px_0_rgba(0,0,0,0.22)] transition-transform enabled:hover:-translate-y-0.5 enabled:active:translate-y-0.5 sm:min-h-[28vh]',
+              'relative flex min-h-20 flex-col items-center justify-center gap-2 rounded-2xl p-4 text-center text-xl font-bold shadow-[inset_0_-6px_0_rgba(0,0,0,0.22)] transition-transform enabled:hover:-translate-y-0.5 enabled:active:translate-y-0.5 sm:min-h-[28vh] 2xl:text-2xl',
               picked && !feedback && 'outline outline-4 outline-offset-2 outline-white',
               right && 'outline outline-4 outline-offset-2 outline-emerald-300',
               wrong && 'opacity-60',

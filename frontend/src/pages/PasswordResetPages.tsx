@@ -53,7 +53,7 @@ export function ForgotPasswordPage() {
           </Button>
         </form>
       )}
-      <Link to="/login" className="block text-center text-sm text-brand-600 hover:underline">
+      <Link to="/login" className="block text-center text-sm text-brand-ink hover:underline">
         Back to sign in
       </Link>
     </Frame>
@@ -106,7 +106,7 @@ export function ResetPasswordPage() {
           Save password and sign in
         </Button>
       </form>
-      <Link to="/forgot-password" className="block text-center text-sm text-brand-600 hover:underline">
+      <Link to="/forgot-password" className="block text-center text-sm text-brand-ink hover:underline">
         Link expired? Get a new one
       </Link>
     </Frame>

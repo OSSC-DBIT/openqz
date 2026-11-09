@@ -18,12 +18,34 @@
   th, td { border:1px solid var(--line); padding:6px 10px; text-align:left; vertical-align:top; }
   th { background:var(--card); }
   blockquote { margin:1rem 0; padding:.6rem 1rem; border-left:4px solid var(--brand); background:var(--card); border-radius:8px; }
+  figure.diagram { margin:1.25rem 0; padding:12px; background:var(--card); border:1px solid var(--line); border-radius:12px; overflow-x:auto; }
+  pre.mermaid { margin:0; text-align:center; background:none; }
 </style>
 </head>
 <body><main>
 <header><a href="/login">&larr; OpenQZ</a></header>
 <h1>OpenQZ student guide</h1>
 <p>OpenQZ is where your faculty post quizzes, assignments, polls and flashcards. It works in any modern browser on your phone or laptop.</p>
+<h2>At a glance</h2>
+<figure class="diagram"><pre class="mermaid">flowchart TD
+    A([Sign in with email or Google]) --&gt; B{First time?}
+    B -- yes --&gt; C[Set your own password]
+    B -- no --&gt; D[Home: your activities]
+    C --&gt; D
+    D --&gt; E{How did you get it?}
+    E -- "assigned to your class" --&gt; F[Press Start on the card]
+    E -- "join code from a teacher or club" --&gt; G[Enter the 6-digit code] --&gt; F
+    F --&gt; H{Full screen required?}
+    H -- yes --&gt; I[Press Enter full screen]
+    H -- "no, or iPhone" --&gt; J
+    I --&gt; J[Answer one question at a time]
+    J --&gt; K{Left the quiz?&lt;br/&gt;tab switch, Back, reload, exit full screen}
+    K -- yes --&gt; L[Warning counted]
+    L --&gt; M{Limit reached?}
+    M -- no --&gt; J
+    M -- yes --&gt; N[Auto-submitted&lt;br/&gt;ask your teacher to unblock]
+    K -- no --&gt; O[Submit]
+    O --&gt; P[Review: marks obtained and answers&lt;br/&gt;when your teacher allows]</pre></figure>
 <h2>1. Sign in</h2>
 <ol>
 <li>Open the OpenQZ address your college gave you (for example <code>https://openqz.dbit.co.in</code>).</li>
@@ -120,5 +142,8 @@
 <li>Something looks broken: tell your teacher what you did and what you saw (a screenshot helps).</li>
 </ul>
 
-</main></body>
+</main>
+<script src="/guides/vendor/mermaid.min.js"></script>
+<script src="/guides/diagrams.js"></script>
+</body>
 </html>

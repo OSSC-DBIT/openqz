@@ -107,12 +107,30 @@ Development: `compose.dev.yaml` points email at Mailpit, a fake inbox at http://
 
 ## 5. Deploy a new version
 
+```mermaid
+flowchart LR
+    A["Merge to main"] --> B["CI: checks, browser tests,<br/>images pushed to GHCR"]
+    B --> C["Tag a release v1.x.y<br/>images get the version tag"]
+    C --> D["Local production check<br/>scripts/prod_smoke.sh (optional)"]
+    D --> E["Staging: set image tags<br/>make staging-up"]
+    E --> F{"Staging OK?<br/>sign in, take a quiz, report"}
+    F -- yes --> G["Production: same tags<br/>make prod-up"]
+    F -- no --> H["Fix, new tag"] --> B
+    G --> I{"Problem?"}
+    I -- yes --> J["Rollback: previous tags<br/>make prod-up"]
+```
+
+
 ```bash
 cd /srv/openqz && git pull
 sed -i 's/^API_IMAGE=.*/API_IMAGE=ghcr.io\/ossc-dbit\/openqz-api:v1.0.1/; s/^WEB_IMAGE=.*/WEB_IMAGE=ghcr.io\/ossc-dbit\/openqz-web:v1.0.1/' .env.staging
 make staging-up        # migrate runs automatically before api starts
 # test on staging, then the same for .env.prod and make prod-up
 ```
+
+### Check the production setup on a laptop first
+
+`scripts/prod_smoke.sh` (or `make prod-smoke`) builds the production images, starts them with `compose.prod.yaml` (gunicorn workers, restart policies, resource limits) under its own project `openqz-prodtest` with throw-away volumes, creates the admin, seeds the demo accounts, checks `/api/v1/health` and the security headers, and runs the whole Playwright suite against it. Stop the dev stack first (both use port 8088 and Mailpit 8025). `KEEP=1` leaves it running at http://localhost:8088. It writes `.env.prodtest` (git-ignored) with `COOKIE_SECURE=false`, because it is plain http on localhost; a real server keeps `COOKIE_SECURE=true` behind the TLS edge.
 
 **Rollback:** set the previous image tags in the env file and run `make prod-up` again. Migrations are additive in a release; if a release added a migration that must be undone, run `docker compose -p openqz-prod run --rm migrate alembic downgrade -1` **before** switching images back.
 
@@ -159,5 +177,6 @@ Restoring into production requires `I_KNOW_THIS_OVERWRITES_PROD=yes`.
 - [ ] Full user import done; credential slips handed out; slips deleted from server
 - [ ] Backup cron running; restore drill on staging in the last 2 weeks
 - [ ] Uptime monitor alerting the DevOps pair
+- [ ] `scripts/prod_smoke.sh` green on the release images
 - [ ] Quick-start guides linked from the login page
 - [ ] Support channel announced; previous image tags noted for rollback

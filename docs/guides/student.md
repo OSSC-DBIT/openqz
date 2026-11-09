@@ -2,6 +2,30 @@
 
 OpenQZ is where your faculty post quizzes, assignments, polls and flashcards. It works in any modern browser on your phone or laptop.
 
+## At a glance
+
+```mermaid
+flowchart TD
+    A([Sign in with email or Google]) --> B{First time?}
+    B -- yes --> C[Set your own password]
+    B -- no --> D[Home: your activities]
+    C --> D
+    D --> E{How did you get it?}
+    E -- "assigned to your class" --> F[Press Start on the card]
+    E -- "join code from a teacher or club" --> G[Enter the 6-digit code] --> F
+    F --> H{Full screen required?}
+    H -- yes --> I[Press Enter full screen]
+    H -- "no, or iPhone" --> J
+    I --> J[Answer one question at a time]
+    J --> K{Left the quiz?<br/>tab switch, Back, reload, exit full screen}
+    K -- yes --> L[Warning counted]
+    L --> M{Limit reached?}
+    M -- no --> J
+    M -- yes --> N[Auto-submitted<br/>ask your teacher to unblock]
+    K -- no --> O[Submit]
+    O --> P[Review: marks obtained and answers<br/>when your teacher allows]
+```
+
 ## 1. Sign in
 
 1. Open the OpenQZ address your college gave you (for example `https://openqz.dbit.co.in`).

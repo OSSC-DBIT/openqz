@@ -418,7 +418,7 @@ async def test_violations_auto_submit(client: AsyncClient) -> None:
     r1 = (
         await client.post(f"{A}/attempts/{st['attempt_id']}/violations", headers=c["s1"], json=v)
     ).json()
-    assert r1 == {"violations": 1, "max": 2, "submitted": False}
+    assert r1 == {"violations": 1, "max": 2, "submitted": False, "submit_reason": None}
     r2 = (
         await client.post(f"{A}/attempts/{st['attempt_id']}/violations", headers=c["s1"], json=v)
     ).json()
@@ -625,3 +625,42 @@ async def test_section_students_and_my_assignments(client: AsyncClient) -> None:
     await assign(client, c["fac"], act["id"], section_ids=[c["sec"]])
     mine = (await client.get(f"{A}/activity-assignments", headers=c["fac"])).json()
     assert len(mine) == 1 and mine[0]["activity_title"] == "Unit 1"
+
+
+async def test_assigning_records_the_classes_on_the_activity(client: AsyncClient) -> None:
+    c = await setup_class(client)
+    act = await make_quiz(client, c["fac"])  # created without picking classes
+    assert act["section_ids"] == [] and act["class_labels"] == []
+    await assign(client, c["fac"], act["id"], section_ids=[c["sec"]])
+    got = (await client.get(f"{A}/activities/{act['id']}", headers=c["fac"])).json()
+    assert got["section_ids"] == [c["sec"]]
+    assert got["class_labels"] and got["department_id"] is not None
+    # the library's class filter now finds it
+    lib = (
+        await client.get(f"{A}/activities", headers=c["fac"], params={"section_id": c["sec"]})
+    ).json()
+    items = lib["items"] if isinstance(lib, dict) else lib
+    assert act["id"] in [x["id"] for x in items]
+    # assigning again to the same class adds nothing twice
+    await assign(client, c["fac"], act["id"], section_ids=[c["sec"]])
+    again = (await client.get(f"{A}/activities/{act['id']}", headers=c["fac"])).json()
+    assert again["section_ids"] == [c["sec"]]
+
+
+async def test_violation_after_manual_submit_is_not_a_violation_submit(client: AsyncClient) -> None:
+    """Leaving full screen right after pressing Submit reaches the server after the submit: it is
+    logged, not counted, and the reply says the attempt ended by a manual submit."""
+    c = await setup_class(client)
+    act = await make_quiz(client, c["fac"])
+    asg = await assign(client, c["fac"], act["id"], section_ids=[c["sec"]], max_violations=1)
+    st = (await client.post(f"{A}/me/assignments/{asg['id']}/start", headers=c["s1"])).json()
+    assert (
+        await client.post(f"{A}/attempts/{st['attempt_id']}/submit", headers=c["s1"])
+    ).status_code == 200
+    v = {"kind": "fullscreen_exit", "session_id": "sess-12345678"}
+    r = (
+        await client.post(f"{A}/attempts/{st['attempt_id']}/violations", headers=c["s1"], json=v)
+    ).json()
+    assert r["submitted"] is True and r["submit_reason"] == "manual" and r["violations"] == 0
+    state = (await client.get(f"{A}/attempts/{st['attempt_id']}", headers=c["s1"])).json()
+    assert state["submit_reason"] == "manual"

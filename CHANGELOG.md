@@ -8,6 +8,7 @@ All notable changes to OpenQZ. Format: [Keep a Changelog](https://keepachangelog
 - Rate limits now apply per real client address. Before, the web proxy limited sign-ins for the whole site at once, and the per-address limit could be dodged with a fake `X-Forwarded-For` header.
 
 ### Changed
+- CI: GitHub Actions moved to their current major versions (Node 24), uv cache keyed on `backend/pyproject.toml`, runners pinned to `ubuntu-24.04`.
 - Dev stack ignores the `.env` SMTP login when sending to Mailpit (a login made Mailpit refuse every message).
 - Google sign-in turned on in development (`GOOGLE_CLIENT_ID` set; containers must be recreated after editing `.env`).
 - **One attempt per student**: the Attempts setting and the student's *Try again* button are gone; the API refuses a second start (`already_taken`). Use Unblock to reopen an attempt that was auto-submitted by mistake.
@@ -16,7 +17,36 @@ All notable changes to OpenQZ. Format: [Keep a Changelog](https://keepachangelog
 - nginx re-resolves the API container so redeploys do not cause 502 errors.
 - Lighter queries on the student home page and answer saves.
 
+### Fixed
+- A warning that reached the server just after a student pressed Submit (for example leaving full screen as the quiz closes) made the review page say "You left the quiz too many times" although the student submitted normally. The violations reply now carries `submit_reason`, and the player uses it.
+- Dark mode: purple link and label text was too dark to read on dark backgrounds (failed WCAG AA contrast). A theme colour `brand-ink` now switches to a lighter purple in dark mode. The join page cards were fixed white with light text in dark mode; they follow the theme now.
+- Screen-reader names for unlabelled controls: the users role filter, the question type, the faculty mapping pickers and the add-section and add-subject fields.
+- Admin tables on phones: Users, Sections, Subjects, Faculty mapping, Imports, Integrity and Audit log (and the faculty Reports list) no longer scroll sideways. Less important columns hide on small screens and their details move under the main cell; user actions sit in a 2 x 2 grid. Icon buttons have screen-reader names.
+- Quiz player on large screens: the question card stops at about half the screen height (a long question scrolls inside it) instead of stretching to fill the window, and question and answer text get bigger on very wide displays.
+- Join-code boxes: the "123 456" hint is faded so it no longer looks like an entered code, and the home page code box keeps dark text in dark mode (it was nearly invisible on its white background).
+- The web server now gzips the app files: the first visit downloads 149 kB instead of 488 kB, and the login page paints in 2.2 s instead of 3.3 s on slow 4G. API responses stay uncompressed (BREACH). The guide pages' Mermaid copy is cached for a week instead of re-downloaded each visit.
+- Assigning an activity to sections now records them as the activity's classes (editor showed "No class chosen"; library class filters missed it). Migration 0010 back-fills existing activities.
+- The password-reset browser test fails in CI instead of skipping when Mailpit is missing.
+- Start and "Join and start" ask for full screen at the moment of the click. Before, the request came after the server replied, and on a slow server the browser refused it (students then had to press Enter full screen).
+- An activity assigned "now" opens even if the server clock steps back a little (NTP, Docker Desktop): activities count as open up to 5 seconds before their start time.
+- Backend tests no longer read SMTP and Google settings from the developer's `.env` (a real mail server made the suite take 14 minutes instead of 3, and broke two tests).
+- A page that fails to load after an update now reloads itself once and otherwise shows a clear "OpenQZ was updated" screen, instead of the raw router error.
+- The offline cache no longer keeps failed downloads (which could break a page in that browser for good).
+- Audit log subtitle says "marks releases", not "score releases".
+- Admin Sections page and report tabs no longer scroll sideways on phones (cards with wide tables now shrink to the screen; tab bars scroll).
+
 ### Added
+- One narrated walkthrough video: `scripts/walkthrough_voice_online.py` (free Microsoft Edge neural voice) and `scripts/make_walkthrough_video.mjs` (title cards, phone frame, voice-over, generated background music, 1920x1080 MP4 with H.264 and AAC, WebM only where the browser engine cannot write MP4).
+- `scripts/record_walkthrough.mjs`: screen-records the whole flow through the real UI with captions (admin imports, faculty builds and assigns, student takes it on a phone, marking and release, student review, a live join-code room, admin logs) into `recordings/` with a player page.
+- Dark-mode accessibility checks (axe, WCAG 2.1 AA) for the student, faculty and admin screens.
+- `scripts/web_vitals.mjs`: Lighthouse-style page-speed and installability check on a throttled phone, results in `docs/performance.md`. `prod_smoke.sh` gained `SKIP_E2E=1` to just start the production setup.
+- New faculty home: create tiles for each activity type (open the create dialog at the title step via `?create=1&kind=`), numbers (classes, assigned, open now, submissions), recently assigned with deadline, join code and a submitted bar, and My classes. Axe and screen-size checked.
+- `scripts/prod_smoke.sh` (`make prod-smoke`): runs the production setup locally (production images, gunicorn, limits) and the full browser suite against it. First run: all 31 browser tests passed, health OK, security headers present.
+- Guide test (`e2e/guides.spec.ts`): guides open, diagrams draw under the CSP, no sideways scrolling.
+- Release flow diagram in the runbook.
+- Screen-size test (`e2e/responsive.spec.ts`): 17 screens must fit every width from 320 px phones to 2560 px monitors.
+- Mermaid diagrams: architecture (components, data model, sign-in, attempt states and flow, rooms, email, environments), user flows in the three guides and the README. The in-app guide pages draw them with a same-origin copy of Mermaid (no CDN, CSP unchanged).
+- `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1) and `SECURITY.md` (private reporting through GitHub, response times, scope), linked from the README and the contributor guide.
 - `compose.mail.yaml` and `docs/email.md`: send real email from a local dev stack through the Cloudflare tunnel (`smtp-tunnel.webuildnow.in`), with setup, tests and troubleshooting. Mailpit stays the default.
 - **Full screen required** (per assignment, on by default): the player hides the questions until the student is in full screen; leaving it is a warning. Skipped on iPhone, which has no full screen for web pages.
 - **Branch** step in the class picker: teachers pick the branch, then semesters and sections they teach, and can mix branches in one activity. Library filter by branch.

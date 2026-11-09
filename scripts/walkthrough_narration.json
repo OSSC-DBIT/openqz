@@ -1,0 +1,68 @@
+{
+  "voice": "Microsoft Zira Desktop",
+  "rate": 0,
+  "online_voice": "en-IN-NeerjaExpressiveNeural",
+  "online_rate": "-4%",
+  "segments": [
+    {
+      "id": "intro",
+      "title": "OpenQZ",
+      "subtitle": "Quizzes and assignments for Don Bosco Institute of Technology",
+      "text": "This is OpenQZ, the quiz and assignment platform for Don Bosco Institute of Technology, built by the Open Source Students Club. In the next few minutes, we will follow one class from start to finish."
+    },
+    {
+      "id": "01-admin-imports",
+      "title": "1. The admin brings everyone in",
+      "subtitle": "Import faculty, students and who teaches what",
+      "text": "It starts with the OSSC admin. At the start of term, the admin imports three sheets from the office: the faculty list, the student list, and who teaches which section and subject. OpenQZ matches the columns, checks every row, and shows a preview before anything is saved. After an import, the admin prints credential slips with temporary passwords, and then deletes the file from the server. In under a minute, a new teacher and three students are ready, and the teaching mapping is in place."
+    },
+    {
+      "id": "02-faculty-create-assign",
+      "title": "2. The teacher builds a quiz",
+      "subtitle": "First sign-in, create, assign",
+      "text": "Doctor Ananya Rao signs in for the first time with her temporary password, and sets her own. Her home page has one tap create buttons. She starts a quiz, and picks the branch and the section she teaches. In the editor, she adds a multiple choice question, a true or false question, and a written answer with a rubric, where the marks are split across criteria. Then she assigns it. The class is already selected. She sets the deadline, keeps full screen on, and chooses to release the marks herself, after marking."
+    },
+    {
+      "id": "03-student-takes-quiz",
+      "title": "3. A student takes it on a phone",
+      "subtitle": "Full screen, one question at a time",
+      "text": "Rahul opens OpenQZ on his phone, sets his password, and starts the quiz. It runs in full screen, one question at a time, with timers kept by the server. When he switches apps, OpenQZ warns him, and counts it for the teacher. He types his written answer, and submits."
+    },
+    {
+      "id": "04-faculty-report-grade",
+      "title": "4. Marking and releasing marks",
+      "subtitle": "Report, rubric, release, export",
+      "text": "Back on her laptop, Doctor Rao opens the report. Completion, average marks, and a student by question grid fill in as students submit. She marks each written answer against the rubric, adds feedback, and releases the marks. The report exports to Excel or CSV."
+    },
+    {
+      "id": "05-student-sees-marks",
+      "title": "5. The student sees the marks",
+      "subtitle": "Marks obtained and review",
+      "text": "Rahul now sees his marks obtained, his accuracy, every answer, and his teacher's feedback."
+    },
+    {
+      "id": "06a-room-host",
+      "title": "6. A room with a join code",
+      "subtitle": "For events like a tech fest",
+      "text": "Rooms are for events, like a tech fest. The teacher hosts the activity, and OpenQZ shows a six digit join code and a QR code on the projector. Players appear in the lobby as they join, and the host can stop new joins at any time."
+    },
+    {
+      "id": "06b-room-join",
+      "title": "6. Joining with the code",
+      "subtitle": "Any signed-in student can join",
+      "text": "Priya enters the code on her phone, sees who is hosting, and joins. She answers both questions, and scores two out of two."
+    },
+    {
+      "id": "07-admin-logs",
+      "title": "7. The admin keeps watch",
+      "subtitle": "Integrity and audit logs",
+      "text": "Finally, the admin can see every integrity event, and every important action, in the audit log."
+    },
+    {
+      "id": "outro",
+      "title": "OpenQZ",
+      "subtitle": "Import. Create. Assign. Attempt. Mark. Release. Review.",
+      "text": "Import, create, assign, attempt, mark, release, and review. That is OpenQZ. Open source, and built for D B I T."
+    }
+  ]
+}

@@ -2,7 +2,7 @@
 
 ## Reporting a problem
 
-Found a security issue? Do **not** open a public issue. Email the OSSC project lead (address: *to be filled in before go-live*) with the steps to reproduce. We reply within 3 working days.
+Found a security issue? Do **not** open a public issue. Report it privately through GitHub (Security tab, **Report a vulnerability**) as described in [SECURITY.md](../SECURITY.md). We reply within 3 working days.
 
 ## What we protect and from whom
 

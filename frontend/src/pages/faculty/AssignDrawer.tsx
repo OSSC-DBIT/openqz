@@ -103,7 +103,7 @@ export function AssignDrawer({
                 onClick={() => setMode(m)}
                 className={cx('rounded-2xl border p-3 text-left', mode === m ? 'border-brand-600 bg-brand-50' : 'border-line hover:border-brand-500')}
               >
-                <Icon className="h-5 w-5 text-brand-600" aria-hidden />
+                <Icon className="h-5 w-5 text-brand-ink" aria-hidden />
                 <div className="mt-1 font-bold">{label}</div>
                 <div className="text-xs text-muted">{help}</div>
               </button>
@@ -119,7 +119,7 @@ export function AssignDrawer({
             <h3 className="text-sm font-bold">Who</h3>
             <ClassPicker data={classes.data} value={secIds} onChange={setSecIds} />
             <details>
-              <summary className="cursor-pointer text-sm text-brand-600">Or pick specific students</summary>
+              <summary className="cursor-pointer text-sm text-brand-ink">Or pick specific students</summary>
               <Select className="mt-2" value={pickStudentsFrom} onChange={(e) => setPickStudentsFrom(e.target.value ? Number(e.target.value) : '')} aria-label="Section to pick students from">
                 <option value="">Choose a section</option>
                 {(classes.data?.classes ?? []).map((c) => (

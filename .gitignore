@@ -31,3 +31,9 @@ Thumbs.db
 test-results/
 playwright-report/
 tests/load/load-tokens.json
+
+# Mermaid copy for the guide pages (scripts/copy-mermaid.mjs)
+frontend/public/guides/vendor/
+
+# Walkthrough screen recordings (scripts/record_walkthrough.mjs)
+recordings/

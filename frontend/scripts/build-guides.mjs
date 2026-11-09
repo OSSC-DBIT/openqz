@@ -5,6 +5,17 @@ import { dirname, join, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { marked } from 'marked';
 
+// ```mermaid blocks become diagrams, drawn in the page by a same-origin copy of Mermaid (scripts/copy-mermaid.mjs).
+const escapeHtml = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+marked.use({
+  renderer: {
+    code({ text, lang }) {
+      if (lang === 'mermaid') return `<figure class="diagram"><pre class="mermaid">${escapeHtml(text)}</pre></figure>\n`;
+      return false;
+    },
+  },
+});
+
 const here = dirname(fileURLToPath(import.meta.url));
 const src = join(here, '..', '..', 'docs', 'guides');
 const out = join(here, '..', 'public', 'guides');
@@ -30,12 +41,15 @@ const page = (title, body) => `<!doctype html>
   th, td { border:1px solid var(--line); padding:6px 10px; text-align:left; vertical-align:top; }
   th { background:var(--card); }
   blockquote { margin:1rem 0; padding:.6rem 1rem; border-left:4px solid var(--brand); background:var(--card); border-radius:8px; }
+  figure.diagram { margin:1.25rem 0; padding:12px; background:var(--card); border:1px solid var(--line); border-radius:12px; overflow-x:auto; }
+  pre.mermaid { margin:0; text-align:center; background:none; }
 </style>
 </head>
 <body><main>
 <header><a href="/login">&larr; OpenQZ</a></header>
 ${body}
-</main></body>
+</main>
+${body.includes('class="mermaid"') ? '<script src="/guides/vendor/mermaid.min.js"></script>\n<script src="/guides/diagrams.js"></script>\n' : ''}</body>
 </html>
 `;
 

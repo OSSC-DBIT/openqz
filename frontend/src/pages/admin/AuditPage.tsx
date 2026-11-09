@@ -18,7 +18,7 @@ export default function AuditPage() {
 
   return (
     <>
-      <PageHeader title="Audit log" subtitle="Sign-ins, lockouts, password resets, imports, assignments and score releases" />
+      <PageHeader title="Audit log" subtitle="Sign-ins, lockouts, password resets, imports, assignments and marks releases" />
       <div className="mb-4 flex flex-col gap-2 sm:flex-row">
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" aria-hidden />
@@ -54,14 +54,20 @@ export default function AuditPage() {
       {log.isLoading ? (
         <Spinner />
       ) : log.data?.items.length ? (
-        <Table head={['When', 'Action', 'Who', 'Target', 'Details']}>
+        <Table head={['When', 'Action', 'Who', 'Target', 'Details']} cols={['hidden sm:table-cell', undefined, 'hidden sm:table-cell', 'hidden xl:table-cell', 'hidden 2xl:table-cell']} compact>
           {log.data.items.map((e) => (
             <tr key={e.id}>
-              <Td className="whitespace-nowrap text-muted">{new Date(e.at).toLocaleString()}</Td>
-              <Td className="font-mono text-xs">{e.action}</Td>
-              <Td className="text-sm">{e.actor ?? <span className="text-muted">-</span>}</Td>
-              <Td className="max-w-48 truncate font-mono text-xs">{e.target}</Td>
-              <Td className="max-w-64 truncate font-mono text-xs text-muted">{e.meta ? JSON.stringify(e.meta) : ''}</Td>
+              <Td className="hidden whitespace-nowrap text-muted sm:table-cell">{new Date(e.at).toLocaleString()}</Td>
+              <Td>
+                <div className="font-mono text-xs">{e.action}</div>
+                {/* phones: who and when under the action */}
+                <div className="mt-1 text-sm sm:hidden">{e.actor ?? <span className="text-muted">-</span>}</div>
+                <div className="text-xs text-muted sm:hidden">{new Date(e.at).toLocaleString()}</div>
+                {e.target && <div className="max-w-[16rem] truncate font-mono text-xs text-muted xl:hidden">{e.target}</div>}
+              </Td>
+              <Td className="hidden text-sm sm:table-cell">{e.actor ?? <span className="text-muted">-</span>}</Td>
+              <Td className="hidden max-w-48 truncate font-mono text-xs xl:table-cell">{e.target}</Td>
+              <Td className="hidden max-w-64 truncate font-mono text-xs text-muted 2xl:table-cell">{e.meta ? JSON.stringify(e.meta) : ''}</Td>
             </tr>
           ))}
         </Table>

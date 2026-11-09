@@ -94,7 +94,7 @@ export function SectionsPage() {
               add.mutate();
             }}
           >
-            <Select required value={form.department_id} onChange={(e) => setForm({ ...form, department_id: e.target.value })}>
+            <Select required aria-label="Department" value={form.department_id} onChange={(e) => setForm({ ...form, department_id: e.target.value })}>
               <option value="">Department</option>
               {depts.data?.map((d) => (
                 <option key={d.id} value={d.id}>
@@ -102,14 +102,14 @@ export function SectionsPage() {
                 </option>
               ))}
             </Select>
-            <Select value={form.semester} onChange={(e) => setForm({ ...form, semester: e.target.value })}>
+            <Select aria-label="Semester" value={form.semester} onChange={(e) => setForm({ ...form, semester: e.target.value })}>
               {Array.from({ length: 8 }, (_, i) => (
                 <option key={i + 1} value={i + 1}>
                   Sem {i + 1}
                 </option>
               ))}
             </Select>
-            <Input placeholder="Section (A)" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            <Input aria-label="Section name" placeholder="Section (A)" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             <Button type="submit" loading={add.isPending}>
               Add section
             </Button>
@@ -118,13 +118,15 @@ export function SectionsPage() {
           {sections.isLoading ? (
             <Spinner />
           ) : sections.data?.length ? (
-            <Table head={['Department', 'Semester', 'Section', 'Students', '']}>
+            <Table head={['Dept', 'Section', 'Students', '']} cols={[undefined, undefined, 'hidden sm:table-cell', 'w-px']} compact>
               {sections.data.map((s) => (
                 <tr key={s.id}>
                   <Td className="font-semibold">{s.department_code}</Td>
-                  <Td>{s.semester}</Td>
-                  <Td>{s.name}</Td>
-                  <Td>{s.student_count}</Td>
+                  <Td>
+                    Sem {s.semester} {s.name}
+                    <div className="text-xs text-muted sm:hidden">{s.student_count} students</div>
+                  </Td>
+                  <Td className="hidden sm:table-cell">{s.student_count}</Td>
                   <Td className="text-right">
                     <Button
                       variant="ghost"
@@ -182,9 +184,9 @@ export function SubjectsPage() {
             add.mutate();
           }}
         >
-          <Input placeholder="Code" required value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} />
-          <Input placeholder="Subject name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-          <Select value={form.department_id} onChange={(e) => setForm({ ...form, department_id: e.target.value })}>
+          <Input aria-label="Subject code" placeholder="Code" required value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} />
+          <Input aria-label="Subject name" placeholder="Subject name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          <Select aria-label="Department" value={form.department_id} onChange={(e) => setForm({ ...form, department_id: e.target.value })}>
             <option value="">Dept</option>
             {depts.data?.map((d) => (
               <option key={d.id} value={d.id}>
@@ -192,7 +194,7 @@ export function SubjectsPage() {
               </option>
             ))}
           </Select>
-          <Select value={form.semester} onChange={(e) => setForm({ ...form, semester: e.target.value })}>
+          <Select aria-label="Semester" value={form.semester} onChange={(e) => setForm({ ...form, semester: e.target.value })}>
             <option value="">Sem</option>
             {Array.from({ length: 8 }, (_, i) => (
               <option key={i + 1} value={i + 1}>
@@ -211,13 +213,19 @@ export function SubjectsPage() {
       {subjects.isLoading ? (
         <Spinner />
       ) : subjects.data?.length ? (
-        <Table head={['Code', 'Name', 'Dept', 'Sem']}>
+        <Table head={['Code', 'Name', 'Dept', 'Sem']} cols={[undefined, undefined, 'hidden sm:table-cell', 'hidden sm:table-cell']} compact>
           {subjects.data.map((s) => (
             <tr key={s.id}>
-              <Td className="font-mono font-semibold">{s.code}</Td>
-              <Td>{s.name}</Td>
-              <Td>{deptCode(s.department_id)}</Td>
-              <Td>{s.semester ?? ''}</Td>
+              <Td className="break-all font-mono font-semibold">{s.code}</Td>
+              <Td>
+                {s.name}
+                {/* phones: department and semester under the name */}
+                <div className="text-xs text-muted sm:hidden">
+                  {[deptCode(s.department_id), s.semester ? `Sem ${s.semester}` : ''].filter(Boolean).join(' | ')}
+                </div>
+              </Td>
+              <Td className="hidden sm:table-cell">{deptCode(s.department_id)}</Td>
+              <Td className="hidden sm:table-cell">{s.semester ?? ''}</Td>
             </tr>
           ))}
         </Table>

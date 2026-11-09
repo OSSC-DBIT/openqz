@@ -16,16 +16,17 @@ export default function IntegrityPage() {
       {events.isLoading ? (
         <Spinner />
       ) : events.data?.length ? (
-        <Table head={['When', 'Student', 'Event', 'Details']}>
+        <Table head={['When', 'Student', 'Event', 'Details']} cols={['hidden sm:table-cell', undefined, undefined, 'hidden md:table-cell']} compact>
           {events.data.map((e) => (
             <tr key={e.id}>
-              <Td className="whitespace-nowrap text-muted">{new Date(e.client_at).toLocaleString()}</Td>
+              <Td className="hidden whitespace-nowrap text-muted sm:table-cell">{new Date(e.client_at).toLocaleString()}</Td>
               <Td>
                 <div className="font-semibold">{e.full_name}</div>
                 <div className="font-mono text-xs text-muted">{e.username}</div>
+                <div className="text-xs text-muted sm:hidden">{new Date(e.client_at).toLocaleString()}</div>
               </Td>
-              <Td className="font-mono">{e.kind}</Td>
-              <Td className="font-mono text-xs text-muted">{e.meta ? JSON.stringify(e.meta) : ''}</Td>
+              <Td className="font-mono text-sm">{e.kind}</Td>
+              <Td className="hidden font-mono text-xs text-muted md:table-cell">{e.meta ? JSON.stringify(e.meta) : ''}</Td>
             </tr>
           ))}
         </Table>

@@ -86,12 +86,12 @@ export default function ReportPage() {
         )}
       </div>
 
-      <div className="mb-4 mt-6 flex gap-1 border-b border-line">
+      <div className="mb-4 mt-6 flex gap-1 overflow-x-auto border-b border-line [scrollbar-width:none]">
         {(['overview', 'students', 'questions', ...(s.graded ? ['grading'] : [])] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t as typeof tab)}
-            className={cx('-mb-px border-b-2 px-4 py-2 text-sm font-semibold capitalize', tab === t ? 'border-brand-600 text-brand-700 dark:text-brand-200' : 'border-transparent text-muted')}
+            className={cx('-mb-px shrink-0 whitespace-nowrap border-b-2 px-4 py-2 text-sm font-semibold capitalize', tab === t ? 'border-brand-600 text-brand-700 dark:text-brand-200' : 'border-transparent text-muted')}
           >
             {t === 'grading' ? `Grading (${queue.data?.length ?? 0})` : t === 'students' ? 'Participants' : t === 'overview' ? 'Overview' : 'Questions'}
           </button>

@@ -18,12 +18,27 @@
   th, td { border:1px solid var(--line); padding:6px 10px; text-align:left; vertical-align:top; }
   th { background:var(--card); }
   blockquote { margin:1rem 0; padding:.6rem 1rem; border-left:4px solid var(--brand); background:var(--card); border-radius:8px; }
+  figure.diagram { margin:1.25rem 0; padding:12px; background:var(--card); border:1px solid var(--line); border-radius:12px; overflow-x:auto; }
+  pre.mermaid { margin:0; text-align:center; background:none; }
 </style>
 </head>
 <body><main>
 <header><a href="/login">&larr; OpenQZ</a></header>
 <h1>OpenQZ admin guide</h1>
 <p>The admin sets up departments, classes and accounts, imports the office sheets, and looks after sign-in problems. Server tasks (deploy, TLS, backups) are in the <a href="https://github.com/ossc-dbit/openqz/blob/main/docs/runbook.md">runbook</a>.</p>
+<h2>At a glance</h2>
+<figure class="diagram"><pre class="mermaid">flowchart TD
+    A([Start of term]) --&gt; B[Import faculty]
+    B --&gt; C[Import students]
+    C --&gt; D[Import faculty-section-subject mapping]
+    D --&gt; E[Download credential slips PDF]
+    E --&gt; F[Print and hand to class teachers]
+    F --&gt; G[Delete the PDF from the server]
+    G --&gt; H[Everyone signs in and sets a password]
+    H --&gt; I{During the term}
+    I --&gt; J[Users: add, reset password,&lt;br/&gt;unlock, change email, disable]
+    I --&gt; K[Sections, subjects, faculty mapping]
+    I --&gt; L[Audit and integrity logs]</pre></figure>
 <h2>1. First sign-in</h2>
 <p>Use the admin email and temporary password from the server setup, then choose your own password. Every page is in the left menu.</p>
 <h2>2. Bring everyone in (start of term)</h2>
@@ -88,6 +103,7 @@
 <td><strong>Users</strong>, then <strong>Add user</strong>, role <strong>Club organiser</strong>. Use the club&#39;s shared email (for example <code>techclub@...</code>).</td>
 </tr>
 </tbody></table>
+<p>On a phone the lists stay narrow: a person&#39;s role and status show under their name, and department and last sign-in appear on wider screens.</p>
 <h3>Club organisers</h3>
 <p>A club organiser (tech club, cultural committee, placement cell) can build activities and <strong>host rooms</strong> with a join code, which any signed-in student can join. They cannot assign to classes, see class lists, import people or open other people&#39;s activities and reports. Disable the account when the club&#39;s term ends; its results are kept.</p>
 <h2>4. Sign-in options</h2>
@@ -110,5 +126,8 @@
 <li>Export only what you need, and keep downloaded files on college devices.</li>
 </ul>
 
-</main></body>
+</main>
+<script src="/guides/vendor/mermaid.min.js"></script>
+<script src="/guides/diagrams.js"></script>
+</body>
 </html>

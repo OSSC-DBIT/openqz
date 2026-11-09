@@ -7,6 +7,8 @@
   --color-brand-500: #6d4fe0;
   --color-brand-600: #5b3fd6;
   --color-brand-700: #4a30b8;
+  /* brand-coloured text and icons: purple on light, a lighter purple on dark backgrounds (AA contrast) */
+  --color-brand-ink: #5b3fd6;
   --color-surface: #f6f5fb;
   --color-card: #ffffff;
   --color-ink: #1d1b2c;
@@ -24,6 +26,7 @@
     --color-line: #2c2a3a;
     --color-brand-50: #241d45;
     --color-brand-100: #2d2457;
+    --color-brand-ink: #b9a8ff;
   }
 }
 

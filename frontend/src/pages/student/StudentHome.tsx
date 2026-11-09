@@ -7,6 +7,7 @@ import { useAuth } from '../../auth/AuthProvider';
 import { Button, EmptyState, ErrorText, PageHeader, Spinner, cx } from '../../components/ui';
 import { KindCover } from '../../components/pieces';
 import { KIND_LABEL, fmtSeconds } from '../../components/quiz';
+import { enterFullscreen } from '../../student/fullscreen';
 
 function due(a: MyActivity): string {
   if (a.window === 'not_started') return `Opens ${new Date(a.start_at).toLocaleString()}`;
@@ -36,7 +37,7 @@ function JoinBar() {
           placeholder="123 456"
           value={d.length > 3 ? `${d.slice(0, 3)} ${d.slice(3)}` : d}
           onChange={(e) => setCode(e.target.value)}
-          className="min-w-0 flex-1 bg-transparent px-3 py-2 text-center text-2xl font-extrabold tracking-widest text-ink outline-none placeholder:text-muted"
+          className="min-w-0 flex-1 bg-transparent px-3 py-2 text-center text-2xl font-extrabold tracking-widest text-[#1d1b2c] outline-none placeholder:font-semibold placeholder:text-[#1d1b2c]/25"
         />
         <button type="submit" disabled={d.length !== 6} className="rounded-xl bg-brand-600 px-5 py-3 font-extrabold text-white shadow-[inset_0_-4px_0_rgba(0,0,0,0.2)] disabled:opacity-50">
           Join
@@ -55,8 +56,6 @@ export default function StudentHome() {
   const start = useMutation({
     mutationFn: (id: string) => api<AttemptState>(`/me/assignments/${id}/start`, { method: 'POST' }),
     onSuccess: (s) => {
-      // Full screen needs this click; best effort (not available on iPhone).
-      void document.documentElement.requestFullscreen?.().catch(() => {});
       nav(`/play/${s.attempt_id}`);
     },
   });
@@ -73,12 +72,12 @@ export default function StudentHome() {
           </span>
         ))}
       </div>
-      <div className="mb-4 flex gap-1 border-b border-line">
+      <div className="mb-4 flex gap-1 overflow-x-auto border-b border-line [scrollbar-width:none]">
         {(['pending', 'completed'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={cx('-mb-px border-b-2 px-4 py-2 text-sm font-semibold capitalize', tab === t ? 'border-brand-600 text-brand-700 dark:text-brand-200' : 'border-transparent text-muted')}
+            className={cx('-mb-px shrink-0 whitespace-nowrap border-b-2 px-4 py-2 text-sm font-semibold capitalize', tab === t ? 'border-brand-600 text-brand-700 dark:text-brand-200' : 'border-transparent text-muted')}
           >
             {t} ({acts.data?.[t].length ?? 0})
           </button>
@@ -115,7 +114,10 @@ export default function StudentHome() {
               )}
               <div className="mt-auto flex gap-2 pt-3">
                 {a.can_start && (
-                  <Button loading={start.isPending && start.variables === a.assignment_id} onClick={() => start.mutate(a.assignment_id)}>
+                  <Button loading={start.isPending && start.variables === a.assignment_id} onClick={() => {
+                    enterFullscreen();
+                    start.mutate(a.assignment_id);
+                  }}>
                     {a.in_progress_attempt_id ? 'Resume' : 'Start'}
                   </Button>
                 )}

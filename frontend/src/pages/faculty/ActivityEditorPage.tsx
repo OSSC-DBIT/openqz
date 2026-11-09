@@ -153,7 +153,7 @@ export default function ActivityEditorPage() {
                   <div className="flex flex-wrap gap-1.5">
                     {a.class_labels.length ? a.class_labels.map((l) => <Pill key={l}>{l}</Pill>) : <span className="text-sm text-muted">No class chosen</span>}
                   </div>
-                  <button type="button" onClick={() => setClassDlg(true)} className="mt-2 text-sm font-semibold text-brand-600 hover:underline dark:text-brand-200">
+                  <button type="button" onClick={() => setClassDlg(true)} className="mt-2 text-sm font-semibold text-brand-ink hover:underline dark:text-brand-200">
                     Edit classes
                   </button>
                 </div>

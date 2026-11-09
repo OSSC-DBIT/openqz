@@ -8,6 +8,7 @@ import { KindCover } from '../components/pieces';
 import { KIND_LABEL, fmtSeconds } from '../components/quiz';
 import { Button } from '../components/ui';
 import { Logo } from '../layouts/AppShell';
+import { enterFullscreen } from './fullscreen';
 
 const digits = (v: string) => v.replace(/\D/g, '').slice(0, 6);
 const pretty = (v: string) => (v.length > 3 ? `${v.slice(0, 3)} ${v.slice(3)}` : v);
@@ -21,7 +22,6 @@ export default function JoinPage() {
   const go = useMutation({
     mutationFn: async () => {
       const j = await api<{ assignment_id: string }>('/join', { method: 'POST', json: { code } });
-      void document.documentElement.requestFullscreen?.().catch(() => {});
       return api<AttemptState>(`/me/assignments/${j.assignment_id}/start`, { method: 'POST' });
     },
     onSuccess: (s) => nav(`/play/${s.attempt_id}`),
@@ -51,7 +51,7 @@ export default function JoinPage() {
       <main className="flex flex-1 items-center justify-center px-4 pb-10">
         <div className="w-full max-w-md">
           {!p ? (
-            <form onSubmit={submit} className="rounded-3xl bg-white p-6 text-ink shadow-2xl">
+            <form onSubmit={submit} className="rounded-3xl bg-card p-6 text-ink shadow-2xl">
               <h1 className="text-center text-2xl font-extrabold">Join an activity</h1>
               <p className="mt-1 text-center text-sm text-muted">Enter the 6-digit code from your teacher or club</p>
               <input
@@ -62,7 +62,7 @@ export default function JoinPage() {
                 placeholder="123 456"
                 value={pretty(code)}
                 onChange={(e) => setCode(digits(e.target.value))}
-                className="mt-5 w-full rounded-2xl border-2 border-line bg-surface py-4 text-center text-4xl font-extrabold tracking-[0.2em] outline-none focus:border-brand-500"
+                className="mt-5 w-full rounded-2xl border-2 border-line bg-surface py-4 text-center text-4xl font-extrabold tracking-[0.2em] outline-none placeholder:font-semibold placeholder:text-muted/40 focus:border-brand-500"
               />
               {err && (
                 <p role="alert" className="mt-3 text-center text-sm font-semibold text-red-600">
@@ -74,10 +74,10 @@ export default function JoinPage() {
               </Button>
             </form>
           ) : (
-            <div className="overflow-hidden rounded-3xl bg-white text-ink shadow-2xl">
+            <div className="overflow-hidden rounded-3xl bg-card text-ink shadow-2xl">
               <KindCover kind={p.kind} className="h-32" />
               <div className="space-y-3 p-6">
-                <div className="text-xs font-bold uppercase text-brand-600">{KIND_LABEL[p.kind]}</div>
+                <div className="text-xs font-bold uppercase text-brand-ink">{KIND_LABEL[p.kind]}</div>
                 <h1 className="text-2xl font-extrabold">{p.title}</h1>
                 <ul className="space-y-1.5 text-sm text-muted">
                   {p.host && (
@@ -101,7 +101,10 @@ export default function JoinPage() {
                     {err.message}
                   </p>
                 )}
-                <Button className="w-full !py-3.5 text-base" loading={go.isPending} disabled={!p.open && !p.joined} onClick={() => go.mutate()}>
+                <Button className="w-full !py-3.5 text-base" loading={go.isPending} disabled={!p.open && !p.joined} onClick={() => {
+                  enterFullscreen();
+                  go.mutate();
+                }}>
                   {p.joined ? 'Continue' : 'Join and start'}
                 </Button>
                 <button type="button" onClick={() => preview.reset()} className="w-full text-center text-sm text-muted hover:text-ink">

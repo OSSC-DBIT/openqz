@@ -72,7 +72,7 @@ export function Field({ label, hint, children }: { label: string; hint?: string;
 }
 
 export function Card({ className, children }: { className?: string; children: ReactNode }) {
-  return <div className={cx('rounded-2xl border border-line bg-card p-5 shadow-sm', className)}>{children}</div>;
+  return <div className={cx('min-w-0 rounded-2xl border border-line bg-card p-5 shadow-sm', className)}>{children}</div>;
 }
 
 export function Badge({ tone = 'neutral', children }: { tone?: 'neutral' | 'green' | 'red' | 'amber' | 'brand'; children: ReactNode }) {
@@ -91,7 +91,7 @@ export function Spinner({ small }: { small?: boolean }) {
     <span
       role="status"
       aria-label="Loading"
-      className={cx('inline-block animate-spin rounded-full border-2 border-current border-t-transparent', small ? 'h-4 w-4' : 'h-7 w-7 text-brand-600')}
+      className={cx('inline-block animate-spin rounded-full border-2 border-current border-t-transparent', small ? 'h-4 w-4' : 'h-7 w-7 text-brand-ink')}
     />
   );
 }
@@ -127,14 +127,18 @@ export function EmptyState({ title, children }: { title: string; children?: Reac
   );
 }
 
-export function Table({ head, children }: { head: ReactNode[]; children: ReactNode }) {
+/**
+ * `cols` gives per-column classes (e.g. 'hidden md:table-cell' to drop a column on phones; use the
+ * same class on that column's <Td>). `compact` drops the 560 px minimum for tables built to fit phones.
+ */
+export function Table({ head, children, cols, compact }: { head: ReactNode[]; children: ReactNode; cols?: (string | undefined)[]; compact?: boolean }) {
   return (
     <div className="overflow-x-auto rounded-2xl border border-line bg-card">
-      <table className="w-full min-w-[560px] text-left text-sm">
+      <table className={cx('w-full text-left text-sm', !compact && 'min-w-[560px]')}>
         <thead className="border-b border-line text-xs uppercase tracking-wide text-muted">
           <tr>
             {head.map((h, i) => (
-              <th key={i} className="px-4 py-3 font-semibold">
+              <th key={i} className={cx('px-3 py-3 font-semibold sm:px-4', cols?.[i])}>
                 {h}
               </th>
             ))}
@@ -147,7 +151,7 @@ export function Table({ head, children }: { head: ReactNode[]; children: ReactNo
 }
 
 export function Td({ children, className }: { children?: ReactNode; className?: string }) {
-  return <td className={cx('px-4 py-3 align-top', className)}>{children}</td>;
+  return <td className={cx('px-3 py-3 align-top sm:px-4', className)}>{children}</td>;
 }
 
 export function Modal({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: ReactNode }) {

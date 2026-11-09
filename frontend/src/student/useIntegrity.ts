@@ -5,6 +5,8 @@ export interface ViolationResult {
   violations: number;
   max: number;
   submitted: boolean;
+  /** why the attempt ended, when submitted: only 'violations' means the warnings did it */
+  submit_reason?: string | null;
 }
 
 const LABEL: Record<string, string> = {

@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+import { ADMIN, ADMIN_PW } from './helpers';
 
 /** Automated WCAG 2.1 AA checks (axe-core) on the main screens. */
 const STUDENT = process.env.E2E_STUDENT_EMAIL ?? 'student@openqz.dev';
@@ -54,4 +55,73 @@ test('faculty library', async ({ page }) => {
   await page.goto('/faculty/library');
   await expect(page.getByRole('heading', { name: 'My library' })).toBeVisible();
   await audit(page);
+});
+
+test('faculty home', async ({ page }) => {
+  await signIn(page, FACULTY, FACULTY_PW);
+  await expect(page.getByRole('heading', { name: /Hello/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Recently assigned' })).toBeVisible();
+  await audit(page);
+  // a quick-create tile opens the create dialog straight at the title step
+  await page.getByRole('link', { name: /^Quiz/ }).click();
+  await expect(page.getByRole('dialog', { name: 'New quiz' })).toBeVisible();
+});
+
+/** The same checks with the phone or laptop set to dark mode (colour contrast flips with the theme). */
+test.describe('dark mode', () => {
+  test.use({ colorScheme: 'dark' });
+
+  test('login, student home and join page', async ({ page }) => {
+    await page.goto('/login');
+    await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+    await audit(page);
+    await signIn(page, STUDENT, STUDENT_PW);
+    await expect(page.getByRole('heading', { name: /Hi,/ })).toBeVisible();
+    await audit(page);
+    await page.goto('/join');
+    await expect(page.getByRole('heading', { name: 'Join an activity' })).toBeVisible();
+    await audit(page);
+  });
+
+  test('faculty home, library and reports', async ({ page }) => {
+    await signIn(page, FACULTY, FACULTY_PW);
+    await expect(page.getByRole('heading', { name: 'Recently assigned' })).toBeVisible();
+    await audit(page);
+    await page.goto('/faculty/library');
+    await expect(page.getByRole('heading', { name: 'My library' })).toBeVisible();
+    await audit(page);
+    await page.goto('/faculty/reports');
+    await expect(page.getByRole('heading', { name: 'Reports' })).toBeVisible();
+    await audit(page);
+    // an assignment report and its activity editor, if the demo faculty has one
+    const report = page.locator('a[href^="/faculty/reports/"]').first();
+    if (await report.count()) {
+      await report.click();
+      await expect(page.getByRole('tab', { name: 'Overview' }).or(page.getByRole('button', { name: 'Overview' }))).toBeVisible();
+      await audit(page);
+    }
+    await page.goto('/faculty/library');
+    const edit = page.getByRole('link', { name: /^Edit/ }).or(page.getByRole('button', { name: /^Edit$/ })).first();
+    if (await edit.count()) {
+      await edit.click();
+      await expect(page.getByRole('button', { name: 'Preview' })).toBeVisible();
+      await audit(page);
+    }
+  });
+
+  test('admin pages', async ({ page }) => {
+    await signIn(page, ADMIN, ADMIN_PW);
+    await expect(page).not.toHaveURL(/\/login$/);
+    for (const [path, name] of [
+      ['/admin', 'Admin dashboard'],
+      ['/admin/users', 'Users'],
+      ['/admin/sections', 'Sections'],
+      ['/admin/imports', 'Imports'],
+      ['/admin/audit', 'Audit log'],
+    ] as const) {
+      await page.goto(path);
+      await expect(page.getByRole('heading', { name, exact: true }).first()).toBeVisible();
+      await audit(page);
+    }
+  });
 });

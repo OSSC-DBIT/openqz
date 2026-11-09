@@ -145,9 +145,14 @@ class Window:
     late: bool
 
 
+# An activity counts as open this long before its start time, so a small clock adjustment on the
+# server (NTP, or Docker Desktop resyncing its VM) never hides one that was assigned "now".
+OPEN_EARLY = timedelta(seconds=5)
+
+
 def window(a: ActivityAssignment, at: datetime | None = None) -> Window:
     t = at or now()
-    if a.start_at > t:
+    if a.start_at > t + OPEN_EARLY:
         return Window(False, "not_started", False)
     if a.due_at and t > a.due_at:
         return Window(a.allow_late, None if a.allow_late else "closed", True)
@@ -430,11 +435,15 @@ async def record_violation(
         )
     )
     if att.status != AttemptStatus.in_progress:
+        # Already submitted (e.g. leaving full screen right after pressing Submit): logged, not
+        # counted. submit_reason tells the player why it ended, so a manual submit is not shown
+        # as "you left too many times".
         await session.commit()
         return {
             "violations": att.violations,
             "max": att.assignment.max_violations,
             "submitted": True,
+            "submit_reason": att.submit_reason,
         }
     att.violations += 1
     limit = att.assignment.max_violations
@@ -446,6 +455,7 @@ async def record_violation(
         "violations": att.violations,
         "max": limit,
         "submitted": att.status == AttemptStatus.submitted,
+        "submit_reason": att.submit_reason,
     }
 
 

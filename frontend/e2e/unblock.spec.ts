@@ -16,7 +16,7 @@ test('a student blocked for leaving the quiz is let back in by the teacher', asy
     );
   }
   const asg = await ok<{ id: string }>(
-    await request.post(`/api/v1/activities/${act.id}/assign`, { headers: H, data: { section_ids: [c.sectionId], max_violations: 1, instant_feedback: false } }),
+    await request.post(`/api/v1/activities/${act.id}/assign`, { headers: H, data: { section_ids: [c.sectionId], max_violations: 1, instant_feedback: false, require_fullscreen: false } }),
   );
 
   // student leaves the tab once: with a limit of 1 the quiz is submitted

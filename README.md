@@ -26,9 +26,25 @@ Documentation index: [docs/README.md](docs/README.md). User guides: [student](do
 | Serving | nginx (SPA + API proxy), TLS edge with Let's Encrypt |
 | Ops | Docker Compose (dev, staging, prod), GitHub Actions, GHCR |
 
+```mermaid
+flowchart LR
+    B["Browser / PWA"] -- HTTPS --> E["edge nginx<br/>TLS"] --> W["web nginx<br/>React build"]
+    W -- /api --> A["FastAPI<br/>gunicorn"]
+    A --> P[("Postgres")]
+    A --> R[("Redis")]
+    K["ARQ worker"] --> R
+    K --> P
+    K --> M["SMTP"]
 ```
-browser/PWA -> edge nginx (TLS) -> web nginx -> /api -> FastAPI (gunicorn) -> Postgres
-                                                                \-> Redis <- ARQ worker
+
+How it fits together, with data model, sign-in, attempt and email flows: [docs/architecture.md](docs/architecture.md).
+
+```mermaid
+flowchart LR
+    T["Teacher creates<br/>and assigns or hosts"] --> S["Students take it<br/>full screen, one attempt"]
+    S --> R["Report: marks obtained"]
+    R --> G["Mark written answers,<br/>release marks"]
+    G --> V["Students review"]
 ```
 
 ## Quick start (development)
@@ -95,6 +111,8 @@ See [docs/runbook.md](docs/runbook.md): server setup, staging and production on 
 - [docs/import-template.md](docs/import-template.md): sheet formats for the office
 - [docs/backlog.md](docs/backlog.md): every sprint item from the implementation plan
 - [CONTRIBUTING.md](CONTRIBUTING.md): workflow and Definition of Done
+- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md): how we treat each other (Contributor Covenant 2.1)
+- [SECURITY.md](SECURITY.md): how to report a vulnerability privately
 - [AGENTS.md](AGENTS.md): product rules, commands and gotchas for AI coding agents and new contributors
 - [CHANGELOG.md](CHANGELOG.md): what changed
 

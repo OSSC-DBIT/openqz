@@ -37,7 +37,7 @@ export default function AssignmentsPage() {
             add.mutate();
           }}
         >
-          <Select required value={form.faculty_id} onChange={(e) => setForm({ ...form, faculty_id: e.target.value })}>
+          <Select required aria-label="Faculty" value={form.faculty_id} onChange={(e) => setForm({ ...form, faculty_id: e.target.value })}>
             <option value="">Faculty</option>
             {faculty.data?.items.map((f) => (
               <option key={f.id} value={f.id}>
@@ -45,7 +45,7 @@ export default function AssignmentsPage() {
               </option>
             ))}
           </Select>
-          <Select required value={form.section_id} onChange={(e) => setForm({ ...form, section_id: e.target.value })}>
+          <Select required aria-label="Section" value={form.section_id} onChange={(e) => setForm({ ...form, section_id: e.target.value })}>
             <option value="">Section</option>
             {sections.data?.map((s) => (
               <option key={s.id} value={s.id}>
@@ -53,7 +53,7 @@ export default function AssignmentsPage() {
               </option>
             ))}
           </Select>
-          <Select required value={form.subject_id} onChange={(e) => setForm({ ...form, subject_id: e.target.value })}>
+          <Select required aria-label="Subject" value={form.subject_id} onChange={(e) => setForm({ ...form, subject_id: e.target.value })}>
             <option value="">Subject</option>
             {subjects.data?.map((s) => (
               <option key={s.id} value={s.id}>
@@ -73,19 +73,24 @@ export default function AssignmentsPage() {
       {rows.isLoading ? (
         <Spinner />
       ) : rows.data?.length ? (
-        <Table head={['Faculty', 'Section', 'Subject', '']}>
+        <Table head={['Faculty', 'Section', 'Subject', '']} cols={[undefined, 'hidden sm:table-cell', 'hidden md:table-cell', 'w-px']} compact>
           {rows.data.map((r) => (
             <tr key={r.id}>
               <Td>
                 <div className="font-semibold">{r.faculty_name}</div>
                 <div className="font-mono text-xs text-muted">{r.faculty_username}</div>
+                {/* phones: section and subject under the name */}
+                <div className="mt-1 text-sm sm:hidden">{r.section_label}</div>
+                <div className="text-sm md:hidden">
+                  <span className="font-mono font-semibold">{r.subject_code}</span> {r.subject_name}
+                </div>
               </Td>
-              <Td>{r.section_label}</Td>
-              <Td>
+              <Td className="hidden sm:table-cell">{r.section_label}</Td>
+              <Td className="hidden md:table-cell">
                 <span className="font-mono font-semibold">{r.subject_code}</span> {r.subject_name}
               </Td>
               <Td className="text-right">
-                <Button variant="ghost" title="Remove" onClick={() => del.mutate(r.id)}>
+                <Button variant="ghost" title="Remove" aria-label={`Remove ${r.faculty_name}: ${r.section_label}, ${r.subject_code}`} onClick={() => del.mutate(r.id)}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </Td>

@@ -2,6 +2,23 @@
 
 The admin sets up departments, classes and accounts, imports the office sheets, and looks after sign-in problems. Server tasks (deploy, TLS, backups) are in the [runbook](https://github.com/ossc-dbit/openqz/blob/main/docs/runbook.md).
 
+## At a glance
+
+```mermaid
+flowchart TD
+    A([Start of term]) --> B[Import faculty]
+    B --> C[Import students]
+    C --> D[Import faculty-section-subject mapping]
+    D --> E[Download credential slips PDF]
+    E --> F[Print and hand to class teachers]
+    F --> G[Delete the PDF from the server]
+    G --> H[Everyone signs in and sets a password]
+    H --> I{During the term}
+    I --> J[Users: add, reset password,<br/>unlock, change email, disable]
+    I --> K[Sections, subjects, faculty mapping]
+    I --> L[Audit and integrity logs]
+```
+
 ## 1. First sign-in
 
 Use the admin email and temporary password from the server setup, then choose your own password. Every page is in the left menu.
@@ -39,6 +56,8 @@ Re-importing the same sheet is safe: existing people are updated, nobody is dupl
 | Subjects | **Subjects**. |
 | Who teaches what | **Faculty mapping**. Faculty only see and assign to sections mapped here. Map a teacher to sections of several branches (for example first-year maths for CSE and ECE) and they can pick any of them. |
 | Club accounts | **Users**, then **Add user**, role **Club organiser**. Use the club's shared email (for example `techclub@...`). |
+
+On a phone the lists stay narrow: a person's role and status show under their name, and department and last sign-in appear on wider screens.
 
 ### Club organisers
 

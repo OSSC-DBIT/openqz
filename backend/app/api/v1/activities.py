@@ -551,6 +551,25 @@ async def new_join_code(session: AsyncSession) -> str:
     )
 
 
+async def add_assigned_classes(
+    session: AsyncSession, act: Activity, section_ids: list[int]
+) -> None:
+    """Classes an activity is assigned to become classes it is for, so the editor, the library
+    filters and the branch shown on the activity match where it was actually given."""
+    new = set(section_ids) - set(act.section_ids)
+    if not new:
+        return
+    act.sections = [*act.sections, *(ActivitySection(section_id=x) for x in sorted(new))]
+    depts = set(
+        (
+            await session.scalars(
+                select(Section.department_id).where(Section.id.in_(act.section_ids))
+            )
+        ).all()
+    )
+    act.department_id = depts.pop() if len(depts) == 1 else None
+
+
 @router.post("/activities/{activity_id}/assign", response_model=AssignmentOut, status_code=201)
 async def assign(
     activity_id: uuid.UUID, body: AssignIn, request: Request, session: SessionDep, user: CreatorUser
@@ -590,6 +609,7 @@ async def assign(
         AssignmentTarget(student_id=s) for s in sorted(set(body.student_ids))
     ]
     session.add(a)
+    await add_assigned_classes(session, act, body.section_ids)
     audit.record(session, "activity_assigned", actor_id=user.id, target=str(act.id))
     await session.commit()
     fresh = await session.get(ActivityAssignment, a.id, populate_existing=True)

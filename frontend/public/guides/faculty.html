@@ -18,15 +18,39 @@
   th, td { border:1px solid var(--line); padding:6px 10px; text-align:left; vertical-align:top; }
   th { background:var(--card); }
   blockquote { margin:1rem 0; padding:.6rem 1rem; border-left:4px solid var(--brand); background:var(--card); border-radius:8px; }
+  figure.diagram { margin:1.25rem 0; padding:12px; background:var(--card); border:1px solid var(--line); border-radius:12px; overflow-x:auto; }
+  pre.mermaid { margin:0; text-align:center; background:none; }
 </style>
 </head>
 <body><main>
 <header><a href="/login">&larr; OpenQZ</a></header>
 <h1>OpenQZ faculty guide</h1>
 <p>Create quizzes, assignments, polls and flashcards for your classes, assign them, and see results and marks in one place.</p>
+<h2>At a glance</h2>
+<figure class="diagram"><pre class="mermaid">flowchart LR
+    A([Create]) --&gt; B[Pick the type&lt;br/&gt;quiz, assignment, poll, flashcards]
+    B --&gt; C[Pick classes&lt;br/&gt;branch, then semesters and sections]
+    C --&gt; D[Editor: add questions&lt;br/&gt;timer and marks per question]
+    D --&gt; E{Share how?}
+    E -- "Assign to classes" --&gt; F[Set window, rules,&lt;br/&gt;full screen, review]
+    E -- "Host a room" --&gt; G[Show the join code&lt;br/&gt;and QR in the lobby]
+    F --&gt; H[Students take it]
+    G --&gt; H
+    H --&gt; I[Report: marks obtained&lt;br/&gt;per student and question]
+    I --&gt; J[Mark written answers]
+    J --&gt; K[Release marks]
+    I --&gt; L[Unblock a student&lt;br/&gt;auto-submitted for leaving]
+    L --&gt; H
+    I --&gt; M[Export Excel or CSV]</pre></figure>
 <h2>1. Sign in</h2>
 <p>Sign in with your <strong>email</strong> and the temporary password from your slip, or with <strong>Continue with Google</strong> if your Google account uses the same email. Choose your own password on first sign-in.</p>
-<p>Your <strong>Home</strong> page shows the sections and subjects the admin has mapped to you, and your recent assignments. If a class is missing, ask the OpenQZ admin to add the mapping.</p>
+<p>Your <strong>Home</strong> page has:</p>
+<ul>
+<li>one-tap <strong>create</strong> tiles (Quiz, Assignment, Poll, Flashcards) that open straight at the title step;</li>
+<li>your numbers: classes you teach, activities assigned, how many are open now, and submissions so far;</li>
+<li><strong>Recently assigned</strong>, each with its classes, deadline (or join code for a room) and a submitted bar; tap one to open its report;</li>
+<li><strong>My classes</strong>: the sections and subjects the admin has mapped to you. If a class is missing, ask the OpenQZ admin to add the mapping.</li>
+</ul>
 <h2>2. Create an activity</h2>
 <p>Press <strong>Create</strong> (top of the menu on any page), or <strong>Library</strong>, then <strong>Create</strong>:</p>
 <table>
@@ -112,7 +136,7 @@
 <h2>4. Assign or host</h2>
 <p>Press <strong>Assign or host</strong> in the editor and choose how students get it:</p>
 <ul>
-<li><strong>Assign to classes</strong>: students of the selected sections see it on their home page. The activity&#39;s classes are already selected; add or remove sections as needed.</li>
+<li><strong>Assign to classes</strong>: students of the selected sections see it on their home page. The activity&#39;s classes are already selected; add or remove sections as needed. Sections you assign to are added to the activity&#39;s classes, so the editor and the library filters show them.</li>
 <li><strong>Host a room</strong>: OpenQZ makes a 6-digit <strong>join code</strong>. Any signed-in student can join with it, from any class or department (good for extra sessions, guest lectures and events). See section 5.</li>
 </ul>
 <table>
@@ -215,5 +239,8 @@
 <li>For a room, put the QR code on the projector and press <strong>Stop new joins</strong> once everyone is in.</li>
 </ul>
 
-</main></body>
+</main>
+<script src="/guides/vendor/mermaid.min.js"></script>
+<script src="/guides/diagrams.js"></script>
+</body>
 </html>

@@ -3,7 +3,7 @@ DEV = docker compose -f compose.yaml -f compose.dev.yaml
 PROD = docker compose -f compose.yaml -f compose.prod.yaml -p openqz-prod --env-file .env.prod
 STAGING = docker compose -f compose.yaml -f compose.prod.yaml -p openqz-staging --env-file .env.staging
 
-.PHONY: up down logs ps migrate revision test lint fmt admin seed e2e docs guides openapi prod-up prod-pull staging-up backup
+.PHONY: up down logs ps migrate revision test lint fmt admin seed e2e docs guides openapi prod-smoke prod-up prod-pull staging-up backup
 
 up:            ## start the dev stack (hot reload)
 	$(DEV) up -d --build
@@ -53,6 +53,9 @@ docs: guides openapi   ## regenerate every generated doc
 
 prod-pull:
 	$(PROD) pull
+
+prod-smoke:    ## production images + compose.prod.yaml on this machine, full browser suite against it
+	bash scripts/prod_smoke.sh
 
 prod-up:
 	$(PROD) up -d --remove-orphans

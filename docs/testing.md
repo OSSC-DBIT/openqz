@@ -4,10 +4,10 @@ OpenQZ is tested at five layers. CI runs all of them on every pull request; a re
 
 | Layer | Tool | Where | Count (2026-11-08) |
 | --- | --- | --- | --- |
-| Backend unit + API | pytest, httpx | `backend/tests/` | 80 tests, 90% line coverage (CI gate: 85%) |
+| Backend unit + API | pytest, httpx | `backend/tests/` | 83 tests, 90% line coverage (CI gate: 85%), about 3 minutes |
 | Frontend unit | Vitest, Testing Library, happy-dom | `frontend/src/test/` | 10 tests |
-| Browser journeys | Playwright (desktop Chrome + Pixel 7) | `frontend/e2e/` | 14 tests (9 journeys + 5 axe checks) x 2 devices = 28 runs |
-| Accessibility | axe-core in Playwright (WCAG 2.1 AA) | `frontend/e2e/a11y.spec.ts` | login, student home, join page, create dialog with class picker, faculty library |
+| Browser journeys | Playwright (desktop Chrome + Pixel 7) | `frontend/e2e/` | 18 tests (9 journeys + 6 axe checks + 3 dark-mode axe checks) x 2 devices, 3 guide tests x 2, and 3 screen-size tests (desktop project only): 48 runs, 45 run and 3 skipped by design. The password-reset journey skips locally without Mailpit but fails in CI. |
+| Accessibility | axe-core in Playwright (WCAG 2.1 AA) | `frontend/e2e/a11y.spec.ts` | login, student home, join page, create dialog with class picker, faculty library, faculty home (and its quick-create tile); in **dark mode** again: login, student home, join, faculty home, library, reports, an assignment report, the editor, and the admin dashboard, users, sections, imports and audit log |
 | Load | k6 | `tests/load/student-exam.js` | see [performance.md](performance.md) |
 | Security | OWASP ZAP baseline, pip-audit, pnpm audit | CI + `docs/reports/` | see [security.md](security.md) |
 
@@ -55,7 +55,33 @@ Browser journeys read `E2E_BASE_URL` (default `http://localhost:8088`), `E2E_ADM
 | `fullscreen.spec.ts` | leaving full screen gives a warning and hides the questions until the student presses Enter full screen |
 | `unblock.spec.ts` | student hits the warning limit, teacher unblocks with extra minutes from the report, the waiting student continues |
 | `password-reset.spec.ts` | forgot password email via Mailpit, reset, sign in, link is single use |
+| `responsive.spec.ts` | 17 screens (sign-in, every admin page, faculty home, library, reports, editor, report, student home, join, quiz player, review) at 320, 375, 768, 1024, 1366, 1920 and 2560 px: no page may be wider than the window; failures name the elements that stick out. On the admin pages and the Reports list, tables must also fit without scrolling inside their own box. The player is loaded once and resized, because reloads count as warnings. |
+| `guides.spec.ts` | the student, faculty and admin guides open without signing in, draw their Mermaid flow diagrams under the site CSP with no console errors, and do not scroll sideways |
 | `a11y.spec.ts` | no serious or critical WCAG 2.1 AA violations |
+
+## Walkthrough recordings
+
+`node scripts/record_walkthrough.mjs` drives the real UI and records one WebM clip per scene, with captions and a visible pointer, into `recordings/<date-time>/` (git-ignored), plus `index.html` to play them in order. Each run imports a new teacher and three students into a new CSE Sem 5 section, so it can be repeated. Scenes: admin imports, faculty builds and assigns, student takes the quiz on a phone, marking and releasing, student review, a live join-code room (teacher and student recorded side by side), admin logs. Full screen is simulated in the recording browser (real full screen shrinks the emulated phone screen in the video). The demo users it creates stay in the database.
+
+**One narrated video.** Three more steps turn the clips into a single film with title cards, a voice-over and background music:
+
+```bash
+pip install edge-tts
+python scripts/walkthrough_voice_online.py recordings/<date-time>     # realistic online voice (Microsoft Edge neural, free)
+node scripts/make_walkthrough_video.mjs recordings/<date-time>        # -> OpenQZ-walkthrough.mp4, 1920x1080
+```
+
+The narration lives in `scripts/walkthrough_narration.json` (one text per scene, plus the voice). The default voice is `en-IN-NeerjaExpressiveNeural`; pass another as the second argument (`edge-tts --list-voices`). The text is sent to Microsoft's speech service. Offline alternative: `powershell -File scripts/walkthrough_voice.ps1 -OutDir recordings/<date-time>` (Windows voices, more robotic). The builder plays the clips in the browser engine onto a canvas, adds the voice and an original generated music track that dips under the voice, and records it in real time (about as long as the video), so no video editor is needed.
+
+```mermaid
+flowchart LR
+    A["Admin imports<br/>faculty, students, mapping"] --> B["Faculty: first sign-in,<br/>build and assign a quiz"]
+    B --> C["Student (phone): take it"]
+    C --> D["Faculty: mark, release, export"]
+    D --> E["Student: marks and review"]
+    E --> F["Room: host shows code,<br/>student joins live"]
+    F --> G["Admin: integrity and audit logs"]
+```
 
 ## Conventions
 
