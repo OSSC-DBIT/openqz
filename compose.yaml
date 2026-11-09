@@ -27,7 +27,9 @@ services:
       - pgdata:/var/lib/postgresql/data
       - ./deploy/db/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      # Over TCP: on the very first start the image runs a temporary server on the Unix socket only
+      # (initdb and init scripts), which a socket check reports as ready too early.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 20
