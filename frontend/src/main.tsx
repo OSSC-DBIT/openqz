@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BarChart3, BookOpen, ClipboardList, History, KeyRound, LayoutDashboard, Layers, Library, ShieldAlert, Upload, Users } from 'lucide-react';
+import { BarChart3, BookOpen, ClipboardList, History, KeyRound, LayoutDashboard, Layers, Library, Settings, ShieldAlert, Upload, Users } from 'lucide-react';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createBrowserRouter, Navigate, Outlet, RouterProvider } from 'react-router';
@@ -18,6 +18,7 @@ import StudentHome from './pages/student/StudentHome';
 import PlayerPage from './student/PlayerPage';
 import JoinPage from './student/JoinPage';
 import ReviewPage from './student/ReviewPage';
+import SettingsPage from './pages/SettingsPage';
 
 /**
  * Staff screens load on demand (route-level code splitting), so students
@@ -39,6 +40,7 @@ const adminNav: NavItem[] = [
   { to: '/admin/integrity', label: 'Integrity log', icon: ShieldAlert },
   { to: '/admin/audit', label: 'Audit log', icon: History },
   { to: '/account/password', label: 'Password', icon: KeyRound },
+  { to: '/account/settings', label: 'Settings', icon: Settings },
 ];
 const facultyNav: NavItem[] = [
   { to: '/faculty', label: 'Home', icon: LayoutDashboard, end: true },
@@ -46,12 +48,14 @@ const facultyNav: NavItem[] = [
   { to: '/faculty/reports', label: 'Reports', icon: BarChart3 },
   { to: '/faculty/integrity', label: 'Integrity log', icon: ShieldAlert },
   { to: '/account/password', label: 'Password', icon: KeyRound },
+  { to: '/account/settings', label: 'Settings', icon: Settings },
 ];
 const clubNav: NavItem[] = [
   { to: '/faculty', label: 'Home', icon: LayoutDashboard, end: true },
   { to: '/faculty/library', label: 'Library', icon: Library },
   { to: '/faculty/reports', label: 'Rooms & reports', icon: BarChart3 },
   { to: '/account/password', label: 'Password', icon: KeyRound },
+  { to: '/account/settings', label: 'Settings', icon: Settings },
 ];
 
 /** Admins reach the faculty tools with their own navigation. */
@@ -68,6 +72,7 @@ const router = createBrowserRouter([
   { path: '/forgot-password', element: <ForgotPasswordPage /> },
   { path: '/reset-password', element: <ResetPasswordPage /> },
   { path: '/account/password', element: <ChangePasswordPage /> },
+  { path: '/account/settings', element: <RequireRole roles={['admin', 'faculty', 'club', 'student']}><SettingsPage /></RequireRole> },
   {
     path: '/admin',
     element: (
@@ -85,6 +90,7 @@ const router = createBrowserRouter([
       { path: 'imports/:id', lazy: page(() => import('./pages/admin/ImportDetailPage')) },
       { path: 'integrity', lazy: page(() => import('./pages/admin/IntegrityPage')) },
       { path: 'audit', lazy: page(() => import('./pages/admin/AuditPage')) },
+      { path: 'settings', lazy: page(() => import('./pages/SettingsPage')) },
     ],
   },
   {
@@ -100,6 +106,7 @@ const router = createBrowserRouter([
       { path: 'reports', lazy: page(() => import('./pages/faculty/ReportsListPage')) },
       { path: 'reports/:id', lazy: page(() => import('./pages/faculty/ReportPage')) },
       { path: 'integrity', lazy: page(() => import('./pages/admin/IntegrityPage')) },
+      { path: 'settings', lazy: page(() => import('./pages/SettingsPage')) },
     ],
   },
   {
@@ -159,6 +166,18 @@ const queryClient = new QueryClient({
       retry: (count, err) => !(err instanceof ApiError && err.status < 500) && count < 2,
     },
   },
+});
+
+const THEME_KEY = 'openqz-theme';
+function applyStoredTheme() {
+  const savedTheme = window.localStorage.getItem(THEME_KEY);
+  document.documentElement.dataset.theme = savedTheme === 'light' || savedTheme === 'dark'
+    ? savedTheme
+    : window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+applyStoredTheme();
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+  if (!window.localStorage.getItem(THEME_KEY)) applyStoredTheme();
 });
 
 createRoot(document.getElementById('root')!).render(

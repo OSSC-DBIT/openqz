@@ -92,7 +92,7 @@ export default function LoginPage() {
               />
             </Field>
             <Field label="Password">
-              <Input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+              <Input type="password" aria-label="Password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
             </Field>
             <ErrorText error={error} />
             <Button type="submit" loading={busy} className="w-full">

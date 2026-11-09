@@ -115,7 +115,8 @@ function mockApi(route: Route) {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
     const hit = route(url, init);
     if (hit) return hit;
-    if (url.endsWith('/auth/config')) return json({ google_client_id: null, password_login: true });
+    if (url.endsWith('/auth/config'))
+      return json({ google_client_id: null, password_login: true, password_reset_email: false, dev_auto_login: false });
     return json({ detail: 'no' }, 401);
   });
 }
@@ -134,11 +135,23 @@ describe('routing and auth', () => {
     renderApp('/login');
     const user = userEvent.setup();
     await user.type(await screen.findByLabelText('Email'), 'Asha@Example.com ');
-    await user.type(screen.getByLabelText('Password'), 'Secret123');
+    await user.type(screen.getByLabelText('Password', { selector: 'input' }), 'Secret123');
     await user.click(screen.getByRole('button', { name: 'Sign in' }));
     expect(await screen.findByText('student home')).toBeInTheDocument();
     const loginCall = fetchMock.mock.calls.find(([u]) => String(u).endsWith('/auth/login'))!;
     expect(JSON.parse(String(loginCall[1]!.body))).toEqual({ email: 'Asha@Example.com', password: 'Secret123' });
+  });
+
+  it('signs in automatically when the API enables dev auto login', async () => {
+    const fetchMock = mockApi((url) => {
+      if (url.endsWith('/auth/config'))
+        return json({ google_client_id: null, password_login: true, password_reset_email: false, dev_auto_login: true });
+      if (url.endsWith('/auth/dev-login')) return token({ role: 'admin' });
+      return undefined;
+    });
+    renderApp('/admin');
+    expect(await screen.findByText('admin home')).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([u]) => String(u).endsWith('/auth/dev-login'))).toBe(true);
   });
 
   it('hides the Google button when not configured', async () => {
@@ -150,7 +163,14 @@ describe('routing and auth', () => {
 
   it('shows the Google button when a client id is configured', async () => {
     mockApi((url) =>
-      url.endsWith('/auth/config') ? json({ google_client_id: 'abc.apps.googleusercontent.com', password_login: true }) : undefined,
+      url.endsWith('/auth/config')
+        ? json({
+            google_client_id: 'abc.apps.googleusercontent.com',
+            password_login: true,
+            password_reset_email: false,
+            dev_auto_login: false,
+          })
+        : undefined,
     );
     renderApp('/login');
     expect(await screen.findByLabelText('Continue with Google')).toBeInTheDocument();

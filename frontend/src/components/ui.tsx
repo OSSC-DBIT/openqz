@@ -1,4 +1,5 @@
-import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from 'react';
+import { useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ');
 
@@ -33,15 +34,37 @@ export function Button({
   );
 }
 
-export function Input({ className, ...rest }: InputHTMLAttributes<HTMLInputElement>) {
-  return (
+export function Input({ className, type, id, 'aria-label': ariaLabel, ...rest }: InputHTMLAttributes<HTMLInputElement>) {
+  const [visible, setVisible] = useState(false);
+  const password = type === 'password';
+  const input = (
     <input
+      type={password && visible ? 'text' : type}
+      id={id}
+      aria-label={ariaLabel}
       className={cx(
         'w-full rounded-xl border border-line bg-card px-3.5 py-2.5 text-sm text-ink outline-none placeholder:text-muted focus:border-brand-500 focus:ring-2 focus:ring-brand-200',
+        password && 'pr-11',
         className,
       )}
       {...rest}
     />
+  );
+  if (!password) return input;
+  return (
+    <div className="relative">
+      {input}
+      <button
+        type="button"
+        aria-label={visible ? `Hide ${ariaLabel ?? 'password'}` : `Show ${ariaLabel ?? 'password'}`}
+        aria-pressed={visible}
+        onMouseDown={(event) => event.preventDefault()}
+        onClick={() => setVisible((shown) => !shown)}
+        className="absolute inset-y-0 right-1 flex w-10 items-center justify-center rounded-lg text-muted hover:text-ink focus-visible:outline-2 focus-visible:outline-brand-600"
+      >
+        {visible ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
+      </button>
+    </div>
   );
 }
 

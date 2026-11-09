@@ -1,4 +1,4 @@
-import { ChevronDown, Home, KeyRound, LogOut } from 'lucide-react';
+import { ChevronDown, Home, KeyRound, LogOut, Settings } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router';
 import { useAuth } from '../auth/AuthProvider';
@@ -91,6 +91,9 @@ export function StudentShell() {
                 </div>
                 <Link role="menuitem" to="/account/password" onClick={() => setMenu(false)} className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold hover:bg-brand-50">
                   <KeyRound className="h-4 w-4" aria-hidden /> Change password
+                </Link>
+                <Link role="menuitem" to="/account/settings" onClick={() => setMenu(false)} className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold hover:bg-brand-50">
+                  <Settings className="h-4 w-4" aria-hidden /> Settings
                 </Link>
                 <button role="menuitem" onClick={() => void logout()} className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-semibold hover:bg-brand-50">
                   <LogOut className="h-4 w-4" aria-hidden /> Log out
