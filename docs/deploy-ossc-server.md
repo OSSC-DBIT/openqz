@@ -6,7 +6,7 @@ OpenQZ runs on the OSSC server (Dell Precision 7820, Ubuntu 24.04) next to PCMS 
 flowchart LR
     subgraph GitHub
         PR["pull request"] --> CI["CI<br/>backend, frontend, browser tests"]
-        PUSH["push to dev / main"] --> CI2["CI"] --> D["Deploy job"]
+        PUSH["push to dev / main"] --> CI2["CI<br/>backend, frontend, images"] --> D["Deploy job"]
     end
     subgraph Server["OSSC server (no inbound ports)"]
         R["runner gh-runner<br/>label openqz"] --> S["deploy/server/deploy.sh"]
@@ -96,6 +96,8 @@ Copying the folder is not a backup of a running database; use `backups/` (or `su
 | `openqz` | `webuildnow.in` | HTTP | `localhost:8093` |
 
 Plain HTTP on that hop is fine: TLS ends at Cloudflare, and nginx takes the visitor's address from `CF-Connecting-IP` (sign-in rate limits are per visitor, not per tunnel) and the `https` scheme from `X-Forwarded-Proto`. Recommended in Cloudflare: SSL/TLS mode **Full**, **Always Use HTTPS** on. Do not turn on Rocket Loader or HTML minification (they break the Content-Security-Policy).
+
+Browser tests (`e2e`) run only on pull requests (and by hand: Actions, CI, Run workflow); a push to `dev` / `main` reruns backend and frontend checks, then deploys.
 
 **d. GitHub.**
 - Create the `dev` branch from `main` (staging deploys from it).

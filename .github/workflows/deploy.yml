@@ -3,8 +3,8 @@ name: Deploy
 # Continuous deployment to the OSSC server, the same way as PCMS and DBIT PageCraft:
 #   push to dev  -> CI -> staging     (https://openqz-staging.webuildnow.in)
 #   push to main -> CI -> production  (https://openqz.webuildnow.in)
-# A deploy runs only after the whole CI (backend, frontend, browser tests) passes on
-# GitHub-hosted runners. The deploy itself runs on the self-hosted runner on the server
+# A deploy runs only after CI (backend, frontend, images) passes on GitHub-hosted runners;
+# the browser tests already passed on the pull request that brought the change in. The deploy itself runs on the self-hosted runner on the server
 # (label "openqz"), which connects out to GitHub, so nothing on the server is exposed and
 # no server secret is stored in GitHub. See docs/deploy-ossc-server.md.
 
