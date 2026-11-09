@@ -24,7 +24,10 @@ test('forgot password sends a working one-time link', async ({ page, request }) 
   await page.goto('/login');
   await page.getByRole('link', { name: 'Forgot your password?' }).click();
   await page.getByLabel('Email').fill(email);
+  const forgot = page.waitForResponse((r) => r.url().includes('/auth/forgot'));
   await page.getByRole('button', { name: 'Send reset link' }).click();
+  const res = await forgot;
+  console.log('FORGOT RESPONSE', res.status(), await res.text());
   await expect(page.getByRole('status')).toContainText('reset link is on its way');
 
   let link = '';

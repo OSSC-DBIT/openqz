@@ -109,7 +109,7 @@ jobs:
           pnpm exec playwright install --with-deps chromium
           pnpm test:e2e
       - if: failure()
-        run: docker compose logs --tail 200
+        run: docker compose -f compose.yaml -f deploy/ci/compose.mailpit.yaml logs --tail=200 api worker
       - if: failure()
         uses: actions/upload-artifact@v4
         with:
