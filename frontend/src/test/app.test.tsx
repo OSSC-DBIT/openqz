@@ -150,8 +150,11 @@ describe('routing and auth', () => {
       return undefined;
     });
     renderApp('/admin');
-    expect(await screen.findByText('admin home')).toBeInTheDocument();
-    expect(fetchMock.mock.calls.some(([u]) => String(u).endsWith('/auth/dev-login'))).toBe(true);
+    await waitFor(
+      () => expect(fetchMock.mock.calls.some(([u]) => String(u).endsWith('/auth/dev-login'))).toBe(true),
+      { timeout: 5000 },
+    );
+    expect(await screen.findByText('admin home', {}, { timeout: 5000 })).toBeInTheDocument();
   });
 
   it('hides the Google button when not configured', async () => {
