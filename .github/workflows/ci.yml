@@ -1,10 +1,16 @@
 name: CI
 
 on:
+  # Pushes to dev and main run CI through deploy.yml, which deploys only after it passes,
+  # so it is not triggered twice for them.
   push:
-    branches: [main]
     tags: ['v*']
   pull_request:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -87,6 +93,9 @@ jobs:
         run: pnpm audit --prod
 
   e2e:
+    # Browser tests run on pull requests (required to merge into dev and main) and by hand,
+    # not again when deploy.yml runs CI for the merged commit.
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     needs: [backend, frontend]
     runs-on: ubuntu-24.04
     steps:

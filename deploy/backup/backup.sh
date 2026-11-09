@@ -8,6 +8,9 @@ PROJECT="${1:-openqz-prod}"
 DEST="${2:-/backup/openqz}"
 KEEP_DAYS="${KEEP_DAYS:-30}"
 STAMP="$(date +%Y%m%d-%H%M%S)"
+# Group-writable: on the OSSC server the folder is shared by the deploy runner and the nightly cron
+# (setgid group openqz), so either may add and prune backups.
+umask 002
 DIR="$DEST/$PROJECT/$STAMP"
 mkdir -p "$DIR"
 
@@ -16,15 +19,28 @@ echo "[$(date -Is)] backing up $PROJECT to $DIR"
 # Database: custom format, compressed, restorable with pg_restore.
 docker exec "${PROJECT}-db-1" sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > "$DIR/db.dump"
 
-# Media volume (uploads, import sheets).
-docker run --rm -v "${PROJECT}_media:/data/media:ro" -v "$DIR:/out" alpine:3.20 \
+# Where this project's /data/media lives: the host folder (MEDIA_HOST_DIR) or the Docker volume.
+media_src() {
+  local id dest src=""
+  id="$(docker ps -aq --filter "label=com.docker.compose.project=$PROJECT" --filter "label=com.docker.compose.service=api" | head -n1)"
+  if [ -n "$id" ]; then
+    # The app's media path (MEDIA_DIR in its environment, /data/media by default).
+    dest="$(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$id" | sed -n 's/^MEDIA_DIR=//p' | tail -n1)"
+    src="$(docker inspect -f "{{range .Mounts}}{{if eq .Destination \"${dest:-/data/media}\"}}{{if eq .Type \"bind\"}}{{.Source}}{{else}}{{.Name}}{{end}}{{end}}{{end}}" "$id")"
+  fi
+  echo "${src:-${PROJECT}_media}"
+}
+
+# Media (uploads, import sheets): the host folder or the volume, whichever the api uses.
+docker run --rm -v "$(media_src):/data/media:ro" -v "$DIR:/out" alpine:3.20 \
   tar -czf /out/media.tar.gz -C /data media
 
-sha256sum "$DIR"/* > "$DIR/SHA256SUMS"
+# Relative names, so a copy can be checked anywhere: cd <backup> && sha256sum -c SHA256SUMS
+(cd "$DIR" && sha256sum db.dump media.tar.gz > SHA256SUMS)
 echo "[$(date -Is)] done: $(du -sh "$DIR" | cut -f1)"
 
 # Retention
-find "$DEST/$PROJECT" -mindepth 1 -maxdepth 1 -type d -mtime +"$KEEP_DAYS" -exec rm -rf {} +
+find "$DEST/$PROJECT" -mindepth 1 -maxdepth 1 -type d -mtime +"$KEEP_DAYS" -exec rm -rf {} + 2>/dev/null || true
 
 # Optional second copy to the external drive.
 if [ -n "${EXTERNAL_COPY:-}" ] && [ -d "$EXTERNAL_COPY" ]; then

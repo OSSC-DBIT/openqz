@@ -2,13 +2,14 @@
 
 OpenQZ sends three kinds of email: password reset links (single use, 30 minutes), "new activity assigned" and "marks released". The worker sends them. If `SMTP_HOST` is blank, nothing is sent and "Forgot your password?" is hidden.
 
-There are two ways to run email locally, and one for servers.
+There are two ways to run email locally, and two for servers.
 
 | Where | Mail goes to | Files |
 | --- | --- | --- |
 | Local, default | **Mailpit**, a fake inbox at http://localhost:8025. Nothing leaves your machine. | `compose.yaml` + `compose.dev.yaml` |
 | Local, real mail | The real mail server, through a Cloudflare tunnel | `compose.yaml` + `compose.dev.yaml` + `compose.mail.yaml` |
-| Staging / production | The mail server directly (or the college relay) | `compose.yaml` + `compose.prod.yaml`, see the [runbook](runbook.md#email-password-reset-and-notifications) |
+| Staging / production, mail server elsewhere | The mail server or college relay, by its public name | `compose.yaml` + `compose.prod.yaml`, see the [runbook](runbook.md#email-password-reset-and-notifications) |
+| Staging / production, mail server **on the same machine** | The local mail server on port 587 | `compose.yaml` + `compose.prod.yaml` + `compose.mail.yaml` (`make prod-up LOCAL_MAIL=1`), see [section 3](#3-server-with-its-own-mail-server-port-587) |
 
 ## 1. Local default: Mailpit
 
@@ -121,6 +122,46 @@ EOF
 
 `sent: True` means the server accepted it. Check the inbox and the spam folder. You can also test the real flow: sign out, press **Forgot your password?** and enter the email of a user you own.
 
+## 3. Server with its own mail server (port 587)
+
+When OpenQZ runs on the same machine as the mail server (for example Postfix for `mail.webuildnow.in`), no tunnel is needed: the containers talk to the host's port 587.
+
+```mermaid
+flowchart LR
+    W["worker container"] -- "mail.webuildnow.in:587<br/>(extra_hosts: host-gateway)" --> H["mail server on the host<br/>port 587, STARTTLS"]
+    H --> I["Gmail, Outlook, ..."]
+```
+
+Why not just use the public name? Inside Docker, `mail.webuildnow.in` resolves to the server's public IP, and many servers cannot connect back to their own public IP (no hairpin NAT), so the mail times out. `compose.mail.yaml` maps the name to the host instead, and TLS still checks the real certificate.
+
+1. In `.env.prod` (and `.env.staging`):
+
+   ```env
+   SMTP_HOST=mail.webuildnow.in
+   SMTP_PORT=587
+   SMTP_USER=dbit-oscc
+   SMTP_PASSWORD=<the mailbox password>
+   SMTP_FROM=OpenQZ <dbit-oscc@webuildnow.in>
+   SMTP_STARTTLS=true
+   SMTP_SSL=false
+   ```
+
+2. Start with the mail override: `make prod-up LOCAL_MAIL=1` (and `make staging-up LOCAL_MAIL=1`). Use it on every `up`, or the containers go back to the public name.
+3. On the host, the mail server must accept connections from the Docker network, not only from `127.0.0.1`:
+   - Postfix: port 587 (`submission` in `master.cf`) listens on all interfaces when `inet_interfaces = all` (the usual setting for a public mail server). Check with `ss -ltnp | grep :587`: it must show `0.0.0.0:587` or the Docker bridge address, not `127.0.0.1:587`.
+   - Firewall: if `ufw` is on and 587 is not open, allow the Docker networks: `sudo ufw allow from 172.16.0.0/12 to any port 587 proto tcp`.
+4. Test from inside the stack (connects, checks TLS and logs in, sends nothing):
+
+   ```bash
+   docker compose -p openqz-prod exec -T worker python -c "
+   import smtplib, ssl; from app.core.config import get_settings as g; s = g()
+   c = smtplib.SMTP(s.smtp_host, s.smtp_port, timeout=10); c.starttls(context=ssl.create_default_context())
+   print(c.login(s.smtp_user, s.smtp_password)); c.quit()"
+   ```
+
+   `(235, ...)` means it works. Then request a password reset for your own account and check it arrives.
+5. Sender rule (SPF) still applies: send from `@webuildnow.in`, not `@dbit.co.in`.
+
 ## Troubleshooting
 
 | Error | Cause and fix |
@@ -132,6 +173,7 @@ EOF
 | `535 5.7.8 authentication failed` | Wrong `SMTP_USER` or `SMTP_PASSWORD`. The user is the mailbox login (for example `dbit-oscc`), not a placeholder. |
 | `sent: True` (or `queued as ...`) but nothing arrives | Almost always the sender domain. With `SMTP_FROM` on `@dbit.co.in`, SPF fails (only Microsoft 365 may send for it) and Gmail drops the mail. Use a `@webuildnow.in` sender, or get `dbit.co.in`'s SPF updated. See step 3. Also check spam. |
 | Changed `.env` but nothing changed | Containers read `.env` only when created. Run the `up -d` command again. |
+| Production: `Timed out` or `Connection refused` to `mail.webuildnow.in:587` | The mail server is on the same machine: start with `LOCAL_MAIL=1` (section 3), and check that 587 listens on more than `127.0.0.1` and the firewall allows the Docker networks. |
 | Emails in production fail | `docker compose -p openqz-prod logs worker` shows each failure with the reason. |
 
 ## Rules

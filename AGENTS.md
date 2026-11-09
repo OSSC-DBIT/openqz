@@ -14,6 +14,7 @@ Roles: `admin`, `faculty`, `student`, `club` (club organisers host rooms only).
 | --- | --- |
 | Marks, not points | Every user-facing text says **marks** / **marks obtained**. Never "points" or "score" in the UI, emails, exports or docs. (`score` is fine as an internal field name.) |
 | One attempt per student | No retakes and no "Try again". `start` refuses a second attempt (`already_taken`). A teacher reopens a violations auto-submit with **Unblock**. `max_attempts` exists only for the load-test seed. |
+| Live games | Host-paced: the host screen shows the question, phones only the options (`/live`, `/live/play/:id`, `/live/host/:id`). Never send the question text or the key to phones before the reveal. Host chooses scoring (`marks_speed`, `marks`, `fun`) and `allow_guests`; guests use the `X-Live-Player` token, never an account. |
 | Classes | Teachers pick **Branch, then semesters and sections**, only from sections mapped to them (`faculty_assignments`). Picks may span branches. Clubs pick no classes. |
 | Full screen | Assignments have `require_fullscreen` (default on). The player hides questions until full screen, except where the browser has no full screen (iPhone). Leaving full screen is a warning. |
 | Integrity | Tab or app switch, Back, reload and full-screen exit are counted on the server; auto-submit at the assignment's limit. Browsers cannot block screenshots; do not add watermark or "screenshot blocking" code (decided against). |
@@ -38,7 +39,7 @@ frontend/           React 19 + TypeScript + Vite + Tailwind 4 + TanStack Query +
   src/components/   ui.tsx (Button, Modal, ...), pieces.tsx (ClassPicker, KindCover, TypePicker), quiz.tsx
   e2e/              Playwright specs + helpers.ts (seedClass, login)
 docs/               guides/, api/openapi.json, architecture, runbook, security, testing, performance, backlog
-deploy/             nginx, TLS edge, backup scripts
+deploy/             nginx, TLS edge, backup scripts; server/ = OSSC server deploy (deploy.sh, setup-environment.sh, install-runner.sh, rollback.sh)
 ```
 
 Staff screens are lazy-loaded routes in `src/main.tsx`; the activity editor is a full-screen route outside the sidebar shell.
@@ -119,7 +120,10 @@ cd frontend && pnpm guides
 - **Tables on phones:** list tables use `<Table cols={[...]} compact>` with `hidden sm:table-cell` (and the same class on the `<Td>`) to drop secondary columns, and repeat that detail under the main cell with `sm:hidden`. `e2e/responsive.spec.ts` (`tablesFit`) fails if such a table scrolls. Only true data grids (import preview, report participants) may scroll inside their box.
 - **`.env` changes** reach containers only when they are recreated: `up -d --force-recreate api worker`.
 - **Dev email:** `compose.dev.yaml` sends all mail to Mailpit (http://localhost:8025) and blanks the SMTP login, whatever `.env` says. Real mail needs the Cloudflare tunnel plus `-f compose.mail.yaml` ([docs/email.md](docs/email.md)). Keep `SMTP_HOST=mail.webuildnow.in` (TLS certificate name), and use a `@webuildnow.in` sender: `dbit.co.in` SPF allows only Microsoft 365, so its mail is accepted and then dropped. Run Playwright in Mailpit mode only.
-- **Client address:** only `X-Real-IP` (set by our edge) is trusted for rate limits; never read `X-Forwarded-For`.
+- **Mail server on the production machine:** start with `make prod-up LOCAL_MAIL=1` (adds `compose.mail.yaml`, `SMTP_PORT=587`); without it containers use the public IP, which often times out (no hairpin NAT). [docs/email.md](docs/email.md) section 3.
+- **Client address:** the web nginx (`frontend/nginx.conf`) takes it from `CF-Connecting-IP` (Cloudflare tunnel), else `X-Real-IP` (our edge, which clears `CF-Connecting-IP`), and passes it to the API as `X-Real-IP`; the API trusts only that. Never read `X-Forwarded-For`.
+- **Data on the server** lives in `/srv/server-data/<env>/openqz/` (`db/` = `DB_HOST_DIR`, `redis/` = `REDIS_HOST_DIR`, `media/` = `MEDIA_HOST_DIR` owner uid 1000), not Docker volumes; `backup.sh` / `restore.sh` find the right place from the api container's mount.
+- **Deploys (OSSC server):** push `dev` = staging (`127.0.0.1:8092`), `main` = production (`127.0.0.1:8093`), through `.github/workflows/deploy.yml` and the self-hosted runner (label `openqz`). Never deploy by hand. `/api/v1/health` must report `version` (= `APP_VERSION`): the deploy checks it. Guide: [docs/deploy-ossc-server.md](docs/deploy-ossc-server.md).
 - **Run Playwright from `frontend/`**, not the repo root (it writes `test-results/` where it runs).
 
 ## Commits

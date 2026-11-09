@@ -10,6 +10,9 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     environment: str = "development"
+    # Release tag set by deploy/server/deploy.sh (e.g. "production-1a2b3c4d5e6f"); the
+    # health check reports it so a deploy can confirm the new release is the one serving.
+    app_version: str = "dev"
     debug: bool = False
     public_url: str = "http://localhost"
 

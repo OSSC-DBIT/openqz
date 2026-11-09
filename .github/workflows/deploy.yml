@@ -1,0 +1,82 @@
+name: Deploy
+
+# Continuous deployment to the OSSC server, the same way as PCMS and DBIT PageCraft:
+#   push to dev  -> CI -> staging     (https://openqz-staging.webuildnow.in)
+#   push to main -> CI -> production  (https://openqz.webuildnow.in)
+# A deploy runs only after CI (backend, frontend, images) passes on GitHub-hosted runners;
+# the browser tests already passed on the pull request that brought the change in. The deploy itself runs on the self-hosted runner on the server
+# (label "openqz"), which connects out to GitHub, so nothing on the server is exposed and
+# no server secret is stored in GitHub. See docs/deploy-ossc-server.md.
+
+on:
+  push:
+    branches: [dev, main]
+  # Redeploy by hand (Actions > Deploy > Run workflow). Production only from main.
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Where to deploy the selected branch
+        type: choice
+        options: [staging, production]
+        default: staging
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: CI
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+      packages: write
+
+  target:
+    name: Pick the environment
+    runs-on: ubuntu-24.04
+    outputs:
+      environment: ${{ steps.pick.outputs.environment }}
+      url: ${{ steps.pick.outputs.url }}
+    steps:
+      - id: pick
+        env:
+          REF: ${{ github.ref }}
+          EVENT: ${{ github.event_name }}
+          WANTED: ${{ inputs.environment }}
+        run: |
+          if [ "$EVENT" = workflow_dispatch ]; then env="$WANTED"
+          elif [ "$REF" = refs/heads/main ]; then env=production
+          elif [ "$REF" = refs/heads/dev ]; then env=staging
+          else echo "::error::no environment for $REF"; exit 1; fi
+          if [ "$env" = production ] && [ "$REF" != refs/heads/main ]; then
+            echo "::error::production deploys only from main (this run is on $REF)"; exit 1
+          fi
+          case "$env" in
+            production) url=https://openqz.webuildnow.in ;;
+            *)          url=https://openqz-staging.webuildnow.in ;;
+          esac
+          echo "environment=$env" >> "$GITHUB_OUTPUT"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Deploying $REF to $env"
+
+  deploy:
+    name: Deploy to ${{ needs.target.outputs.environment }}
+    needs: [ci, target]
+    # The runner registered on the OSSC server with the label "openqz".
+    runs-on: [self-hosted, linux, openqz]
+    timeout-minutes: 45
+    # GitHub Environment: deployment history; "Required reviewers" on production makes a
+    # push to main wait for approval before the runner starts.
+    environment:
+      name: ${{ needs.target.outputs.environment }}
+      url: ${{ needs.target.outputs.url }}
+    # One deploy per environment at a time; a running deploy is never cancelled halfway.
+    concurrency:
+      group: deploy-${{ needs.target.outputs.environment }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          clean: true
+      - name: Deploy
+        run: bash deploy/server/deploy.sh "${{ needs.target.outputs.environment }}" "$GITHUB_SHA"

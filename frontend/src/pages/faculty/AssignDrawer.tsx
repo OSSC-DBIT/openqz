@@ -1,14 +1,16 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { DoorOpen, Users } from 'lucide-react';
+import { DoorOpen, Radio, Users } from 'lucide-react';
 import { useState } from 'react';
+import { useNavigate } from 'react-router';
 import { api } from '../../api/client';
 import type { Activity, AssignmentInfo, StudentBrief } from '../../api/types';
 import { ClassPicker } from '../../components/pieces';
 import { Button, ErrorText, Field, Input, Modal, Select, cx } from '../../components/ui';
 import { fromLocalInput, toLocalInput } from '../../components/quiz';
 import { useClassOptions } from './LibraryPage';
+import { SCORING_LABEL, type HostView, type LiveScoring } from '../../live/api';
 
-/** "Assign" dialog: to classes, or as a room anyone can join with a code. */
+/** "Assign" dialog: to classes, as a room anyone can join with a code, or as a live (host-paced) game. */
 export function AssignDrawer({
   activity,
   open,
@@ -22,8 +24,17 @@ export function AssignDrawer({
 }) {
   const classes = useClassOptions(open);
   const canUseSections = classes.data?.can_use_sections !== false;
-  const [mode, setMode] = useState<'classes' | 'room'>('classes');
-  const room = mode === 'room' || !canUseSections;
+  const [mode, setMode] = useState<'classes' | 'room' | 'live'>('classes');
+  const live = mode === 'live';
+  const room = !live && (mode === 'room' || !canUseSections);
+  const liveAllowed = activity.kind === 'quiz' || activity.kind === 'poll';
+  const [scoring, setScoring] = useState<LiveScoring>('marks_speed');
+  const [guests, setGuests] = useState(false);
+  const nav = useNavigate();
+  const startLive = useMutation({
+    mutationFn: () => api<HostView>('/live/games', { method: 'POST', json: { activity_id: activity.id, scoring, allow_guests: guests } }),
+    onSuccess: (g) => nav(`/live/host/${g.id}`),
+  });
   const graded = activity.kind === 'quiz' || activity.kind === 'assignment';
   // Pre-select the classes the activity was created for.
   const [secIds, setSecIds] = useState<number[]>(activity.section_ids);
@@ -87,21 +98,24 @@ export function AssignDrawer({
   return (
     <Modal open={open} onClose={onClose} title={`Share "${activity.title}"`}>
       <div className="max-h-[70vh] space-y-5 overflow-y-auto pr-1">
-        {canUseSections && (
-          <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="How to share">
+        {(canUseSections || liveAllowed) && (
+          <div className={cx('grid gap-2', canUseSections && liveAllowed ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-2')} role="radiogroup" aria-label="How to share">
             {(
               [
                 ['classes', Users, 'Assign to classes', 'Students of the chosen sections see it in Pending'],
-                ['room', DoorOpen, 'Host a room', 'Anyone with the 6-digit join code can take it'],
+                ['room', DoorOpen, 'Host a room', 'Anyone with the 6-digit join code takes it at their own pace'],
+                ['live', Radio, 'Live game', 'You show each question on the big screen; phones show only the answers'],
               ] as const
-            ).map(([m, Icon, label, help]) => (
+            )
+              .filter(([m]) => (m !== 'classes' || canUseSections) && (m !== 'live' || liveAllowed))
+              .map(([m, Icon, label, help]) => (
               <button
                 key={m}
                 type="button"
                 role="radio"
-                aria-checked={mode === m}
+                aria-checked={mode === m || (m === 'room' && room && mode !== 'room')}
                 onClick={() => setMode(m)}
-                className={cx('rounded-2xl border p-3 text-left', mode === m ? 'border-brand-600 bg-brand-50' : 'border-line hover:border-brand-500')}
+                className={cx('rounded-2xl border p-3 text-left', mode === m || (m === 'room' && room) ? 'border-brand-600 bg-brand-50' : 'border-line hover:border-brand-500')}
               >
                 <Icon className="h-5 w-5 text-brand-ink" aria-hidden />
                 <div className="mt-1 font-bold">{label}</div>
@@ -110,6 +124,26 @@ export function AssignDrawer({
             ))}
           </div>
         )}
+        {live ? (
+          <section className="space-y-4">
+            <p className="rounded-xl bg-brand-50 px-3 py-2 text-sm">
+              Your screen (the projector) shows each question; students and guests answer on their phones, which show only the coloured answers. You move everyone to the next question. Uses the multiple choice, true / false and multi-select questions.
+            </p>
+            {activity.kind === 'quiz' && (
+              <Field label="Scoring">
+                <Select value={scoring} onChange={(e) => setScoring(e.target.value as LiveScoring)}>
+                  {(Object.keys(SCORING_LABEL) as LiveScoring[]).map((k) => (
+                    <option key={k} value={k}>
+                      {SCORING_LABEL[k]}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            )}
+            {check('Let guests join with a nickname', guests, setGuests, 'For open events: no account needed. Off: only signed-in students can join. You can remove any player from the lobby.')}
+          </section>
+        ) : (
+          <>
         {room ? (
           <p className="rounded-xl bg-brand-50 px-3 py-2 text-sm">
             A join code is created after you press <b>Host room</b>. Share it (or the link / QR code) with the students. Any signed-in student can join.
@@ -189,15 +223,23 @@ export function AssignDrawer({
           </Field>
         </section>
 
-        <ErrorText error={assign.error} />
+          </>
+        )}
+        <ErrorText error={assign.error || startLive.error} />
       </div>
       <div className="mt-4 flex justify-end gap-2 border-t border-line pt-4">
         <Button variant="secondary" onClick={onClose}>
           Cancel
         </Button>
-        <Button loading={assign.isPending} disabled={!room && !secIds.length && !studentIds.length} onClick={() => assign.mutate()}>
-          {room ? 'Host room' : 'Assign'}
-        </Button>
+        {live ? (
+          <Button loading={startLive.isPending} onClick={() => startLive.mutate()}>
+            Start live game
+          </Button>
+        ) : (
+          <Button loading={assign.isPending} disabled={!room && !secIds.length && !studentIds.length} onClick={() => assign.mutate()}>
+            {room ? 'Host room' : 'Assign'}
+          </Button>
+        )}
       </div>
     </Modal>
   );

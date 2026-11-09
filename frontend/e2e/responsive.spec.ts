@@ -69,6 +69,7 @@ test.describe('fits every screen size', () => {
   test('sign-in pages', async ({ page }) => {
     await fits(page, '/login', heading('Sign in'));
     await fits(page, '/forgot-password', (p) => expect(p.getByRole('button').first()).toBeVisible());
+    await fits(page, '/live', heading('Join a live game'));
   });
 
   test('admin screens', async ({ page }) => {

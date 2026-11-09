@@ -135,8 +135,23 @@ const router = createBrowserRouter([
         { path: 'reports', lazy: page(() => import('./pages/faculty/ReportsListPage')) },
         { path: 'reports/:id', lazy: page(() => import('./pages/faculty/ReportPage')) },
         { path: 'integrity', lazy: page(() => import('./pages/admin/IntegrityPage')) },
+        { path: 'live/:gameId', lazy: page(() => import('./live/LiveResultsPage')) },
       ],
     },
+    {
+      // Live game projector screen: full screen, outside the sidebar shell.
+      path: '/live/host/:gameId',
+      element: (
+        <RequireRole roles={['faculty', 'admin', 'club']}>
+          <Outlet />
+        </RequireRole>
+      ),
+      children: [{ index: true, lazy: page(() => import('./live/LiveHostPage')) }],
+    },
+    // Players join and play live games without signing in when the host allows guests.
+    { path: '/live', lazy: page(() => import('./live/LiveJoinPage')) },
+    { path: '/live/:code', lazy: page(() => import('./live/LiveJoinPage')) },
+    { path: '/live/play/:gameId', lazy: page(() => import('./live/LivePlayPage')) },
     {
       // The editor is a full-screen workspace with its own top bar.
       path: '/faculty/activities/:id',

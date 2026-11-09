@@ -18,6 +18,9 @@ All notable changes to OpenQZ. Format: [Keep a Changelog](https://keepachangelog
 - Lighter queries on the student home page and answer saves.
 
 ### Fixed
+- First start of a new database: the health check now connects over TCP, so migrations no longer start while Postgres is still initialising ("connection refused" on a fresh server).
+- Production: the media folder is mounted at `MEDIA_DIR`, so setting `MEDIA_DIR` to the host path no longer stops the API from starting.
+- `restore.sh` put restored uploads one folder too deep (`media/media`); it now restores into the folder the app reads.
 - A warning that reached the server just after a student pressed Submit (for example leaving full screen as the quiz closes) made the review page say "You left the quiz too many times" although the student submitted normally. The violations reply now carries `submit_reason`, and the player uses it.
 - Dark mode: purple link and label text was too dark to read on dark backgrounds (failed WCAG AA contrast). A theme colour `brand-ink` now switches to a lighter purple in dark mode. The join page cards were fixed white with light text in dark mode; they follow the theme now.
 - Screen-reader names for unlabelled controls: the users role filter, the question type, the faculty mapping pickers and the add-section and add-subject fields.
@@ -37,6 +40,11 @@ All notable changes to OpenQZ. Format: [Keep a Changelog](https://keepachangelog
 
 ### Added
 - Public landing page at "/": space-themed hero with interactive feature overview, "How to Use" sequence, role cards linking to user guides, and assessment integrity highlights; signed-in users and standalone PWAs bypass it directly to their dashboard or login.
+- CI: browser tests run on pull requests and by hand only; deploys after a merge run the backend and frontend checks (the pull request already passed the browser tests).
+- Production data can live in host folders per environment (`DB_HOST_DIR`, `REDIS_HOST_DIR`, `MEDIA_HOST_DIR`); on the OSSC server everything is under `/srv/server-data/<env>/openqz/` (db, redis, media, backups). Backup and restore follow it.
+- Continuous deployment to the OSSC server, the same way as PCMS and PageCraft: push `dev` deploys staging (`openqz-staging.webuildnow.in`, port 8092), push `main` deploys production (`openqz.webuildnow.in`, port 8093) through a self-hosted runner and the Cloudflare tunnel. `deploy/server/` (deploy with backup, migrations and health check; rollback; one-command environment setup with secrets, nightly backup cron and the `openqz` helper; runner install), `.github/workflows/deploy.yml`, guide `docs/deploy-ossc-server.md`. The health check reports the release (`version`); nginx takes the visitor address from Cloudflare's `CF-Connecting-IP`.
+- Production with the mail server on the same machine (for example Postfix on port 587): `make prod-up LOCAL_MAIL=1` adds `compose.mail.yaml`, which points the mail server's name at the host; setup, firewall and a test command in `docs/email.md`.
+- **Live games (Kahoot-style)** for faculty and clubs: the projector shows each question, phones show only the coloured answers, the host moves everyone on; automatic reveal with answer counts, leaderboard, podium, results page and CSV. Host-chosen scoring (marks + speed bonus, marks only, just for fun) and optional guests with a filtered nickname; the host can remove players and stop joins. Students can type a live code in the normal join box. Migration 0011, backend and three-browser e2e tests.
 - Show/hide eye buttons on every password field (sign-in, change password and password reset). Fields start hidden.
 - One narrated walkthrough video: `scripts/walkthrough_voice_online.py` (free Microsoft Edge neural voice) and `scripts/make_walkthrough_video.mjs` (title cards, phone frame, voice-over, generated background music, 1920x1080 MP4 with H.264 and AAC, WebM only where the browser engine cannot write MP4).
 - `scripts/record_walkthrough.mjs`: screen-records the whole flow through the real UI with captions (admin imports, faculty builds and assigns, student takes it on a phone, marking and release, student review, a live join-code room, admin logs) into `recordings/` with a player page.

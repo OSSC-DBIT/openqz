@@ -204,6 +204,31 @@
 <li><strong>Present</strong>: a full-screen lobby for the projector with the address, the big code, the QR code and the names of players as they join (Esc or <strong>Close</strong> to leave).</li>
 </ul>
 <p>The participant list updates every few seconds while you have the page open. All the other settings (deadline, attempts, timers, warnings, scores) work exactly as for a class assignment.</p>
+<h2>5b. Live games (Kahoot-style)</h2>
+<p>A live game is played together, at the pace you set. <strong>Your screen (the projector) shows the question; students&#39; phones show only the coloured answers.</strong> Good for revision in class, labs, tech fests and club events.</p>
+<figure class="diagram"><pre class="mermaid">flowchart LR
+    A["Assign or host&lt;br/&gt;Live game"] --&gt; B["Lobby: code + QR&lt;br/&gt;players appear"]
+    B -- Start --&gt; C["Question on the big screen&lt;br/&gt;answers on phones"]
+    C -- "time up or all answered" --&gt; D["Answer revealed&lt;br/&gt;counts per option"]
+    D --&gt; E["Leaderboard"]
+    E -- Next --&gt; C
+    D -- Next --&gt; C
+    E -- "last question" --&gt; F["Podium&lt;br/&gt;results and CSV"]</pre></figure>
+<ol>
+<li>Open a quiz or poll, press <strong>Assign or host</strong>, choose <strong>Live game</strong>.</li>
+<li>Pick the <strong>Scoring</strong>:<ul>
+<li><strong>Marks + speed bonus</strong>: marks as usual; on the leaderboard, faster correct answers earn more points (up to 1000 per question, half at the last second).</li>
+<li><strong>Marks only</strong>: ranked by marks, ties by total answer time.</li>
+<li><strong>Just for fun</strong>: points only, nothing counted as marks. Polls are always &quot;just for fun&quot;.</li>
+</ul>
+</li>
+<li><strong>Let guests join with a nickname</strong>: tick it for open events (no account needed). Leave it off for class games, so only signed-in students with real names can play. Nicknames are checked for rude words and must be unique in the game.</li>
+<li>Press <strong>Start live game</strong>. The lobby shows <code>.../live</code>, the 6-digit code and a QR code. Players appear as they join; click a name to remove someone. <strong>Stop new joins</strong> closes the door.</li>
+<li>Press <strong>Start</strong>. Each question gets a 3-second &quot;get ready&quot;, then its timer (the question&#39;s own timer, or 20 seconds). The answer is shown automatically when time is up or everyone has answered; <strong>Show answer</strong> ends it early.</li>
+<li>After each question: <strong>Leaderboard</strong> (top 5) or straight to <strong>Next</strong>. After the last one, <strong>Finish</strong> shows the podium.</li>
+<li><strong>View results</strong> (also under <strong>Reports, Live games</strong>): every player&#39;s rank, points, <strong>marks obtained</strong>, correct answers, per-question stats and a CSV export.</li>
+</ol>
+<p>Live games use the <strong>multiple choice, true / false and multi-select</strong> questions of the activity; other types are skipped. Integrity checks (full screen, tab switches) do not apply: the game is paced on the big screen.</p>
 <h2>6. Reports and marking</h2>
 <p><strong>Reports</strong> (called <strong>Rooms &amp; reports</strong> for clubs) lists everything you assigned or hosted. Open one to see:</p>
 <ul>

@@ -5,9 +5,9 @@ OpenQZ is tested at five layers. CI runs all of them on every pull request; a re
 | Layer | Tool | Where | Count (2026-11-08) |
 | --- | --- | --- | --- |
 | Backend unit + API | pytest, httpx | `backend/tests/` | 83 tests, 90% line coverage (CI gate: 85%), about 3 minutes |
-| Frontend unit | Vitest, Testing Library, happy-dom | `frontend/src/test/` | 10 tests |
-| Browser journeys | Playwright (desktop Chrome + Pixel 7) | `frontend/e2e/` | 18 tests (9 journeys + 6 axe checks + 3 dark-mode axe checks) x 2 devices, 3 guide tests x 2, and 3 screen-size tests (desktop project only): 48 runs, 45 run and 3 skipped by design. The password-reset journey skips locally without Mailpit but fails in CI. |
-| Accessibility | axe-core in Playwright (WCAG 2.1 AA) | `frontend/e2e/a11y.spec.ts` | login, student home, join page, create dialog with class picker, faculty library, faculty home (and its quick-create tile); in **dark mode** again: login, student home, join, faculty home, library, reports, an assignment report, the editor, and the admin dashboard, users, sections, imports and audit log |
+| Frontend unit | Vitest, Testing Library, happy-dom | `frontend/src/test/` | 12 tests |
+| Browser journeys | Playwright (desktop Chrome + Pixel 7) | `frontend/e2e/` | 18 tests (9 journeys + 6 axe checks + 3 dark-mode axe checks) x 2 devices, 3 guide tests x 2, 3 screen-size tests and 1 live-game test (both desktop project only): 50 runs, 46 run and 4 skipped by design. The password-reset journey skips locally without Mailpit but fails in CI. |
+| Accessibility | axe-core in Playwright (WCAG 2.1 AA) | `frontend/e2e/a11y.spec.ts` | landing page, login, student home, join page, create dialog with class picker, faculty library, faculty home (and its quick-create tile); in **dark mode** again: landing page, login, student home, join, faculty home, library, reports, an assignment report, the editor, and the admin dashboard, users, sections, imports and audit log |
 | Load | k6 | `tests/load/student-exam.js` | see [performance.md](performance.md) |
 | Security | OWASP ZAP baseline, pip-audit, pnpm audit | CI + `docs/reports/` | see [security.md](security.md) |
 
@@ -55,7 +55,8 @@ Browser journeys read `E2E_BASE_URL` (default `http://localhost:8088`), `E2E_ADM
 | `fullscreen.spec.ts` | leaving full screen gives a warning and hides the questions until the student presses Enter full screen |
 | `unblock.spec.ts` | student hits the warning limit, teacher unblocks with extra minutes from the report, the waiting student continues |
 | `password-reset.spec.ts` | forgot password email via Mailpit, reset, sign in, link is single use |
-| `responsive.spec.ts` | 17 screens (sign-in, every admin page, faculty home, library, reports, editor, report, student home, join, quiz player, review) at 320, 375, 768, 1024, 1366, 1920 and 2560 px: no page may be wider than the window; failures name the elements that stick out. On the admin pages and the Reports list, tables must also fit without scrolling inside their own box. The player is loaded once and resized, because reloads count as warnings. |
+| `live.spec.ts` | a live game across three browsers: the teacher starts it from the share dialog (guests allowed), a signed-in student enters the code in the normal join box (forwarded to the live game), a guest joins from `/live` with a nickname; the phones show only the answer tiles; automatic reveal when everyone answered; Correct / Not this time on the phones; leaderboard, next question, podium (1st and 2nd place), results page; axe on the lobby, the guest join page and the tiles |
+| `responsive.spec.ts` | 18 screens (landing page, sign-in, every admin page, faculty home, library, reports, editor, report, student home, join, quiz player, review) at 320, 375, 768, 1024, 1366, 1920 and 2560 px: no page may be wider than the window; failures name the elements that stick out. On the admin pages and the Reports list, tables must also fit without scrolling inside their own box. The player is loaded once and resized, because reloads count as warnings. |
 | `guides.spec.ts` | the student, faculty and admin guides open without signing in, draw their Mermaid flow diagrams under the site CSP with no console errors, and do not scroll sideways |
 | `a11y.spec.ts` | no serious or critical WCAG 2.1 AA violations |
 

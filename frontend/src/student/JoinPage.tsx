@@ -2,7 +2,7 @@ import { useMutation } from '@tanstack/react-query';
 import { ArrowLeft, Clock, ListChecks, User } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
-import { api } from '../api/client';
+import { api, ApiError } from '../api/client';
 import type { AttemptState, RoomPreview } from '../api/types';
 import { KindCover } from '../components/pieces';
 import { KIND_LABEL, fmtSeconds } from '../components/quiz';
@@ -18,7 +18,23 @@ export default function JoinPage() {
   const { code: fromUrl } = useParams();
   const nav = useNavigate();
   const [code, setCode] = useState(digits(fromUrl ?? ''));
-  const preview = useMutation({ mutationFn: (c: string) => api<RoomPreview>(`/join/${c}`) });
+  const preview = useMutation({
+    mutationFn: async (c: string) => {
+      try {
+        return await api<RoomPreview>(`/join/${c}`);
+      } catch (e) {
+        // Not a room: one box for every code, so try a live game with this code too.
+        if (e instanceof ApiError && e.status === 404) {
+          const live = await api(`/live/join/${c}`).catch(() => null);
+          if (live) {
+            nav(`/live/${c}`);
+            return new Promise<RoomPreview>(() => {}); // stays "loading" while we move on
+          }
+        }
+        throw e;
+      }
+    },
+  });
   const go = useMutation({
     mutationFn: async () => {
       const j = await api<{ assignment_id: string }>('/join', { method: 'POST', json: { code } });

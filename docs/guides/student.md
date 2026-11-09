@@ -110,6 +110,16 @@ Notifications that pop up briefly are ignored. Opening another app is not.
 
 If your quiz was submitted because of warnings and it was a mistake, tell your teacher. They can **unblock** you: keep the results page open and a **Continue the quiz** button appears, or press **Resume** on your home page. Your answers are kept and your warnings start again from 0.
 
+## 5b. Live games
+
+In a live game the **question is on the big screen** and your phone shows only the coloured answers.
+
+1. Open `.../live` (or type the code in **Enter a join code** on your home page, or scan the QR code).
+2. Enter the 6-digit code. If you are signed in you join with your name; at open events you can join as a guest with a nickname.
+3. Wait for **You're in!**. When the host starts, you get a 3-second "get ready", then tap your answer before the timer runs out. For "pick all that apply" questions, tap the answers and press **Submit**.
+4. After each question your phone turns green (**Correct!** with your points) or red. Faster correct answers earn more points.
+5. At the end you see your place and the top three.
+
 ## 6. Results and review
 
 Open **Completed**, then **Review**:

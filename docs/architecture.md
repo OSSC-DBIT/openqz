@@ -197,6 +197,37 @@ sequenceDiagram
 - Joining is rate-limited to 20 tries per minute per user, so codes cannot be guessed by brute force (10^6 codes).
 - Club organisers can only host rooms; they never see class lists.
 
+## Live games (Kahoot-style)
+
+The host's screen shows the question; players' phones show only the options. Everyone moves together: the host drives the state, phones poll it once a second.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor H as Host screen
+    participant A as API
+    actor P as Phones (students or guests)
+    H->>A: POST /live/games (activity, scoring, allow_guests)
+    A-->>H: game + 6-digit code (unique among open games and room codes)
+    P->>A: POST /live/join (code, nickname for guests)
+    A-->>P: player (guests also get a player token, sent as X-Live-Player)
+    loop each question
+        H->>A: POST /live/games/{id}/start or next
+        A->>A: status question, starts_at = now + 3 s, ends_at = starts_at + timer
+        P->>A: GET /live/play/{id} every second: options only, no question text, no key
+        P->>A: POST /live/play/{id}/answer (graded on arrival, once per question)
+        H->>A: reveal (auto at time up or when all answered), leaderboard
+        P->>A: GET /live/play/{id}: correct_ids, my points, my rank
+    end
+    H->>A: end, then results and CSV
+```
+
+- Tables: `live_games` (status `lobby`, `question`, `reveal`, `leaderboard`, `ended`; `scoring`; `allow_guests`; frozen `snapshot` with the key; `version` bumped on every change), `live_players` (user or guest with a hashed token; nickname unique per game; points, marks, total answer time; `removed`), `live_answers` (one per player and question).
+- Only `mcq`, `true_false` and `multi_select` questions are played; polls are always scored "for fun".
+- Points: `1000 x fraction correct x (1 - 0.5 x answer time / timer)`. Marks use the normal grader (`grading.grade`), so partial credit for multi-select works the same. "Fun" scoring records no marks.
+- Rules on the server: answers only between `starts_at` and `ends_at` + 1 s, once per question; the key reaches phones only after the reveal; guests only when allowed; nicknames filtered (`live_service.clean_nickname`); joins and code lookups rate-limited per user or per IP; the host can remove a player.
+- Capacity: polling at 1 s is about one light request per player per second; fine for a class or an event hall. Server-sent events would be the next step for very large audiences.
+
 ## Grading and reports
 
 - `services/grading.py` (pure functions): MCQ / True-False exact; multi-select partial credit (right minus wrong, floor 0) or all-or-nothing; fill-in-the-blank per blank with alternatives, case and trailing-dot tolerant; justify and open answers wait for a teacher (empty answers score 0). Polls and flashcards are never scored.

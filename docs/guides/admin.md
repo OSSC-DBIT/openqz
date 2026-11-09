@@ -61,7 +61,7 @@ On a phone the lists stay narrow: a person's role and status show under their na
 
 ### Club organisers
 
-A club organiser (tech club, cultural committee, placement cell) can build activities and **host rooms** with a join code, which any signed-in student can join. They cannot assign to classes, see class lists, import people or open other people's activities and reports. Disable the account when the club's term ends; its results are kept.
+A club organiser (tech club, cultural committee, placement cell) can build activities and **host rooms** with a join code, which any signed-in student can join. They cannot assign to classes, see class lists, import people or open other people's activities and reports. Club organisers can also run **live games** (Kahoot-style: question on the projector, answers on phones) and may let guests join with a nickname, for events with visitors. Disable the account when the club's term ends; its results are kept.
 
 ## 4. Sign-in options
 
