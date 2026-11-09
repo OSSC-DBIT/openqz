@@ -9,6 +9,7 @@ async def test_health(client: AsyncClient) -> None:
     r = await client.get("/api/v1/health")
     assert r.status_code == 200
     assert r.json()["status"] == "ok"
+    assert r.json()["version"]  # the deploy script checks the release tag here
 
 
 async def test_login_ok_sets_refresh_cookie(client: AsyncClient) -> None:

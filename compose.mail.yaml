@@ -1,11 +1,16 @@
-# Optional dev override: send email through the real mail server instead of Mailpit.
-# Use it on top of the dev files, with the Cloudflare tunnel running on this machine:
+# Optional override: the mail server is reached on THIS machine (the Docker host).
+# extra_hosts points SMTP_HOST at the host, so containers connect to the host's port
+# SMTP_PORT, while TLS still checks the certificate against the real name.
 #
-#   cloudflared access tcp --hostname smtp-tunnel.webuildnow.in --url localhost:1587
-#   docker compose -f compose.yaml -f compose.dev.yaml -f compose.mail.yaml up -d
+# 1. Server with its own mail server (Postfix etc. on port 587), SMTP_PORT=587:
+#      make prod-up LOCAL_MAIL=1
+#    or: docker compose -f compose.yaml -f compose.prod.yaml -f compose.mail.yaml -p openqz-prod --env-file .env.prod up -d
+#
+# 2. Laptop through the Cloudflare tunnel, SMTP_PORT=1587:
+#      cloudflared access tcp --hostname smtp-tunnel.webuildnow.in --url localhost:1587
+#      docker compose -f compose.yaml -f compose.dev.yaml -f compose.mail.yaml up -d
 #
 # SMTP_HOST must be the mail server's real name (it must match its TLS certificate).
-# extra_hosts points that name at this machine, where the tunnel listens on SMTP_PORT.
 # See docs/email.md.
 
 x-real-smtp: &real-smtp

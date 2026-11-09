@@ -1,5 +1,7 @@
 # OpenQZ runbook
 
+> **On the OSSC server** (with PCMS and PageCraft: Cloudflare tunnel, GitHub runner, push to deploy) follow [deploy-ossc-server.md](deploy-ossc-server.md) instead of sections 1 to 5. Sections 6 onwards (backups, monitoring, common tasks, go-live) apply to both.
+
 Target host: the CSE Dell Xeon workstation (Ubuntu 24.04 LTS, Docker). Staging and production run on the same machine as separate Compose projects, each with its own volumes, env file and sub-domain.
 
 | Environment | Project | Sub-domain | Local port |
@@ -98,6 +100,7 @@ Email is optional. Without it, "Forgot your password?" is hidden and people ask 
 
 1. Get SMTP details from the IT cell (host, port, user, password, sender address). Google Workspace: use `smtp-relay.gmail.com:587`, or an app password on a dedicated account.
 2. Set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` (for example `OpenQZ <no-reply@dbit.co.in>`), `SMTP_STARTTLS=true` (port 587) or `SMTP_SSL=true` (port 465) in the env file, and `make prod-up`.
+   **Mail server on this same machine** (for example Postfix on port 587 for `mail.webuildnow.in`): use `make prod-up LOCAL_MAIL=1` instead, so the containers reach the host's port 587. Setup, firewall and test: [email.md, section 3](email.md#3-server-with-its-own-mail-server-port-587).
 3. Test: on the login page, **Forgot your password?** now shows. Request a reset for your own account and check the mail arrives (and its link uses `PUBLIC_URL`).
 4. Emails are sent by the worker: `docker compose -p openqz-prod logs worker` shows failures.
 

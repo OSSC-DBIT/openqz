@@ -102,7 +102,8 @@ cd frontend && pnpm exec playwright install chromium && pnpm test:e2e
 
 ## Deploying
 
-See [docs/runbook.md](docs/runbook.md): server setup, staging and production on one machine, TLS, backups, restore drill and rollback.
+- **OSSC server** (Cloudflare tunnel, push `dev` for staging and `main` for production): [docs/deploy-ossc-server.md](docs/deploy-ossc-server.md).
+- Any other server (own TLS edge): [docs/runbook.md](docs/runbook.md): server setup, staging and production on one machine, TLS, backups, restore drill and rollback.
 
 ## Project docs
 

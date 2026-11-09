@@ -1,10 +1,16 @@
 name: CI
 
 on:
+  # Pushes to dev and main run CI through deploy.yml, which deploys only after it passes,
+  # so it is not triggered twice for them.
   push:
-    branches: [main]
     tags: ['v*']
   pull_request:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
   group: ci-${{ github.ref }}

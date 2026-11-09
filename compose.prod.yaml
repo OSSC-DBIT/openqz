@@ -15,7 +15,7 @@ services:
   db:
     <<: *prod
     shm_size: 256m
-    command: ["postgres", "-c", "max_connections=200", "-c", "shared_buffers=2GB", "-c", "effective_cache_size=6GB"]
+    command: ["postgres", "-c", "max_connections=200", "-c", "shared_buffers=${PG_SHARED_BUFFERS:-2GB}", "-c", "effective_cache_size=${PG_EFFECTIVE_CACHE:-6GB}"]
 
   redis:
     <<: *prod
@@ -29,6 +29,7 @@ services:
     image: ${API_IMAGE:-ghcr.io/ossc-dbit/openqz-api:latest}
     environment:
       WEB_CONCURRENCY: ${WEB_CONCURRENCY:-8}
+      APP_VERSION: ${APP_VERSION:-unknown}
     command: ["sh", "-c", "exec gunicorn app.main:app -k uvicorn.workers.UvicornWorker -w $${WEB_CONCURRENCY} -b 0.0.0.0:8000 --forwarded-allow-ips '*' --access-logfile - --graceful-timeout 30 --timeout 120"]
     deploy:
       resources:
@@ -37,9 +38,11 @@ services:
   worker:
     <<: *prod
     image: ${API_IMAGE:-ghcr.io/ossc-dbit/openqz-api:latest}
+    environment:
+      APP_VERSION: ${APP_VERSION:-unknown}
     deploy:
       resources:
-        limits: { cpus: "4", memory: 4g }
+        limits: { cpus: "${WORKER_CPUS:-4}", memory: "${WORKER_MEMORY:-4g}" }
 
   nginx:
     <<: *prod

@@ -1,7 +1,9 @@
 # Shortcuts for Git Bash / WSL / Linux. PowerShell users: see README for the raw commands.
 DEV = docker compose -f compose.yaml -f compose.dev.yaml
-PROD = docker compose -f compose.yaml -f compose.prod.yaml -p openqz-prod --env-file .env.prod
-STAGING = docker compose -f compose.yaml -f compose.prod.yaml -p openqz-staging --env-file .env.staging
+# LOCAL_MAIL=1: the mail server runs on this server (e.g. Postfix on 587); see compose.mail.yaml
+MAIL = $(if $(LOCAL_MAIL),-f compose.mail.yaml)
+PROD = docker compose -f compose.yaml -f compose.prod.yaml $(MAIL) -p openqz-prod --env-file .env.prod
+STAGING = docker compose -f compose.yaml -f compose.prod.yaml $(MAIL) -p openqz-staging --env-file .env.staging
 
 .PHONY: up down logs ps migrate revision test lint fmt admin seed e2e docs guides openapi prod-smoke prod-up prod-pull staging-up backup
 

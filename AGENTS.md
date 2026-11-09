@@ -39,7 +39,7 @@ frontend/           React 19 + TypeScript + Vite + Tailwind 4 + TanStack Query +
   src/components/   ui.tsx (Button, Modal, ...), pieces.tsx (ClassPicker, KindCover, TypePicker), quiz.tsx
   e2e/              Playwright specs + helpers.ts (seedClass, login)
 docs/               guides/, api/openapi.json, architecture, runbook, security, testing, performance, backlog
-deploy/             nginx, TLS edge, backup scripts
+deploy/             nginx, TLS edge, backup scripts; server/ = OSSC server deploy (deploy.sh, setup-environment.sh, install-runner.sh, rollback.sh)
 ```
 
 Staff screens are lazy-loaded routes in `src/main.tsx`; the activity editor is a full-screen route outside the sidebar shell.
@@ -120,7 +120,9 @@ cd frontend && pnpm guides
 - **Tables on phones:** list tables use `<Table cols={[...]} compact>` with `hidden sm:table-cell` (and the same class on the `<Td>`) to drop secondary columns, and repeat that detail under the main cell with `sm:hidden`. `e2e/responsive.spec.ts` (`tablesFit`) fails if such a table scrolls. Only true data grids (import preview, report participants) may scroll inside their box.
 - **`.env` changes** reach containers only when they are recreated: `up -d --force-recreate api worker`.
 - **Dev email:** `compose.dev.yaml` sends all mail to Mailpit (http://localhost:8025) and blanks the SMTP login, whatever `.env` says. Real mail needs the Cloudflare tunnel plus `-f compose.mail.yaml` ([docs/email.md](docs/email.md)). Keep `SMTP_HOST=mail.webuildnow.in` (TLS certificate name), and use a `@webuildnow.in` sender: `dbit.co.in` SPF allows only Microsoft 365, so its mail is accepted and then dropped. Run Playwright in Mailpit mode only.
-- **Client address:** only `X-Real-IP` (set by our edge) is trusted for rate limits; never read `X-Forwarded-For`.
+- **Mail server on the production machine:** start with `make prod-up LOCAL_MAIL=1` (adds `compose.mail.yaml`, `SMTP_PORT=587`); without it containers use the public IP, which often times out (no hairpin NAT). [docs/email.md](docs/email.md) section 3.
+- **Client address:** the web nginx (`frontend/nginx.conf`) takes it from `CF-Connecting-IP` (Cloudflare tunnel), else `X-Real-IP` (our edge, which clears `CF-Connecting-IP`), and passes it to the API as `X-Real-IP`; the API trusts only that. Never read `X-Forwarded-For`.
+- **Deploys (OSSC server):** push `dev` = staging (`127.0.0.1:8092`), `main` = production (`127.0.0.1:8093`), through `.github/workflows/deploy.yml` and the self-hosted runner (label `openqz`). Never deploy by hand. `/api/v1/health` must report `version` (= `APP_VERSION`): the deploy checks it. Guide: [docs/deploy-ossc-server.md](docs/deploy-ossc-server.md).
 - **Run Playwright from `frontend/`**, not the repo root (it writes `test-results/` where it runs).
 
 ## Commits

@@ -1,0 +1,3 @@
+self-hosted-runner:
+  # The OSSC server runner (deploy/server/install-runner.sh).
+  labels: [openqz]
