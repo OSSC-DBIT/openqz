@@ -18,6 +18,7 @@ All notable changes to OpenQZ. Format: [Keep a Changelog](https://keepachangelog
 - Lighter queries on the student home page and answer saves.
 
 ### Fixed
+- `restore.sh` put restored uploads one folder too deep (`media/media`); it now restores into the folder the app reads.
 - A warning that reached the server just after a student pressed Submit (for example leaving full screen as the quiz closes) made the review page say "You left the quiz too many times" although the student submitted normally. The violations reply now carries `submit_reason`, and the player uses it.
 - Dark mode: purple link and label text was too dark to read on dark backgrounds (failed WCAG AA contrast). A theme colour `brand-ink` now switches to a lighter purple in dark mode. The join page cards were fixed white with light text in dark mode; they follow the theme now.
 - Screen-reader names for unlabelled controls: the users role filter, the question type, the faculty mapping pickers and the add-section and add-subject fields.
@@ -36,6 +37,7 @@ All notable changes to OpenQZ. Format: [Keep a Changelog](https://keepachangelog
 - Admin Sections page and report tabs no longer scroll sideways on phones (cards with wide tables now shrink to the screen; tab bars scroll).
 
 ### Added
+- Production data can live in host folders per environment (`DB_HOST_DIR`, `REDIS_HOST_DIR`, `MEDIA_HOST_DIR`); on the OSSC server everything is under `/srv/server-data/<env>/openqz/` (db, redis, media, backups). Backup and restore follow it.
 - Continuous deployment to the OSSC server, the same way as PCMS and PageCraft: push `dev` deploys staging (`openqz-staging.webuildnow.in`, port 8092), push `main` deploys production (`openqz.webuildnow.in`, port 8093) through a self-hosted runner and the Cloudflare tunnel. `deploy/server/` (deploy with backup, migrations and health check; rollback; one-command environment setup with secrets, nightly backup cron and the `openqz` helper; runner install), `.github/workflows/deploy.yml`, guide `docs/deploy-ossc-server.md`. The health check reports the release (`version`); nginx takes the visitor address from Cloudflare's `CF-Connecting-IP`.
 - Production with the mail server on the same machine (for example Postfix on port 587): `make prod-up LOCAL_MAIL=1` adds `compose.mail.yaml`, which points the mail server's name at the host; setup, firewall and a test command in `docs/email.md`.
 - **Live games (Kahoot-style)** for faculty and clubs: the projector shows each question, phones show only the coloured answers, the host moves everyone on; automatic reveal with answer counts, leaderboard, podium, results page and CSV. Host-chosen scoring (marks + speed bonus, marks only, just for fun) and optional guests with a filtered nickname; the host can remove players and stop joins. Students can type a live code in the normal join box. Migration 0011, backend and three-browser e2e tests.

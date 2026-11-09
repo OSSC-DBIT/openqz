@@ -19,8 +19,16 @@ echo "[$(date -Is)] backing up $PROJECT to $DIR"
 # Database: custom format, compressed, restorable with pg_restore.
 docker exec "${PROJECT}-db-1" sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > "$DIR/db.dump"
 
-# Media volume (uploads, import sheets).
-docker run --rm -v "${PROJECT}_media:/data/media:ro" -v "$DIR:/out" alpine:3.20 \
+# Where this project's /data/media lives: the host folder (MEDIA_HOST_DIR) or the Docker volume.
+media_src() {
+  local id src=""
+  id="$(docker ps -aq --filter "label=com.docker.compose.project=$PROJECT" --filter "label=com.docker.compose.service=api" | head -n1)"
+  [ -n "$id" ] && src="$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/data/media"}}{{if eq .Type "bind"}}{{.Source}}{{else}}{{.Name}}{{end}}{{end}}{{end}}' "$id")"
+  echo "${src:-${PROJECT}_media}"
+}
+
+# Media (uploads, import sheets): the host folder or the volume, whichever the api uses.
+docker run --rm -v "$(media_src):/data/media:ro" -v "$DIR:/out" alpine:3.20 \
   tar -czf /out/media.tar.gz -C /data media
 
 # Relative names, so a copy can be checked anywhere: cd <backup> && sha256sum -c SHA256SUMS

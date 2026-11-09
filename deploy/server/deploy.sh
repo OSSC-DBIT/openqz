@@ -68,6 +68,15 @@ esac
 [ "$PROJECT" != "$other_project" ] || die "$CONF names project $PROJECT, which belongs to the other environment"
 owner="$(docker ps --filter "publish=$HTTP_PORT" --format '{{.Label "com.docker.compose.project"}}' | sort -u | grep -v "^${PROJECT}$" | head -n1 || true)"
 [ -z "$owner" ] || die "host port $HTTP_PORT is held by Compose project '$owner'"
+for key in DB_HOST_DIR REDIS_HOST_DIR; do
+  d="$(envval "$key")"
+  [ -z "$d" ] || [ -d "$d" ] || die "$key $d does not exist. Run: sudo bash deploy/server/setup-environment.sh $ENVIRONMENT"
+done
+MEDIA_HOST_DIR="$(envval MEDIA_HOST_DIR)"
+if [ -n "$MEDIA_HOST_DIR" ]; then
+  [ -d "$MEDIA_HOST_DIR" ] || die "MEDIA_HOST_DIR $MEDIA_HOST_DIR does not exist. Run: sudo bash deploy/server/setup-environment.sh $ENVIRONMENT"
+  [ "$(stat -c %u "$MEDIA_HOST_DIR")" = 1000 ] || die "$MEDIA_HOST_DIR must be owned by uid 1000 (the app user): sudo chown 1000:1000 $MEDIA_HOST_DIR"
+fi
 
 mkdir -p "$STATE_DIR"
 exec 9>"$STATE_DIR/${ENVIRONMENT}.lock"

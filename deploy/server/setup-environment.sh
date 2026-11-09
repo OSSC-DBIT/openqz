@@ -6,7 +6,7 @@
 #
 # It never overwrites a secret that is already set. It does:
 #   - the `openqz` group, with the GitHub runner user (gh-runner) in it
-#   - /srv/server-data/<env>/openqz/ (root:openqz 750) and its backups folder
+#   - /srv/server-data/<env>/openqz/ (root:openqz 750) with all its data: db, redis, media, backups
 #   - the settings file openqz.env (root:openqz 640): fresh secrets, this environment's port,
 #     the mail server on this machine (asks for the mailbox password), or completes an existing one
 #   - /etc/openqz/<env>.conf for continuous deployment (no secrets)
@@ -38,6 +38,9 @@ esac
 DATA_DIR="/srv/server-data/$ENVIRONMENT/openqz"
 ENV_FILE="$DATA_DIR/openqz.env"
 BACKUP_DIR="$DATA_DIR/backups"
+MEDIA_DIR="$DATA_DIR/media"
+DB_DIR="$DATA_DIR/db"
+REDIS_DIR="$DATA_DIR/redis"
 RUNNER_USER="${RUNNER_USER:-gh-runner}"
 RUNNER_CHECKOUT="${RUNNER_CHECKOUT:-/srv/actions-runner-openqz/_work/openqz/openqz}"
 SMTP_HOST_DEFAULT="${SMTP_HOST_DEFAULT:-mail.webuildnow.in}"
@@ -88,6 +91,12 @@ install -d -m 755 /srv/server-data "/srv/server-data/$ENVIRONMENT"
 install -d -m 750 -o root -g openqz "$DATA_DIR"
 # Written by the runner (backup before each deploy) and by root (nightly cron).
 install -d -m 2770 -o root -g openqz "$BACKUP_DIR"
+# Uploads and import sheets of this environment, written by the app (uid 1000 in the container).
+install -d -m 750 -o 1000 -g 1000 "$MEDIA_DIR"
+# PostgreSQL data (uid 70 = postgres in postgres:16-alpine) and Redis data (uid 999 = redis).
+# Both containers start as root and fix the owner themselves if needed.
+install -d -m 700 -o 70 -g 70 "$DB_DIR"
+install -d -m 700 -o 999 -g 1000 "$REDIS_DIR"
 note "ok"
 
 # ---------- settings file ----------
@@ -132,7 +141,12 @@ POSTGRES_PASSWORD=$DB_PASSWORD
 POSTGRES_DB=openqz
 DATABASE_URL=postgresql+asyncpg://openqz:$DB_PASSWORD@db:5432/openqz
 REDIS_URL=redis://redis:6379/0
+# Uploads: /data/media in the containers is this host folder (owner uid 1000).
 MEDIA_DIR=/data/media
+MEDIA_HOST_DIR=$MEDIA_DIR
+# Database and Redis data of this environment (instead of Docker volumes).
+DB_HOST_DIR=$DB_DIR
+REDIS_HOST_DIR=$REDIS_DIR
 
 # Size of this environment on the server.
 WEB_CONCURRENCY=$WEB_CONCURRENCY
@@ -166,6 +180,15 @@ else
   put_if_empty JWT_SECRET "$(random 96 64)"
   put_if_empty SMTP_HOST "$SMTP_HOST_DEFAULT"
   put_if_empty SMTP_PORT 587
+  put_if_empty MEDIA_HOST_DIR "$MEDIA_DIR"
+  # Existing data in Docker volumes is NOT moved automatically: see docs/deploy-ossc-server.md.
+  if [ -z "$(get DB_HOST_DIR)" ] && docker volume inspect "${PROJECT}_pgdata" >/dev/null 2>&1; then
+    note "WARNING: $PROJECT already has its database in the Docker volume ${PROJECT}_pgdata;"
+    note "         DB_HOST_DIR not set, so it keeps using it. To move it, see docs/deploy-ossc-server.md"
+  else
+    put_if_empty DB_HOST_DIR "$DB_DIR"
+    put_if_empty REDIS_HOST_DIR "$REDIS_DIR"
+  fi
   put_if_empty SMTP_FROM "$SMTP_FROM_DEFAULT"
   for k in WEB_CONCURRENCY API_CPUS API_MEMORY WORKER_CPUS WORKER_MEMORY PG_SHARED_BUFFERS PG_EFFECTIVE_CACHE; do
     put_if_empty "$k" "${!k}"
@@ -286,7 +309,7 @@ fi
 
 say "summary"
 note "settings:    $ENV_FILE"
-grep -E '^(ENVIRONMENT|PUBLIC_URL|HTTP_PORT|ADMIN_EMAIL|SMTP_HOST|SMTP_FROM)=' "$ENV_FILE" | sed 's/^/             /'
+grep -E '^(ENVIRONMENT|PUBLIC_URL|HTTP_PORT|MEDIA_HOST_DIR|DB_HOST_DIR|REDIS_HOST_DIR|ADMIN_EMAIL|SMTP_HOST|SMTP_FROM)=' "$ENV_FILE" | sed 's/^/             /'
 note "Cloudflare:  Zero Trust > Networks > Tunnels > the existing tunnel > Public hostname > Add"
 note "             $DOMAIN  ->  type HTTP, URL localhost:$HTTP_PORT"
 if [ "$ENVIRONMENT" = production ]; then

@@ -6,6 +6,14 @@ set -euo pipefail
 SRC="${1:?backup directory}"
 PROJECT="${2:-openqz-staging}"
 
+# Where this project's /data/media lives: the host folder (MEDIA_HOST_DIR) or the Docker volume.
+media_src() {
+  local id src=""
+  id="$(docker ps -aq --filter "label=com.docker.compose.project=$PROJECT" --filter "label=com.docker.compose.service=api" | head -n1)"
+  [ -n "$id" ] && src="$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/data/media"}}{{if eq .Type "bind"}}{{.Source}}{{else}}{{.Name}}{{end}}{{end}}{{end}}' "$id")"
+  echo "${src:-${PROJECT}_media}"
+}
+
 if [ "$PROJECT" = "openqz-prod" ] && [ "${I_KNOW_THIS_OVERWRITES_PROD:-}" != "yes" ]; then
   echo "Refusing to restore into production without I_KNOW_THIS_OVERWRITES_PROD=yes" >&2
   exit 1
@@ -21,8 +29,9 @@ docker exec -i "${PROJECT}-db-1" sh -c \
   'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists --no-owner' < "$SRC/db.dump"
 
 echo "Restoring media"
-docker run --rm -v "${PROJECT}_media:/data" -v "$SRC:/in:ro" alpine:3.20 \
-  sh -c 'rm -rf /data/media && tar -xzf /in/media.tar.gz -C /data'
+# The archive holds media/...; extract it over the folder the api uses (uid 1000 = the app user).
+docker run --rm -v "$(media_src):/data/media" -v "$SRC:/in:ro" alpine:3.20 \
+  sh -c 'find /data/media -mindepth 1 -delete && tar -xzf /in/media.tar.gz -C /data && chown -R 1000:1000 /data/media'
 
 docker start "${PROJECT}-api-1" "${PROJECT}-worker-1" >/dev/null
 echo "Restore complete. Check: curl -fsS https://<host>/api/v1/health"

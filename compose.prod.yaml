@@ -15,18 +15,30 @@ services:
   db:
     <<: *prod
     shm_size: 256m
+    # Data folders per environment on the host (OSSC server: /srv/server-data/<env>/openqz/...);
+    # unset = the project's Docker volumes.
+    volumes:
+      - ${DB_HOST_DIR:-pgdata}:/var/lib/postgresql/data
     command: ["postgres", "-c", "max_connections=200", "-c", "shared_buffers=${PG_SHARED_BUFFERS:-2GB}", "-c", "effective_cache_size=${PG_EFFECTIVE_CACHE:-6GB}"]
 
   redis:
     <<: *prod
+    volumes:
+      - ${REDIS_HOST_DIR:-redisdata}:/data
 
   migrate:
     image: ${API_IMAGE:-ghcr.io/ossc-dbit/openqz-api:latest}
     env_file: ${ENV_FILE:-.env}
+    volumes: &media
+      # Uploads and import sheets. MEDIA_HOST_DIR = a host folder for this environment
+      # (OSSC server: /srv/server-data/<env>/openqz/media, owned by uid 1000, the app user);
+      # unset = the project's Docker volume.
+      - ${MEDIA_HOST_DIR:-media}:/data/media
 
   api:
     <<: *prod
     image: ${API_IMAGE:-ghcr.io/ossc-dbit/openqz-api:latest}
+    volumes: *media
     environment:
       WEB_CONCURRENCY: ${WEB_CONCURRENCY:-8}
       APP_VERSION: ${APP_VERSION:-unknown}
@@ -38,6 +50,7 @@ services:
   worker:
     <<: *prod
     image: ${API_IMAGE:-ghcr.io/ossc-dbit/openqz-api:latest}
+    volumes: *media
     environment:
       APP_VERSION: ${APP_VERSION:-unknown}
     deploy:

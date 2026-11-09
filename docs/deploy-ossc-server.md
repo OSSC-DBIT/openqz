@@ -64,6 +64,9 @@ It asks for the password of the mailbox `dbit-oscc` (press Enter to skip and fil
 | Path | What | Owner, mode |
 |---|---|---|
 | `/srv/server-data/<env>/openqz/openqz.env` | all settings and secrets: database password, JWT secret, first admin, mail, port, size | root:openqz 640 |
+| `/srv/server-data/<env>/openqz/db/` | PostgreSQL data (`DB_HOST_DIR`) | uid 70 (postgres) 700 |
+| `/srv/server-data/<env>/openqz/redis/` | Redis data: sessions queue, rate limits (`REDIS_HOST_DIR`) | uid 999 (redis) 700 |
+| `/srv/server-data/<env>/openqz/media/` | uploads and import sheets of that environment (`MEDIA_HOST_DIR`; `/data/media` in the containers) | uid 1000 (the app user) 750 |
 | `/srv/server-data/<env>/openqz/backups/` | database dumps and media, before every deploy and nightly, kept 30 days | root:openqz 2770 |
 | `/etc/openqz/<env>.conf` | project, env file, health URL, local mail on, backup folder. No secrets | root 644 |
 | `/etc/cron.d/openqz-<env>` | the nightly backup (production 01:30, staging 02:30) | root 644 |
@@ -71,6 +74,19 @@ It asks for the password of the mailbox `dbit-oscc` (press Enter to skip and fil
 | `/usr/local/bin/openqz` | helper command (section 4) | root 755 |
 
 It prints the first admin's password once: store it, sign in after the first deploy and change it. It also checks that ports 8092 / 8093 are free and that the mail server on 587 is reachable from containers (section 5).
+
+Everything of one environment is in one folder:
+
+```
+/srv/server-data/production/openqz/
+  openqz.env     settings and secrets
+  db/            PostgreSQL data
+  redis/         Redis data
+  media/         uploads and import sheets
+  backups/       nightly and pre-deploy backups (database dump + media)
+```
+
+Copying the folder is not a backup of a running database; use `backups/` (or `sudo openqz <env> backup`).
 
 **c. Cloudflare.** Zero Trust, Networks, Tunnels, the server's existing tunnel, **Public hostname, Add**:
 
@@ -151,6 +167,7 @@ Test with `sudo openqz production mailtest` (`235` means the login works), then 
 | Deploy job: "Waiting for a runner" | The runner is offline. `systemctl status 'actions.runner.*'`; `cd /srv/actions-runner-openqz && sudo ./svc.sh start`. |
 | "env file ... is not readable" | The runner is not in group `openqz`, or was not restarted after being added: `sudo usermod -aG openqz gh-runner && sudo systemctl restart 'actions.runner.*'`. |
 | "host port 8093 is held by Compose project ..." | Another stack took the port. `sudo ss -ltnp \| grep 8093`; move one of them (env file + `/etc/openqz/<env>.conf` + Cloudflare). |
+| "MEDIA_HOST_DIR ... must be owned by uid 1000" | `sudo chown -R 1000:1000 /srv/server-data/<env>/openqz/media` (the app user in the container is uid 1000). |
 | "backup failed; production is not deployed" | `ls -ld /srv/server-data/production/openqz/backups` must be `root:openqz` with mode `2770`; rerun the setup script. |
 | "did not report version" | The new API did not answer through nginx. `sudo openqz <env> logs api`. Often a changed `POSTGRES_PASSWORD` (the volume keeps the old one) or `ALLOWED_HOSTS` without `127.0.0.1`. |
 | Everyone gets 429 on sign-in | nginx does not see visitor addresses: traffic must come through the tunnel (`CF-Connecting-IP`). |
