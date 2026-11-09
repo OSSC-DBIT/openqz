@@ -766,6 +766,11 @@
       },
       "AuthConfigOut": {
         "properties": {
+          "dev_auto_login": {
+            "default": false,
+            "title": "Dev Auto Login",
+            "type": "boolean"
+          },
           "google_client_id": {
             "anyOf": [
               {

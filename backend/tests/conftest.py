@@ -13,6 +13,8 @@ os.environ.setdefault("JWT_SECRET", "test-secret-test-secret-test-secret")
 os.environ["MEDIA_DIR"] = "/tmp/openqz-test-media"
 os.environ["COOKIE_SECURE"] = "false"
 os.environ["LOGIN_RATE_PER_MINUTE"] = "1000"
+# Never inherit a developer's .env auto sign-in account into tests.
+os.environ["DEV_AUTO_LOGIN_EMAIL"] = ""
 
 from collections.abc import AsyncIterator  # noqa: E402
 

@@ -96,6 +96,26 @@ async def authenticate(session: AsyncSession, email: str, password: str, ip: str
     return user
 
 
+async def dev_login(session: AsyncSession, email: str, ip: str) -> User:
+    """Sign in the configured development account without a password.
+
+    The router only calls this when ENVIRONMENT=development and DEV_AUTO_LOGIN_EMAIL
+    is set, so this never weakens a deployed environment.
+    """
+    user = await find_by_email(session, email)
+    if user is None or not user.is_active:
+        raise AuthError(
+            "dev_login_failed",
+            f"Dev auto sign-in account {normalize_email(email)} is missing or disabled",
+            500,
+        )
+    user.failed_logins = 0
+    user.locked_until = None
+    user.last_login_at = datetime.now(UTC)
+    audit.record(session, "login_dev", actor_id=user.id, meta={"ip": ip})
+    return user
+
+
 async def google_login(session: AsyncSession, claims: dict[str, object], ip: str) -> User:
     """Sign in an imported user whose email matches a verified Google identity."""
     s = get_settings()

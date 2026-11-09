@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     # account lockout (login_max_failures) is what stops password guessing.
     login_rate_per_minute: int = 60
 
+    # Development only: the browser signs in as this account automatically.
+    # Ignored unless ENVIRONMENT=development. Blank = normal sign-in page.
+    dev_auto_login_email: str = ""
+
     # Google sign-in. Blank client id = button hidden and endpoint disabled.
     google_client_id: str = ""
     # Optional allow-list of email domains for Google sign-in (blank = any Google account
@@ -69,6 +73,12 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.environment.lower() in {"production", "staging"}
+
+    @property
+    def dev_auto_login_enabled(self) -> bool:
+        return self.environment.strip().lower() == "development" and bool(
+            self.dev_auto_login_email.strip()
+        )
 
 
 @lru_cache

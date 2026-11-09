@@ -4,8 +4,8 @@ OpenQZ is tested at five layers. CI runs all of them on every pull request; a re
 
 | Layer | Tool | Where | Count (2026-11-08) |
 | --- | --- | --- | --- |
-| Backend unit + API | pytest, httpx | `backend/tests/` | 80 tests, 90% line coverage (CI gate: 85%) |
-| Frontend unit | Vitest, Testing Library, happy-dom | `frontend/src/test/` | 10 tests |
+| Backend unit + API | pytest, httpx | `backend/tests/` | 83 tests, 90% line coverage (CI gate: 85%) |
+| Frontend unit | Vitest, Testing Library, happy-dom | `frontend/src/test/` | 11 tests |
 | Browser journeys | Playwright (desktop Chrome + Pixel 7) | `frontend/e2e/` | 14 tests (9 journeys + 5 axe checks) x 2 devices = 28 runs |
 | Accessibility | axe-core in Playwright (WCAG 2.1 AA) | `frontend/e2e/a11y.spec.ts` | login, student home, join page, create dialog with class picker, faculty library |
 | Load | k6 | `tests/load/student-exam.js` | see [performance.md](performance.md) |
@@ -34,7 +34,7 @@ Browser journeys read `E2E_BASE_URL` (default `http://localhost:8088`), `E2E_ADM
 
 | File | Covers |
 | --- | --- |
-| `test_auth.py` | email login (case-insensitive), lockout, refresh rotation and reuse detection, logout, forced password change, RBAC |
+| `test_auth.py` | email login (case-insensitive), lockout, refresh rotation and reuse detection, logout, forced password change, RBAC, dev auto sign-in (on in development, off in production) |
 | `test_google.py` | Google ID token checks: signature, audience, issuer, expiry, verified email, domain allow-list, unknown email, account linking, temp password cancelled |
 | `test_admin.py` | users, password reset, deactivate, departments / sections / subjects / faculty mapping |
 | `test_imports.py` | header aliases, row errors (missing, invalid, duplicate USN or email, email owned by someone else), XLSX, manual column mapping, idempotent re-import, credential PDF |

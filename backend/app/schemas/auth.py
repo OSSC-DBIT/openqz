@@ -20,6 +20,7 @@ class AuthConfigOut(BaseModel):
     google_client_id: str | None
     password_login: bool = True
     password_reset_email: bool = False
+    dev_auto_login: bool = False
 
 
 class ForgotIn(BaseModel):

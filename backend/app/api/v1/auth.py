@@ -76,6 +76,20 @@ async def login(body: LoginIn, request: Request, session: SessionDep) -> JSONRes
     return _token_response(tokens)
 
 
+@router.post("/dev-login", response_model=TokenOut, include_in_schema=False)
+async def dev_login(request: Request, session: SessionDep) -> JSONResponse:
+    """Local development only: sign in as DEV_AUTO_LOGIN_EMAIL without a password."""
+    s = get_settings()
+    if not s.dev_auto_login_enabled:
+        raise HTTPException(status.HTTP_404_NOT_FOUND)
+    try:
+        user = await auth_service.dev_login(session, s.dev_auto_login_email, client_ip(request))
+        tokens = await auth_service.issue_tokens(session, user)
+    except AuthError as exc:
+        raise _http(exc) from exc
+    return _token_response(tokens)
+
+
 @router.get("/config", response_model=AuthConfigOut)
 async def auth_config() -> AuthConfigOut:
     """Public: tells the login page which sign-in methods are available."""
@@ -83,6 +97,7 @@ async def auth_config() -> AuthConfigOut:
     return AuthConfigOut(
         google_client_id=s.google_client_id or None,
         password_reset_email=s.email_enabled,
+        dev_auto_login=s.dev_auto_login_enabled,
     )
 
 

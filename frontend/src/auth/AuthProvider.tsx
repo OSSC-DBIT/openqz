@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { api, onSessionChange, refreshSession, setAccessToken } from '../api/client';
-import type { Me, TokenResponse } from '../api/types';
+import type { AuthConfig, Me, TokenResponse } from '../api/types';
 
 interface AuthState {
   user: Me | null;
@@ -18,10 +18,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     const off = onSessionChange(setUser);
-    // Restore the session from the refresh cookie on page load.
-    refreshSession().finally(() => setReady(true));
+    void (async () => {
+      try {
+        // Restore the session from the refresh cookie on page load.
+        const session = await refreshSession();
+        if (cancelled || session) return;
+
+        // Development convenience: the API advertises a passwordless account.
+        const config = await api<AuthConfig>('/auth/config');
+        if (cancelled || !config.dev_auto_login) return;
+        const tokens = await api<TokenResponse>('/auth/dev-login', { method: 'POST' });
+        if (cancelled) return;
+        setAccessToken(tokens.access_token);
+        setUser(tokens.user);
+      } catch {
+        // Fall back to the normal sign-in page.
+      } finally {
+        if (!cancelled) setReady(true);
+      }
+    })();
     return () => {
+      cancelled = true;
       off();
     };
   }, []);

@@ -15,6 +15,8 @@ export interface AuthConfig {
   google_client_id: string | null;
   password_login: boolean;
   password_reset_email: boolean;
+  /** Development only: the API signs in DEV_AUTO_LOGIN_EMAIL automatically. */
+  dev_auto_login: boolean;
 }
 
 export interface TokenResponse {

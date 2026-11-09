@@ -143,6 +143,52 @@ async def test_auth_config_hides_google_when_not_configured(
     assert g.status_code == 404
 
 
+async def test_dev_auto_login_signs_in_configured_account(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.core.config import get_settings
+
+    await make_user("devadmin", Role.admin)
+    s = get_settings()
+    monkeypatch.setattr(s, "environment", "development")
+    monkeypatch.setattr(s, "dev_auto_login_email", "devadmin@test.dev")
+
+    cfg = await client.get("/api/v1/auth/config")
+    assert cfg.json()["dev_auto_login"] is True
+
+    r = await client.post("/api/v1/auth/dev-login")
+    assert r.status_code == 200
+    assert r.json()["user"]["username"] == "devadmin"
+    assert "openqz_refresh" in r.cookies
+
+
+async def test_dev_auto_login_is_off_in_production(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.core.config import get_settings
+
+    await make_user("devadmin", Role.admin)
+    s = get_settings()
+    monkeypatch.setattr(s, "environment", "production")
+    monkeypatch.setattr(s, "dev_auto_login_email", "devadmin@test.dev")
+
+    assert (await client.get("/api/v1/auth/config")).json()["dev_auto_login"] is False
+    assert (await client.post("/api/v1/auth/dev-login")).status_code == 404
+
+
+async def test_dev_auto_login_needs_an_email(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.core.config import get_settings
+
+    s = get_settings()
+    monkeypatch.setattr(s, "environment", "development")
+    monkeypatch.setattr(s, "dev_auto_login_email", "")
+
+    assert (await client.get("/api/v1/auth/config")).json()["dev_auto_login"] is False
+    assert (await client.post("/api/v1/auth/dev-login")).status_code == 404
+
+
 async def test_client_ip_ignores_spoofed_forwarded_for(client: AsyncClient) -> None:
     """X-Forwarded-For is client-controlled; only X-Real-IP (set by our edge) counts."""
     from app.core.redis import get_redis

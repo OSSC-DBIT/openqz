@@ -17,6 +17,7 @@ All notable changes to OpenQZ. Format: [Keep a Changelog](https://keepachangelog
 - Lighter queries on the student home page and answer saves.
 
 ### Added
+- **Dev auto sign-in** (development only): set `DEV_AUTO_LOGIN_EMAIL` to an existing account and the browser signs in as that account on page load. Ignored unless `ENVIRONMENT=development`; blank keeps the normal sign-in page.
 - `compose.mail.yaml` and `docs/email.md`: send real email from a local dev stack through the Cloudflare tunnel (`smtp-tunnel.webuildnow.in`), with setup, tests and troubleshooting. Mailpit stays the default.
 - **Full screen required** (per assignment, on by default): the player hides the questions until the student is in full screen; leaving it is a warning. Skipped on iPhone, which has no full screen for web pages.
 - **Branch** step in the class picker: teachers pick the branch, then semesters and sections they teach, and can mix branches in one activity. Library filter by branch.

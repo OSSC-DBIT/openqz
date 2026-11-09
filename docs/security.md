@@ -24,6 +24,8 @@ Found a security issue? Do **not** open a public issue. Email the OSSC project l
 | Accountability | misuse | audit log of sign-ins, failures, lockouts, resets, imports, credential downloads, assignments and score releases |
 | Dependencies | known CVEs | pip-audit and pnpm audit block CI |
 
+Development auto sign-in (`DEV_AUTO_LOGIN_EMAIL`) is refused unless `ENVIRONMENT=development`, and it is off when the variable is blank. Staging and production always use the normal sign-in flow.
+
 ## Latest results (2026-11-08)
 
 | Check | Result |
