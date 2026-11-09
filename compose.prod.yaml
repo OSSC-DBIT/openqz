@@ -33,7 +33,8 @@ services:
       # Uploads and import sheets. MEDIA_HOST_DIR = a host folder for this environment
       # (OSSC server: /srv/server-data/<env>/openqz/media, owned by uid 1000, the app user);
       # unset = the project's Docker volume.
-      - ${MEDIA_HOST_DIR:-media}:/data/media
+      # Mounted at MEDIA_DIR (the path the app uses), so either value of MEDIA_DIR works.
+      - ${MEDIA_HOST_DIR:-media}:${MEDIA_DIR:-/data/media}
 
   api:
     <<: *prod
