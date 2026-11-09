@@ -145,17 +145,15 @@ describe('routing and auth', () => {
 
   it('signs in automatically when the API enables dev auto login', async () => {
     const fetchMock = mockApi((url) => {
+      if (url.endsWith('/auth/refresh')) return json({ detail: 'no session' }, 401);
       if (url.endsWith('/auth/config'))
         return json({ google_client_id: null, password_login: true, password_reset_email: false, dev_auto_login: true });
       if (url.endsWith('/auth/dev-login')) return token({ role: 'admin' });
       return undefined;
     });
     renderApp('/admin');
-    await waitFor(
-      () => expect(fetchMock.mock.calls.some(([u]) => String(u).endsWith('/auth/dev-login'))).toBe(true),
-      { timeout: 5000 },
-    );
-    expect(await screen.findByText('admin home', {}, { timeout: 5000 })).toBeInTheDocument();
+    expect(await screen.findByText('admin home')).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([u]) => String(u).endsWith('/auth/dev-login'))).toBe(true);
   });
 
   it('hides the Google button when not configured', async () => {
