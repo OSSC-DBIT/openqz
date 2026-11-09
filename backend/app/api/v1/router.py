@@ -6,6 +6,7 @@ from app.api.v1 import (
     health,
     imports,
     integrity,
+    live,
     media,
     org,
     play,
@@ -23,5 +24,6 @@ api_router.include_router(integrity.router)
 api_router.include_router(activities.router)
 api_router.include_router(results.router)
 api_router.include_router(play.router)
+api_router.include_router(live.router)
 api_router.include_router(media.router)
 api_router.include_router(users.audit_router)

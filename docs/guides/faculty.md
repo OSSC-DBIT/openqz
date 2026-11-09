@@ -124,6 +124,34 @@ After **Host room**, the report page opens with a large banner:
 
 The participant list updates every few seconds while you have the page open. All the other settings (deadline, attempts, timers, warnings, scores) work exactly as for a class assignment.
 
+## 5b. Live games (Kahoot-style)
+
+A live game is played together, at the pace you set. **Your screen (the projector) shows the question; students' phones show only the coloured answers.** Good for revision in class, labs, tech fests and club events.
+
+```mermaid
+flowchart LR
+    A["Assign or host<br/>Live game"] --> B["Lobby: code + QR<br/>players appear"]
+    B -- Start --> C["Question on the big screen<br/>answers on phones"]
+    C -- "time up or all answered" --> D["Answer revealed<br/>counts per option"]
+    D --> E["Leaderboard"]
+    E -- Next --> C
+    D -- Next --> C
+    E -- "last question" --> F["Podium<br/>results and CSV"]
+```
+
+1. Open a quiz or poll, press **Assign or host**, choose **Live game**.
+2. Pick the **Scoring**:
+   - **Marks + speed bonus**: marks as usual; on the leaderboard, faster correct answers earn more points (up to 1000 per question, half at the last second).
+   - **Marks only**: ranked by marks, ties by total answer time.
+   - **Just for fun**: points only, nothing counted as marks. Polls are always "just for fun".
+3. **Let guests join with a nickname**: tick it for open events (no account needed). Leave it off for class games, so only signed-in students with real names can play. Nicknames are checked for rude words and must be unique in the game.
+4. Press **Start live game**. The lobby shows `.../live`, the 6-digit code and a QR code. Players appear as they join; click a name to remove someone. **Stop new joins** closes the door.
+5. Press **Start**. Each question gets a 3-second "get ready", then its timer (the question's own timer, or 20 seconds). The answer is shown automatically when time is up or everyone has answered; **Show answer** ends it early.
+6. After each question: **Leaderboard** (top 5) or straight to **Next**. After the last one, **Finish** shows the podium.
+7. **View results** (also under **Reports, Live games**): every player's rank, points, **marks obtained**, correct answers, per-question stats and a CSV export.
+
+Live games use the **multiple choice, true / false and multi-select** questions of the activity; other types are skipped. Integrity checks (full screen, tab switches) do not apply: the game is paced on the big screen.
+
 ## 6. Reports and marking
 
 **Reports** (called **Rooms & reports** for clubs) lists everything you assigned or hosted. Open one to see:

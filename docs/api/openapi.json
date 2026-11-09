@@ -411,25 +411,6 @@
         "title": "ActivityUpdate",
         "type": "object"
       },
-      "AnswerIn": {
-        "properties": {
-          "final": {
-            "default": false,
-            "title": "Final",
-            "type": "boolean"
-          },
-          "response": {
-            "additionalProperties": true,
-            "title": "Response",
-            "type": "object"
-          }
-        },
-        "required": [
-          "response"
-        ],
-        "title": "AnswerIn",
-        "type": "object"
-      },
       "AssignIn": {
         "properties": {
           "allow_late": {
@@ -965,6 +946,29 @@
         "title": "ForgotIn",
         "type": "object"
       },
+      "GameIn": {
+        "properties": {
+          "activity_id": {
+            "format": "uuid",
+            "title": "Activity Id",
+            "type": "string"
+          },
+          "allow_guests": {
+            "default": false,
+            "title": "Allow Guests",
+            "type": "boolean"
+          },
+          "scoring": {
+            "$ref": "#/components/schemas/LiveScoring",
+            "default": "marks_speed"
+          }
+        },
+        "required": [
+          "activity_id"
+        ],
+        "title": "GameIn",
+        "type": "object"
+      },
       "GoogleLoginIn": {
         "properties": {
           "credential": {
@@ -1395,21 +1399,14 @@
         "title": "IntegrityEventOut",
         "type": "object"
       },
-      "JoinIn": {
-        "properties": {
-          "code": {
-            "maxLength": 8,
-            "minLength": 6,
-            "pattern": "^[0-9 ]+$",
-            "title": "Code",
-            "type": "string"
-          }
-        },
-        "required": [
-          "code"
+      "LiveScoring": {
+        "enum": [
+          "marks_speed",
+          "marks",
+          "fun"
         ],
-        "title": "JoinIn",
-        "type": "object"
+        "title": "LiveScoring",
+        "type": "string"
       },
       "LoginIn": {
         "properties": {
@@ -2596,6 +2593,87 @@
           "session_id"
         ],
         "title": "ViolationIn",
+        "type": "object"
+      },
+      "app__api__v1__live__AnswerIn": {
+        "properties": {
+          "index": {
+            "title": "Index",
+            "type": "integer"
+          },
+          "response": {
+            "additionalProperties": true,
+            "title": "Response",
+            "type": "object"
+          }
+        },
+        "required": [
+          "index",
+          "response"
+        ],
+        "title": "AnswerIn",
+        "type": "object"
+      },
+      "app__api__v1__live__JoinIn": {
+        "properties": {
+          "code": {
+            "maxLength": 6,
+            "minLength": 6,
+            "title": "Code",
+            "type": "string"
+          },
+          "nickname": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nickname"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "JoinIn",
+        "type": "object"
+      },
+      "app__api__v1__play__AnswerIn": {
+        "properties": {
+          "final": {
+            "default": false,
+            "title": "Final",
+            "type": "boolean"
+          },
+          "response": {
+            "additionalProperties": true,
+            "title": "Response",
+            "type": "object"
+          }
+        },
+        "required": [
+          "response"
+        ],
+        "title": "AnswerIn",
+        "type": "object"
+      },
+      "app__api__v1__play__JoinIn": {
+        "properties": {
+          "code": {
+            "maxLength": 8,
+            "minLength": 6,
+            "pattern": "^[0-9 ]+$",
+            "title": "Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "JoinIn",
         "type": "object"
       },
       "app__schemas__activities__AssignmentOut": {
@@ -4566,7 +4644,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/AnswerIn"
+                "$ref": "#/components/schemas/app__api__v1__play__AnswerIn"
               }
             }
           },
@@ -5894,7 +5972,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/JoinIn"
+                "$ref": "#/components/schemas/app__api__v1__play__JoinIn"
               }
             }
           },
@@ -5981,6 +6059,603 @@
         "summary": "Room Preview",
         "tags": [
           "play"
+        ]
+      }
+    },
+    "/api/v1/live/games": {
+      "get": {
+        "operationId": "my_games_api_v1_live_games_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response My Games Api V1 Live Games Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "My Games",
+        "tags": [
+          "live"
+        ]
+      },
+      "post": {
+        "operationId": "create_game_api_v1_live_games_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GameIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Game Api V1 Live Games Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Game",
+        "tags": [
+          "live"
+        ]
+      }
+    },
+    "/api/v1/live/games/{game_id}": {
+      "get": {
+        "operationId": "get_game_api_v1_live_games__game_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "game_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Game Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Game Api V1 Live Games  Game Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Game",
+        "tags": [
+          "live"
+        ]
+      }
+    },
+    "/api/v1/live/games/{game_id}/players/{player_id}": {
+      "delete": {
+        "operationId": "remove_player_api_v1_live_games__game_id__players__player_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "game_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Game Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "player_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Player Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Remove Player",
+        "tags": [
+          "live"
+        ]
+      }
+    },
+    "/api/v1/live/games/{game_id}/results": {
+      "get": {
+        "operationId": "results_api_v1_live_games__game_id__results_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "game_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Game Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Results Api V1 Live Games  Game Id  Results Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Results",
+        "tags": [
+          "live"
+        ]
+      }
+    },
+    "/api/v1/live/games/{game_id}/results.csv": {
+      "get": {
+        "operationId": "results_csv_api_v1_live_games__game_id__results_csv_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "game_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Game Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Results Csv",
+        "tags": [
+          "live"
+        ]
+      }
+    },
+    "/api/v1/live/games/{game_id}/{action}": {
+      "post": {
+        "operationId": "game_action_api_v1_live_games__game_id___action__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "game_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Game Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "action",
+            "required": true,
+            "schema": {
+              "enum": [
+                "start",
+                "reveal",
+                "leaderboard",
+                "next",
+                "end",
+                "lock",
+                "unlock"
+              ],
+              "title": "Action",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Game Action Api V1 Live Games  Game Id   Action  Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Game Action",
+        "tags": [
+          "live"
+        ]
+      }
+    },
+    "/api/v1/live/join": {
+      "post": {
+        "operationId": "join_api_v1_live_join_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/app__api__v1__live__JoinIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Join Api V1 Live Join Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Join",
+        "tags": [
+          "live"
+        ]
+      }
+    },
+    "/api/v1/live/join/{code}": {
+      "get": {
+        "operationId": "preview_api_v1_live_join__code__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Preview Api V1 Live Join  Code  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Preview",
+        "tags": [
+          "live"
+        ]
+      }
+    },
+    "/api/v1/live/play/{game_id}": {
+      "get": {
+        "operationId": "state_api_v1_live_play__game_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "game_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Game Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Live-Player",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Live-Player"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response State Api V1 Live Play  Game Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "State",
+        "tags": [
+          "live"
+        ]
+      }
+    },
+    "/api/v1/live/play/{game_id}/answer": {
+      "post": {
+        "operationId": "submit_answer_api_v1_live_play__game_id__answer_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "game_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Game Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Live-Player",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Live-Player"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/app__api__v1__live__AnswerIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Submit Answer Api V1 Live Play  Game Id  Answer Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Submit Answer",
+        "tags": [
+          "live"
         ]
       }
     },

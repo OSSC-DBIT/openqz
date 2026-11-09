@@ -14,6 +14,7 @@ Roles: `admin`, `faculty`, `student`, `club` (club organisers host rooms only).
 | --- | --- |
 | Marks, not points | Every user-facing text says **marks** / **marks obtained**. Never "points" or "score" in the UI, emails, exports or docs. (`score` is fine as an internal field name.) |
 | One attempt per student | No retakes and no "Try again". `start` refuses a second attempt (`already_taken`). A teacher reopens a violations auto-submit with **Unblock**. `max_attempts` exists only for the load-test seed. |
+| Live games | Host-paced: the host screen shows the question, phones only the options (`/live`, `/live/play/:id`, `/live/host/:id`). Never send the question text or the key to phones before the reveal. Host chooses scoring (`marks_speed`, `marks`, `fun`) and `allow_guests`; guests use the `X-Live-Player` token, never an account. |
 | Classes | Teachers pick **Branch, then semesters and sections**, only from sections mapped to them (`faculty_assignments`). Picks may span branches. Clubs pick no classes. |
 | Full screen | Assignments have `require_fullscreen` (default on). The player hides questions until full screen, except where the browser has no full screen (iPhone). Leaving full screen is a warning. |
 | Integrity | Tab or app switch, Back, reload and full-screen exit are counted on the server; auto-submit at the assignment's limit. Browsers cannot block screenshots; do not add watermark or "screenshot blocking" code (decided against). |

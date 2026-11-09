@@ -2,11 +2,13 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { api } from '../../api/client';
 import type { AssignmentInfo } from '../../api/types';
+import { SCORING_LABEL, type LiveGameRow } from '../../live/api';
 import { Badge, EmptyState, ErrorText, PageHeader, Spinner, Table, Td } from '../../components/ui';
 import { KIND_LABEL } from '../../components/quiz';
 
 export default function ReportsListPage() {
   const list = useQuery({ queryKey: ['my-assignments'], queryFn: () => api<AssignmentInfo[]>('/activity-assignments') });
+  const games = useQuery({ queryKey: ['live-games'], queryFn: () => api<LiveGameRow[]>('/live/games') });
   const now = Date.now();
   return (
     <>
@@ -46,6 +48,31 @@ export default function ReportsListPage() {
         </Table>
       ) : (
         <EmptyState title="Nothing assigned yet">Open an activity in your library and press Assign.</EmptyState>
+      )}
+
+      {!!games.data?.length && (
+        <section className="mt-8" aria-labelledby="live-games">
+          <h2 id="live-games" className="mb-3 text-lg font-bold">
+            Live games
+          </h2>
+          <Table head={['Game', 'Scoring', 'Players', '']} cols={[undefined, 'hidden md:table-cell', undefined, 'hidden sm:table-cell']} compact>
+            {games.data.map((g) => (
+              <tr key={g.id}>
+                <Td>
+                  <Link to={g.status === 'ended' ? `/faculty/live/${g.id}` : `/live/host/${g.id}`} className="font-semibold text-brand-ink hover:underline">
+                    {g.title}
+                  </Link>
+                  <div className="text-xs text-muted">{new Date(g.created_at).toLocaleString()}</div>
+                </Td>
+                <Td className="hidden text-sm md:table-cell">{SCORING_LABEL[g.scoring]}</Td>
+                <Td>{g.players}</Td>
+                <Td className="hidden sm:table-cell">
+                  <Badge tone={g.status === 'ended' ? 'neutral' : 'green'}>{g.status === 'ended' ? 'ended' : 'live'}</Badge>
+                </Td>
+              </tr>
+            ))}
+          </Table>
+        </section>
       )}
     </>
   );
