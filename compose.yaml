@@ -66,8 +66,14 @@ services:
         condition: service_completed_successfully
       redis:
         condition: service_healthy
+    # Healthy only while the worker is running and writing its heartbeat to Redis
+    # (`docker compose up --wait` and CI rely on every service having a health check).
     healthcheck:
-      disable: true
+      test: ["CMD", "arq", "--check", "app.worker.tasks.WorkerSettings"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
 
   nginx:
     build:

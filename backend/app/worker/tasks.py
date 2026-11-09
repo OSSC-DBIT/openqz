@@ -106,4 +106,6 @@ class WorkerSettings:
     on_shutdown = shutdown
     redis_settings = RedisSettings.from_dsn(get_settings().redis_url)
     max_jobs = 4
+    # A heartbeat in Redis every 30 s; `arq --check` (the container health check) reads it.
+    health_check_interval = 30
     job_timeout = 900
