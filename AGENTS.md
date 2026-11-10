@@ -26,7 +26,7 @@ Roles: `admin`, `faculty`, `student`, `club` (club organisers host rooms only).
 
 ```
 backend/            FastAPI app (Python 3.12)
-  app/api/v1/       routers: auth, users(+audit), org, imports, activities, results, play, media, integrity, health
+  app/api/v1/       routers: auth, users(+audit), org, imports, activities, results, play, live, media, integrity, stats, health
   app/services/     business logic (attempt_service, grading, auth_service, import_*, email, assignment_view)
   app/models/       SQLAlchemy 2 models
   app/worker/       ARQ jobs (imports, emails, sweep_attempts cron)
@@ -124,6 +124,11 @@ cd frontend && pnpm guides
 - **Client address:** the web nginx (`frontend/nginx.conf`) takes it from `CF-Connecting-IP` (Cloudflare tunnel), else `X-Real-IP` (our edge, which clears `CF-Connecting-IP`), and passes it to the API as `X-Real-IP`; the API trusts only that. Never read `X-Forwarded-For`.
 - **Data on the server** lives in `/srv/server-data/<env>/openqz/` (`db/` = `DB_HOST_DIR`, `redis/` = `REDIS_HOST_DIR`, `media/` = `MEDIA_HOST_DIR` owner uid 1000), not Docker volumes; `backup.sh` / `restore.sh` find the right place from the api container's mount.
 - **Deploys (OSSC server):** push `dev` = staging (`127.0.0.1:8092`), `main` = production (`127.0.0.1:8093`), through `.github/workflows/deploy.yml` and the self-hosted runner (label `openqz`). Never deploy by hand. `/api/v1/health` must report `version` (= `APP_VERSION`): the deploy checks it. Guide: [docs/deploy-ossc-server.md](docs/deploy-ossc-server.md).
+- **`User.departments` is not loaded by default** (`lazy="raise"`: the user row is read on every request). Query with `selectinload(User.departments)` and build `UserOut` with `users.user_out()`; change memberships through `services/user_org.py` (`set_departments`, `add_department`, `set_section`), never the relationship.
+- **Questions lock once an attempt exists** (`activities._editable`, 409 `has_attempts`). Tests and scripts that need to edit must do it before the first `start`, or work on a duplicate.
+- **Writes to an attempt take a row lock** (`play.my_attempt(..., lock=True)`): answer saves, submit, violations and the deadline check run one after the other. Keep new write endpoints on it.
+- **Scheduled start:** `start_notified_at` is set at once when an assignment is already open; the worker cron `notify_started` sends the "open now" email for the rest and marks them. New rows made by scripts must set it, or students get a late email.
+- **API docs are development only:** `/api/docs` and `/api/openapi.json` are 404 when `ENVIRONMENT` is `staging` or `production`. `scripts/export_openapi.py` still works everywhere.
 - **Run Playwright from `frontend/`**, not the repo root (it writes `test-results/` where it runs).
 
 ## Commits

@@ -20,7 +20,7 @@ from app.models.imports import ImportJob, ImportKind, ImportStatus
 from app.models.integrity import IntegrityEvent
 from app.models.live import LiveAnswer, LiveGame, LivePlayer, LiveScoring, LiveStatus
 from app.models.org import Department, FacultyAssignment, Section, StudentSection, Subject
-from app.models.user import PasswordResetToken, RefreshToken, Role, User
+from app.models.user import PasswordResetToken, RefreshToken, Role, User, UserDepartment
 
 __all__ = [
     "LiveAnswer",
@@ -57,4 +57,5 @@ __all__ = [
     "StudentSection",
     "Subject",
     "User",
+    "UserDepartment",
 ]

@@ -32,6 +32,9 @@ class User(UUIDPk, Timestamped, Base):
     department_id: Mapped[int | None] = mapped_column(
         ForeignKey("departments.id", ondelete="SET NULL"), nullable=True, index=True
     )
+    # Optional contact and role details, filled in by the admin.
+    phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    designation: Mapped[str | None] = mapped_column(String(120), nullable=True)
     password_hash: Mapped[str] = mapped_column(String(255))
     must_change_password: Mapped[bool] = mapped_column(Boolean, default=True)
     failed_logins: Mapped[int] = mapped_column(Integer, default=0)
@@ -40,10 +43,34 @@ class User(UUIDPk, Timestamped, Base):
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     department = relationship("Department", lazy="joined")
+    # Every department the user belongs to. Faculty may have several (a maths teacher in CSE
+    # and ECE); `department_id` above is the main one and is always in this list. Not loaded
+    # by default (the user row is read on every request): ask with selectinload(User.departments).
+    departments = relationship(
+        "Department", secondary="user_departments", lazy="raise", order_by="Department.code"
+    )
+
+    @property
+    def department_ids(self) -> list[int]:
+        return [d.id for d in self.departments]
 
     @property
     def google_linked(self) -> bool:
         return self.google_sub is not None
+
+
+class UserDepartment(Base):
+    __tablename__ = "user_departments"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE", name="fk_user_departments_user"),
+        primary_key=True,
+    )
+    department_id: Mapped[int] = mapped_column(
+        ForeignKey("departments.id", ondelete="CASCADE", name="fk_user_departments_department"),
+        primary_key=True,
+        index=True,
+    )
 
 
 # Usernames are unique regardless of case (login is case-insensitive).

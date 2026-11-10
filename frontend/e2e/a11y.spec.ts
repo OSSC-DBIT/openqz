@@ -127,6 +127,7 @@ test.describe('dark mode', () => {
     for (const [path, name] of [
       ['/admin', 'Admin dashboard'],
       ['/admin/users', 'Users'],
+      ['/admin/stats', 'Statistics'],
       ['/admin/sections', 'Sections'],
       ['/admin/imports', 'Imports'],
       ['/admin/audit', 'Audit log'],

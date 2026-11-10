@@ -7,7 +7,7 @@ from sqlalchemy import select
 
 from app.core.config import get_settings
 from app.core.db import SessionLocal, engine
-from app.models import ActivityAssignment, User
+from app.models import Activity, ActivityAssignment, ActivityStatus, Attempt, User
 from app.services import attempt_service, email, import_service
 
 
@@ -49,6 +49,10 @@ async def send_password_reset(ctx: dict[str, Any], user_id: str, raw_token: str)
         )
 
 
+def _when(at: Any) -> str | None:
+    return at.strftime("%d %b %Y, %I:%M %p UTC") if at else None
+
+
 async def _students(session: Any, a: ActivityAssignment) -> list[User]:
     ids = await attempt_service.target_student_ids(session, a)
     rows = await session.scalars(select(User).where(User.id.in_(ids), User.is_active.is_(True)))
@@ -61,7 +65,7 @@ async def notify_assigned(ctx: dict[str, Any], assignment_id: str) -> int:
         if a is None or not a.notify:
             return 0
         teacher = await session.get(User, a.activity.owner_id)
-        due = a.due_at.strftime("%d %b %Y, %I:%M %p UTC") if a.due_at else None
+        scheduled = a.start_notified_at is None  # opens later: say when
         sent = 0
         for u in await _students(session, a):
             mail = email.assigned(
@@ -69,10 +73,71 @@ async def notify_assigned(ctx: dict[str, Any], assignment_id: str) -> int:
                 u.full_name,
                 a.activity.title,
                 teacher.full_name if teacher else "Your teacher",
-                due,
+                _when(a.due_at),
                 _link("/student"),
+                opens=_when(a.start_at) if scheduled else None,
+                instructions=a.instructions,
             )
             sent += int(await email.send(mail))
+        return sent
+
+
+async def notify_started(ctx: dict[str, Any]) -> int:
+    """Every minute: email "it is open now" for scheduled assignments whose start time came.
+
+    Each assignment is marked first and mailed after, so a slow mail server or a crash can
+    never send the same email twice."""
+    async with SessionLocal() as session:
+        ids = list(
+            (
+                await session.scalars(
+                    select(ActivityAssignment.id)
+                    .join(Activity, Activity.id == ActivityAssignment.activity_id)
+                    .where(
+                        ActivityAssignment.start_notified_at.is_(None),
+                        ActivityAssignment.start_at <= attempt_service.now(),
+                        Activity.status != ActivityStatus.archived,
+                    )
+                    .with_for_update(of=ActivityAssignment, skip_locked=True)
+                )
+            ).all()
+        )
+        if not ids:
+            return 0
+        opened = list(
+            (
+                await session.scalars(
+                    select(ActivityAssignment).where(ActivityAssignment.id.in_(ids))
+                )
+            ).unique()
+        )
+        for a in opened:
+            a.start_notified_at = attempt_service.now()
+        await session.commit()
+        sent = 0
+        for a in opened:
+            if not a.notify:
+                continue
+            begun = set(
+                (
+                    await session.scalars(
+                        select(Attempt.student_id).where(Attempt.assignment_id == a.id)
+                    )
+                ).all()
+            )
+            teacher = await session.get(User, a.activity.owner_id)
+            for u in await _students(session, a):
+                if u.id in begun:
+                    continue
+                mail = email.started(
+                    u.email or "",
+                    u.full_name,
+                    a.activity.title,
+                    teacher.full_name if teacher else "Your teacher",
+                    _when(a.due_at),
+                    _link("/student"),
+                )
+                sent += int(await email.send(mail))
         return sent
 
 
@@ -102,7 +167,10 @@ class WorkerSettings:
         notify_assigned,
         notify_released,
     ]
-    cron_jobs = [cron(sweep_attempts, second=0, run_at_startup=True)]
+    cron_jobs = [
+        cron(sweep_attempts, second=0, run_at_startup=True),
+        cron(notify_started, second=20),
+    ]
     on_shutdown = shutdown
     redis_settings = RedisSettings.from_dsn(get_settings().redis_url)
     max_jobs = 4

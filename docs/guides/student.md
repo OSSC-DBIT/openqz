@@ -39,6 +39,8 @@ flowchart TD
 
 After 5 wrong passwords your account locks for 15 minutes.
 
+**Have a join code?** The sign-in page has a **Have a join code?** box: type the 6-digit code from the host's screen, or tap **Scan QR code** and point the camera at it. A live game opens at once (as a guest you only pick a nickname, when the host allows guests). For a room, sign in first and you go straight to it.
+
 ## 2. Install it like an app (optional)
 
 - **Android (Chrome):** menu, then **Install app** or **Add to Home screen**.
@@ -55,7 +57,9 @@ The home page has two tabs:
 
 Buttons on each card:
 
-- **Start**: begin the activity.
+- **Start**: begin the activity. If your teacher wrote **instructions**, you read them first and then press **Start now**.
+- **Not started yet**: the activity is assigned but opens later. The card shows the opening time and the Start button appears by itself when it opens (you also get an email, if your college has email set up).
+- **Instructions**: read your teacher's note again before you start.
 - **Resume**: continue an attempt you left. Your answers were saved.
 - **Review**: see your answers and marks after submitting.
 

@@ -20,8 +20,9 @@ from app.models import (
     StudentSection,
     Subject,
     User,
+    UserDepartment,
 )
-from app.services import audit
+from app.services import audit, user_org
 from app.services.credential_pdf import Credential, build_credential_pdf
 from app.services.import_parser import (
     FIELDS,
@@ -225,6 +226,10 @@ async def _apply(
             dept = await cache.dept(r["department"])
             sec = await cache.section(dept, r["semester"], r["section"])
             sub = await cache.subject(r["subject_code"], r.get("subject_name"), dept, r["semester"])
+            # Teaching in a branch makes the teacher part of it (several departments allowed).
+            await user_org.add_department(session, faculty.id, dept.id)
+            if faculty.department_id is None:
+                faculty.department_id = dept.id
             exists = await session.scalar(
                 select(FacultyAssignment.id).where(
                     FacultyAssignment.faculty_id == faculty.id,
@@ -269,6 +274,14 @@ async def _apply(
             user.department_id = dept.id
             updated += 1
             temp = None
+        if role == Role.student:
+            # a student has exactly one department
+            await session.execute(
+                delete(UserDepartment).where(
+                    UserDepartment.user_id == user.id, UserDepartment.department_id != dept.id
+                )
+            )
+        await user_org.add_department(session, user.id, dept.id)
 
         if role == Role.student:
             sec = await cache.section(dept, r["semester"], r["section"])

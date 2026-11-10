@@ -1,7 +1,7 @@
 """Faculty: activity library, editor (questions), publish, duplicate, assign."""
 
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 from fastapi import APIRouter, HTTPException, Request, Response, status
@@ -44,6 +44,10 @@ from app.services import audit
 from app.services.assignment_view import assignment_out
 
 router = APIRouter(tags=["activities"])
+
+# An assignment whose start is further away than this is "scheduled": students see it as not
+# started, and get a second email when it opens (worker job notify_started).
+SCHEDULED_AFTER = timedelta(minutes=2)
 
 ALLOWED_TYPES = {
     ActivityKind.quiz: set(QuestionType),
@@ -394,6 +398,20 @@ async def duplicate(activity_id: uuid.UUID, session: SessionDep, user: CreatorUs
 # ---------------------------------------------------------------- questions
 
 
+async def _editable(session: AsyncSession, act: Activity) -> None:
+    """Each attempt keeps its own copy of the questions. Changing them after students have
+    started gives later students a different paper and a report that mixes two versions."""
+    if await has_attempts(session, act.id):
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            detail={
+                "code": "has_attempts",
+                "message": "Students have already attempted this, so its questions are locked. "
+                "Duplicate the activity to change the questions.",
+            },
+        )
+
+
 async def _check_images(session: AsyncSession, body: QuestionIn) -> None:
     ids = {body.stem_image_id, *[o.image_id for o in body.options]} - {None}
     if ids:
@@ -446,6 +464,7 @@ async def add_question(
     activity_id: uuid.UUID, body: QuestionIn, session: SessionDep, user: CreatorUser
 ) -> QuestionOut:
     act = await get_owned(session, activity_id, user)
+    await _editable(session, act)
     _validate_for_kind(act, body)
     await _check_images(session, body)
     q = Question(activity_id=act.id, position=len(act.questions))
@@ -474,6 +493,7 @@ async def update_question(
 ) -> QuestionOut:
     act = await get_owned(session, activity_id, user)
     q = await _question(session, act, question_id)
+    await _editable(session, act)
     _validate_for_kind(act, body)
     await _check_images(session, body)
     _apply(q, body)
@@ -489,6 +509,7 @@ async def delete_question(
 ) -> Response:
     act = await get_owned(session, activity_id, user)
     q = await _question(session, act, question_id)
+    await _editable(session, act)
     act.questions.remove(q)
     for i, other in enumerate(act.questions):
         other.position = i
@@ -519,6 +540,7 @@ async def apply_all(
     activity_id: uuid.UUID, body: BulkApplyIn, session: SessionDep, user: CreatorUser
 ) -> ActivityOut:
     act = await get_owned(session, activity_id, user)
+    await _editable(session, act)
     for q in act.questions:
         if body.clear_timer:
             q.time_limit_seconds = None
@@ -597,12 +619,16 @@ async def assign(
         )
         if found != set(body.student_ids):
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "Some selected students do not exist")
+    now = datetime.now(UTC)
     a = ActivityAssignment(
         activity_id=act.id,
         created_by=user.id,
-        start_at=body.start_at or datetime.now(UTC),
+        start_at=body.start_at or now,
         **body.model_dump(exclude={"section_ids", "student_ids", "start_at", "room"}),
     )
+    if a.start_at <= now + SCHEDULED_AFTER:
+        # Open already: the "assigned" email says so, no separate "it has started" email.
+        a.start_notified_at = now
     if body.room:
         a.join_code = await new_join_code(session)
     a.targets = [AssignmentTarget(section_id=s) for s in sorted(set(body.section_ids))] + [

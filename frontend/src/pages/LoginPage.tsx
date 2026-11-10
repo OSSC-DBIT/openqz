@@ -1,12 +1,107 @@
 import { useQuery } from '@tanstack/react-query';
-import { useState, type FormEvent } from 'react';
+import { QrCode } from 'lucide-react';
+import { lazy, Suspense, useState, type FormEvent } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router';
-import { api } from '../api/client';
+import { api, ApiError } from '../api/client';
 import type { AuthConfig, Me } from '../api/types';
 import { homeFor, useAuth } from '../auth/AuthProvider';
 import { GoogleButton } from '../auth/GoogleButton';
 import { Button, ErrorText, Field, Input, PasswordInput } from '../components/ui';
 import { Logo } from '../layouts/AppShell';
+
+// The camera code loads only when someone presses "Scan QR code".
+const QrScanner = lazy(() => import('../components/QrScanner').then((m) => ({ default: m.QrScanner })));
+
+const digits = (v: string) => v.replace(/\D/g, '').slice(0, 6);
+
+/** What a scanned QR code or typed text means: a live game, a room, or just a code. */
+export function readJoinCode(text: string): { kind: 'live' | 'room' | 'code'; code: string } | null {
+  const t = text.trim();
+  const m = /\/(live|join)\/(\d{6})(?:[/?#]|$)/.exec(t);
+  if (m) return { kind: m[1] === 'live' ? 'live' : 'room', code: m[2] };
+  const bare = t.replace(/\s/g, '');
+  return /^\d{6}$/.test(bare) ? { kind: 'code', code: bare } : null;
+}
+
+/**
+ * For people without an account (or not signed in yet): type the code from the host's screen
+ * or scan its QR code. A live game opens at once (guests pick a nickname there, when the host
+ * allows guests); a room needs a student account, so we ask them to sign in and go there after.
+ */
+function GuestJoin({ onRoom }: { onRoom: (code: string) => void }) {
+  const nav = useNavigate();
+  const [code, setCode] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  async function open(c: string) {
+    setBusy(true);
+    setMsg(null);
+    try {
+      await api(`/live/join/${c}`);
+      nav(`/live/${c}`);
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 404) onRoom(c);
+      else setMsg(e instanceof Error ? e.message : 'Could not check that code. Try again.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function scanned(text: string) {
+    setScanning(false);
+    const hit = readJoinCode(text);
+    if (!hit) setMsg('That QR code is not an OpenQZ join code.');
+    else if (hit.kind === 'live') nav(`/live/${hit.code}`);
+    else if (hit.kind === 'room') onRoom(hit.code);
+    else void open(hit.code);
+  }
+
+  return (
+    <section aria-labelledby="guest-title" className="mt-4 space-y-3 rounded-2xl border border-line bg-card p-6 shadow-sm">
+      <div>
+        <h2 id="guest-title" className="text-lg font-bold">
+          Have a join code?
+        </h2>
+        <p className="text-sm text-muted">Enter the 6-digit code from the host's screen, or scan the QR code. Guests need no account for live games that allow them.</p>
+      </div>
+      <form
+        className="flex gap-2"
+        onSubmit={(e: FormEvent) => {
+          e.preventDefault();
+          if (code.length === 6) void open(code);
+        }}
+      >
+        <Input
+          inputMode="numeric"
+          autoComplete="off"
+          aria-label="Join code"
+          placeholder="123 456"
+          className="text-center text-lg font-bold tracking-widest"
+          value={code.length > 3 ? `${code.slice(0, 3)} ${code.slice(3)}` : code}
+          onChange={(e) => setCode(digits(e.target.value))}
+        />
+        <Button type="submit" loading={busy} disabled={code.length !== 6}>
+          Join
+        </Button>
+      </form>
+      <Button type="button" variant="secondary" className="w-full" onClick={() => setScanning(true)}>
+        <QrCode className="h-4 w-4" aria-hidden /> Scan QR code
+      </Button>
+      {msg && (
+        <p role="alert" className="text-sm font-semibold text-red-600">
+          {msg}
+        </p>
+      )}
+      {scanning && (
+        <Suspense fallback={null}>
+          <QrScanner onResult={scanned} onClose={() => setScanning(false)} />
+        </Suspense>
+      )}
+    </section>
+  );
+}
 
 export default function LoginPage() {
   const { user, login, loginWithGoogle } = useAuth();
@@ -16,18 +111,26 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
+  // A room code entered before signing in: students go straight to it after sign-in.
+  const [room, setRoom] = useState<string | null>(null);
   const config = useQuery({
     queryKey: ['auth-config'],
     queryFn: () => api<AuthConfig>('/auth/config'),
     staleTime: Infinity,
   });
 
-  if (user) return <Navigate to={user.must_change_password ? '/change-password' : homeFor(user.role)} replace />;
-
-  const go = (me: Me) => {
-    const from = (loc.state as { from?: string } | null)?.from;
-    nav(me.must_change_password ? '/change-password' : from ?? homeFor(me.role), { replace: true });
+  // Where a signed-in person goes: the room whose code they typed here (students), the page
+  // that sent them to sign in, or their home.
+  const target = (me: Me) => {
+    if (me.must_change_password) return '/change-password';
+    if (room && me.role === 'student') return `/join/${room}`;
+    return (loc.state as { from?: string } | null)?.from ?? homeFor(me.role);
   };
+
+  // Also the redirect right after signing in: it renders before `go` below can navigate.
+  if (user) return <Navigate to={target(user)} replace />;
+
+  const go = (me: Me) => nav(target(me), { replace: true });
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -57,7 +160,7 @@ export default function LoginPage() {
   const clientId = config.data?.google_client_id;
 
   return (
-    <div className="grid min-h-dvh place-items-center bg-gradient-to-br from-brand-50 via-surface to-surface px-4">
+    <div className="grid min-h-dvh place-items-center bg-gradient-to-br from-brand-50 via-surface to-surface px-4 py-8">
       <div className="w-full max-w-sm">
         <div className="mb-8 flex justify-center">
           <Logo />
@@ -67,6 +170,11 @@ export default function LoginPage() {
             <h1 className="text-xl font-bold">Sign in</h1>
             <p className="text-sm text-muted">Use the email your college registered for you.</p>
           </div>
+          {room && (
+            <p role="status" className="rounded-xl bg-brand-50 px-3 py-2 text-sm">
+              No live game has the code <b>{room}</b>. If it is a <b>room</b> code, sign in with your student account and you will go straight to it.
+            </p>
+          )}
 
           {clientId && (
             <>
@@ -118,6 +226,7 @@ export default function LoginPage() {
             .
           </p>
         </div>
+        <GuestJoin onRoom={setRoom} />
       </div>
     </div>
   );

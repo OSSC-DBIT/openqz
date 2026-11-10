@@ -62,8 +62,15 @@ async def optional_user(
 MaybeUser = Annotated[User | None, Depends(optional_user)]
 
 
+# Guests have no account, so they are counted per address, and a whole hall of guests often
+# shares one address (campus Wi-Fi): their ceiling is this many times the per-person one.
+GUESTS_PER_ADDRESS = 15
+
+
 async def rate_limit(request: Request, user: User | None, what: str, per_minute: int) -> None:
     who = str(user.id) if user else client_ip(request)
+    if user is None:
+        per_minute *= GUESTS_PER_ADDRESS
     key = f"rl:live:{what}:{who}:{int(datetime.now(UTC).timestamp() // 60)}"
     r = get_redis()
     n = await r.incr(key)
@@ -400,6 +407,8 @@ async def join(
     if not game.accepting_joins:
         raise live.err("closed", "This game is not taking new players")
     token = None
+    # Read now: a failed insert below rolls back, which expires `user`.
+    user_id = user.id if user is not None else None
     if user is not None:
         base = user.full_name.strip()[:36] or user.username
         nick = base
@@ -410,15 +419,15 @@ async def join(
         base = nick
     for n in range(1, 50):
         candidate = nick if n == 1 else f"{base[:34]} ({n})"
-        if user is None and n > 1:
+        if user_id is None and n > 1:
             raise live.err("nickname_taken", "That nickname is taken in this game, pick another")
         player = LivePlayer(
             game_id=game.id,
-            user_id=user.id if user else None,
+            user_id=user_id,
             nickname=candidate,
             nickname_key=candidate.lower(),
         )
-        if user is None:
+        if user_id is None:
             token, player.guest_token_hash = live.new_guest_token()
         session.add(player)
         try:

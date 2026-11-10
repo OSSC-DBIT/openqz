@@ -106,7 +106,9 @@ export default function ReviewPage() {
             </div>
           </div>
         ) : (
-          <p className="mt-4 text-white/80">Your teacher will release the marks later.</p>
+          <p className="mt-4 text-white/80">
+            {d.submit_reason === 'violations' ? 'Your marks and the answers are shown once this activity is over.' : 'Your teacher will release the marks later.'}
+          </p>
         )}
         {d.scores_visible && d.needs_manual && <p className="mt-4 text-sm text-white/70">Marks so far: some answers are still being graded.</p>}
         <Link to="/student">
