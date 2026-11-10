@@ -13,7 +13,7 @@ All notable changes to OpenQZ. Format: [Keep a Changelog](https://keepachangelog
 - `robots.txt`, `sitemap.xml` and `/.well-known/security.txt` (RFC 9116), served by the web server with the site's own address.
 
 ### Security
-- **Password reset is rate limited**: using a reset link (`/auth/reset`) had no limit; it and "forgot password" now allow 20 requests per client address per minute, in the API and in nginx.
+- **Password reset is rate limited**: using a reset link (`/auth/reset`) had no limit; it and "forgot password" now allow 20 requests per client address per minute, in the API and in nginx. Reset emails to one address are limited to one a minute, 3 an hour and 6 a day (before: 3 per clock hour, so 6 could go out within minutes around the hour).
 - **API reference closed on staging and production**: `/api/docs` and `/api/openapi.json` answer 404 there (still open in development).
 - A teacher sees only the integrity events from attempts at **their own** activities; before, any faculty member could list every student's events.
 - A student auto-submitted for too many warnings no longer sees marks, right / wrong or the answer key while the teacher can still unblock them (they could read the key, be let back in and fill it in).

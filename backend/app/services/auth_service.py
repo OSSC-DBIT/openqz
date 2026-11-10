@@ -274,7 +274,29 @@ async def change_password(
 
 # ---------------------------------------------------------------- forgot / reset password
 
+# Reset emails to one address: one a minute, 3 an hour, 6 a day. Each window starts at the
+# first request (not on the clock hour), so nobody gets a double ration around a boundary.
+RESET_COOLDOWN_SECONDS = 60
 RESET_PER_EMAIL_PER_HOUR = 3
+RESET_PER_EMAIL_PER_DAY = 6
+
+
+async def _reset_mail_allowed(redis: Redis, email: str) -> bool:
+    who = normalize_email(email)
+    # Not counted while cooling down, so impatient taps do not use up the hour.
+    if not await redis.set(f"rl:reset:cd:{who}", "1", nx=True, ex=RESET_COOLDOWN_SECONDS):
+        return False
+    for window, seconds, limit in (
+        ("h", 3600, RESET_PER_EMAIL_PER_HOUR),
+        ("d", 86400, RESET_PER_EMAIL_PER_DAY),
+    ):
+        key = f"rl:reset:{window}:{who}"
+        n = await redis.incr(key)
+        if n == 1:
+            await redis.expire(key, seconds)
+        if n > limit:
+            return False
+    return True
 
 
 async def request_password_reset(
@@ -283,11 +305,7 @@ async def request_password_reset(
     """Create a one-time reset token. Returns None (silently) for unknown or throttled emails,
     so the response never reveals whether an account exists."""
     s = get_settings()
-    key = f"rl:reset:{normalize_email(email)}:{int(datetime.now(UTC).timestamp() // 3600)}"
-    n = await redis.incr(key)
-    if n == 1:
-        await redis.expire(key, 3700)
-    if n > RESET_PER_EMAIL_PER_HOUR:
+    if not await _reset_mail_allowed(redis, email):
         return None
     user = await find_by_email(session, email)
     if user is None or not user.is_active:
