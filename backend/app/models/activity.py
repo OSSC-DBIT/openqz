@@ -194,6 +194,12 @@ class ActivityAssignment(UUIDPk, Timestamped, Base):
     require_fullscreen: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     # Email students when assigned / when scores are released (needs SMTP).
     notify: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
+    # Optional note from the teacher or club organiser, shown to students before they start.
+    instructions: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # When the "it has started" email went out (set at once when there is nothing to wait for).
+    start_notified_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     # Room: anyone signed in as a student can join with this 6-digit code.
     join_code: Mapped[str | None] = mapped_column(String(8), nullable=True, unique=True)
     accepting_joins: Mapped[bool] = mapped_column(

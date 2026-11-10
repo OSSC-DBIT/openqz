@@ -2,7 +2,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Annotated
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     login_lock_minutes: int = 15
     # Per client address. A classroom often shares one Wi-Fi address, so keep this generous;
     # account lockout (login_max_failures) is what stops password guessing.
-    login_rate_per_minute: int = 60
+    login_rate_per_minute: int = 300
 
     # Google sign-in. Blank client id = button hidden and endpoint disabled.
     google_client_id: str = ""
@@ -64,6 +64,27 @@ class Settings(BaseSettings):
         if isinstance(v, str) and not v.strip().startswith("["):
             return [item.strip() for item in v.split(",") if item.strip()]
         return v
+
+    @model_validator(mode="after")
+    def _strict_origins(self) -> "Settings":
+        """On staging and production the browser may call the API only from named https sites.
+
+        The API sends cookies (allow_credentials), so "any origin" must never be configured."""
+        if self.is_production:
+            for origin in self.cors_origins:
+                local = origin.startswith(("http://localhost", "http://127.0.0.1"))  # smoke test
+                if (
+                    origin == "*"
+                    or origin.endswith("/")
+                    or not (origin.startswith("https://") or local)
+                ):
+                    raise ValueError(
+                        f"CORS_ORIGINS has {origin!r}: on staging and production list exact "
+                        "https origins without a trailing slash, e.g. https://openqz.example.org"
+                    )
+            if "*" in self.allowed_hosts:
+                raise ValueError("ALLOWED_HOSTS must list the real hostnames, not *")
+        return self
 
     @property
     def email_enabled(self) -> bool:

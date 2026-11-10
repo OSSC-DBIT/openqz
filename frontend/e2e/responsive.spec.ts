@@ -77,6 +77,7 @@ test.describe('fits every screen size', () => {
     for (const [path, h] of [
       ['/admin', 'Admin dashboard'],
       ['/admin/users', 'Users'],
+      ['/admin/stats', 'Statistics'],
       ['/admin/sections', 'Sections'],
       ['/admin/subjects', 'Subjects'],
       ['/admin/assignments', /mapping|Who teaches/i],

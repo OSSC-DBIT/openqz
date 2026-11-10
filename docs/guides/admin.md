@@ -47,10 +47,12 @@ Re-importing the same sheet is safe: existing people are updated, nobody is dupl
 
 | Task | Where |
 | --- | --- |
-| Add one person | **Users**, then **Add user** (gives a temporary password to hand over). |
+| Add one person | **Users**, then **Add user** (gives a temporary password to hand over). Fill in the ID, role, name and email; optionally phone and designation. For a **student** choose the department and **section** (needed to receive class assignments). For **faculty** tap every **department** they work in: the first one is the main department. |
+| Edit a person | **Users**, pencil icon: name, email, phone, designation, departments, section. |
 | Reset a password | **Users**, key icon. Gives a new temporary password; they must change it at next sign-in. |
 | Unlock an account | **Users**, lock icon (accounts lock for 15 minutes after 5 wrong passwords). |
-| Change someone's sign-in email | **Users**, mail icon. Their old Google link is removed. |
+| Change someone's sign-in email | **Users**, pencil icon. Their old Google link is removed. |
+| Find people | Search by name, email, phone or ID; filter by role and by department (faculty appear under every department they belong to). |
 | Disable / enable an account | **Users**, **Disable**. Disabled people cannot sign in; their work is kept. |
 | Departments and sections | **Sections**. Sections belong to an academic year (for example 2026-27). |
 | Subjects | **Subjects**. |
@@ -73,6 +75,7 @@ A club organiser (tech club, cultural committee, placement cell) can build activ
 
 - **Integrity log**: tab switches, Back presses, reloads during quizzes.
 - **Audit log**: sign-ins, failed sign-ins, lockouts, password resets, imports, credential downloads, score releases. Filter by action or search by person.
+- **Statistics**: how OpenQZ is used across the college. Tiles for the totals, a table **by department** (students, faculty, sections, class assignments, students assigned, submitted, completion and average marks) and a table **by teacher and organiser** (activities made, class assignments, rooms, live games, completion, average marks, answers waiting for grading). Choose a day range (by the day an activity was assigned) and a department. **Excel** downloads everything in one file (Summary, Departments, Faculty); the two **CSV** buttons download one table each.
 - **Dashboard**: counts of students, faculty, sections and teaching assignments for the current academic year.
 
 Admins can also open the faculty **Library** and **Reports** to see every activity.

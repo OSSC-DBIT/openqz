@@ -96,15 +96,60 @@ def password_reset(to: str, name: str, link: str, minutes: int) -> Mail:
     )
 
 
-def assigned(to: str, name: str, title: str, teacher: str, due: str | None, link: str) -> Mail:
+def _instructions(instructions: str | None) -> tuple[str, str]:
+    """The teacher's note as (plain text, HTML); both empty when there is none."""
+    note = (instructions or "").strip()
+    if not note:
+        return "", ""
+    lines = "<br>".join(html.escape(x) for x in note.splitlines())
+    return (
+        f"\nInstructions:\n{note}\n",
+        '<p style="background:#f4f1ff;border-radius:10px;padding:12px 14px">'
+        f"<b>Instructions</b><br>{lines}</p>",
+    )
+
+
+def assigned(
+    to: str,
+    name: str,
+    title: str,
+    teacher: str,
+    due: str | None,
+    link: str,
+    opens: str | None = None,
+    instructions: str | None = None,
+) -> Mail:
+    """`opens` is set only for a scheduled activity (not open yet)."""
     due_txt = f"Due: {due}" if due else "No deadline"
-    text = f'Hi {name},\n\n{teacher} assigned you "{title}".\n{due_txt}\n\nOpen OpenQZ: {link}\n'
+    when = f"Opens: {opens} (you cannot start before that)\n{due_txt}" if opens else due_txt
+    note_txt, note_html = _instructions(instructions)
+    text = (
+        f'Hi {name},\n\n{teacher} assigned you "{title}".\n{when}\n{note_txt}'
+        f"\nOpen OpenQZ: {link}\n"
+    )
     body = (
         f"<p>Hi {html.escape(name)},</p><p><b>{html.escape(teacher)}</b> assigned you "
-        f"<b>{html.escape(title)}</b>.</p><p>{html.escape(due_txt)}</p>"
+        f"<b>{html.escape(title)}</b>.</p>"
+        f"<p>{'<br>'.join(html.escape(x) for x in when.splitlines())}</p>{note_html}"
     )
     return Mail(
         to, f"New on OpenQZ: {title}", text, _layout("New activity", body, ("Open OpenQZ", link))
+    )
+
+
+def started(to: str, name: str, title: str, teacher: str, due: str | None, link: str) -> Mail:
+    due_txt = f"Due: {due}" if due else "No deadline"
+    text = (
+        f'Hi {name},\n\n"{title}" from {teacher} is open now. You can start it.\n{due_txt}\n'
+        f"\nOpen OpenQZ: {link}\n"
+    )
+    body = (
+        f"<p>Hi {html.escape(name)},</p><p><b>{html.escape(title)}</b> from "
+        f"<b>{html.escape(teacher)}</b> is open now. You can start it.</p>"
+        f"<p>{html.escape(due_txt)}</p>"
+    )
+    return Mail(
+        to, f"Open now: {title}", text, _layout("It has started", body, ("Start now", link))
     )
 
 

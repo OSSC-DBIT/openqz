@@ -199,6 +199,8 @@ class AssignIn(BaseModel):
     max_violations: int = Field(default=3, ge=0, le=50)
     require_fullscreen: bool = True
     notify: bool = True
+    # Optional note shown to students before they start.
+    instructions: str | None = Field(default=None, max_length=5000)
     # Room: open to any signed-in student who enters the join code.
     room: bool = False
 
@@ -208,6 +210,7 @@ class AssignIn(BaseModel):
             raise ValueError("Pick at least one section or student, or open it as a room")
         if self.start_at and self.due_at and self.due_at <= self.start_at:
             raise ValueError("Deadline must be after the start time")
+        self.instructions = (self.instructions or "").strip() or None
         return self
 
 
@@ -222,6 +225,7 @@ class AssignUpdate(BaseModel):
     max_violations: int | None = Field(default=None, ge=0, le=50)
     require_fullscreen: bool | None = None
     notify: bool | None = None
+    instructions: str | None = Field(default=None, max_length=5000)
     accepting_joins: bool | None = None
 
 
@@ -244,6 +248,7 @@ class AssignmentOut(BaseModel):
     max_violations: int
     require_fullscreen: bool
     notify: bool
+    instructions: str | None = None
     is_room: bool = False
     join_code: str | None = None
     accepting_joins: bool = True

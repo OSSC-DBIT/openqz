@@ -111,13 +111,23 @@ export default function JoinPage() {
                   )}
                   {p.due_at && <li>Closes {new Date(p.due_at).toLocaleString()}</li>}
                 </ul>
-                {!p.open && !p.joined && <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">This room is not accepting players right now.</p>}
+                {p.instructions && (
+                  <div className="rounded-xl bg-brand-50 px-3 py-2 text-sm">
+                    <div className="font-bold">Instructions</div>
+                    <p className="mt-1 max-h-40 overflow-y-auto whitespace-pre-wrap break-words">{p.instructions}</p>
+                  </div>
+                )}
+                {p.window === 'not_started' ? (
+                  <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">Not started yet. It opens {new Date(p.start_at).toLocaleString()}.</p>
+                ) : (
+                  !p.open && !p.joined && <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">This room is not accepting players right now.</p>
+                )}
                 {err && (
                   <p role="alert" className="text-sm font-semibold text-red-600">
                     {err.message}
                   </p>
                 )}
-                <Button className="w-full !py-3.5 text-base" loading={go.isPending} disabled={!p.open && !p.joined} onClick={() => {
+                <Button className="w-full !py-3.5 text-base" loading={go.isPending} disabled={(!p.open && !p.joined) || p.window === 'not_started'} onClick={() => {
                   enterFullscreen();
                   go.mutate();
                 }}>

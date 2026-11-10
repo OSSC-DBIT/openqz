@@ -1,7 +1,10 @@
+from datetime import timedelta
+
 import pytest
 from httpx import AsyncClient
 
 from app.models import Role
+from app.services import auth_service
 from tests.conftest import PASSWORD, login, make_user
 
 
@@ -50,7 +53,9 @@ async def test_lockout_after_five_failures(client: AsyncClient) -> None:
     assert r.json()["detail"]["code"] == "locked"
 
 
-async def test_refresh_rotation_and_reuse_detection(client: AsyncClient) -> None:
+async def test_refresh_rotation_and_reuse_detection(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
     await make_user("stud3")
     r = await client.post(
         "/api/v1/auth/login", json={"email": "stud3@test.dev", "password": PASSWORD}
@@ -62,7 +67,16 @@ async def test_refresh_rotation_and_reuse_detection(client: AsyncClient) -> None
     second = r2.cookies["openqz_refresh"]
     assert second != first
 
-    # replaying the old token kills the family, including the new one
+    # The same token again within seconds is a lost answer or a second tab, not theft: it
+    # gets a fresh pair and nothing is revoked.
+    again = await client.post("/api/v1/auth/refresh", cookies={"openqz_refresh": first})
+    assert again.status_code == 200
+    still = await client.post("/api/v1/auth/refresh", cookies={"openqz_refresh": second})
+    assert still.status_code == 200
+    second = still.cookies["openqz_refresh"]
+
+    # After that short while, replaying the old token kills the family, including the new one
+    monkeypatch.setattr(auth_service, "REFRESH_REUSE_GRACE", timedelta(0))
     replay = await client.post("/api/v1/auth/refresh", cookies={"openqz_refresh": first})
     assert replay.status_code == 401
     after = await client.post("/api/v1/auth/refresh", cookies={"openqz_refresh": second})

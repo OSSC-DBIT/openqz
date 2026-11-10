@@ -196,15 +196,18 @@ async def start_or_resume(session: AsyncSession, a: ActivityAssignment, student:
         raise AttemptError("not_assigned", "This activity is not assigned to you", 403)
     activity = await session.get(Activity, a.activity_id)
     assert activity is not None
-    if activity.status != ActivityStatus.published:
-        raise AttemptError("unavailable", "This activity is not available right now", 403)
 
+    # Resuming always works: a student in the middle of an attempt (their timer is running)
+    # is never locked out because the teacher unpublished the activity meanwhile.
     previous = await attempts_of(session, a.id, student.id)
     for i, att in enumerate(previous):
         if att.status == AttemptStatus.in_progress:
             att = previous[i] = await refresh_expired(session, att)
             if att.status == AttemptStatus.in_progress:
                 return await full_attempt(session, att.id)
+
+    if activity.status != ActivityStatus.published:
+        raise AttemptError("unavailable", "This activity is not available right now", 403)
 
     w = window(a)
     if not w.open:
@@ -247,6 +250,33 @@ async def start_or_resume(session: AsyncSession, a: ActivityAssignment, student:
 
 
 # ---------------------------------------------------------------- timers
+
+
+async def apply_new_deadline(session: AsyncSession, a: ActivityAssignment) -> int:
+    """The teacher changed the deadline (or "allow late"): attempts already in progress follow.
+
+    Each attempt froze its own deadline when it started, so without this an extended deadline
+    would still cut those students off at the old time, and a new deadline on an open-ended
+    activity would never close them."""
+    limit = a.time_limit_seconds or a.activity.time_limit_seconds
+    rows = await session.scalars(
+        select(Attempt)
+        .where(Attempt.assignment_id == a.id, Attempt.status == AttemptStatus.in_progress)
+        .options(raiseload(Attempt.answers), defer(Attempt.snapshot, raiseload=True))
+    )
+    changed = 0
+    for att in rows.unique():
+        own = att.started_at + timedelta(seconds=limit) if limit else None
+        # An unblocked attempt was given its blocked time back: never take that away.
+        if own is not None and att.unblocked_count and att.deadline_at and att.deadline_at > own:
+            own = att.deadline_at
+        # A student who started late (allowed at that time) keeps their full timer.
+        cap = a.due_at if a.due_at and not a.allow_late and not att.late else None
+        new = min(own, cap) if own and cap else (own or cap)
+        if new != att.deadline_at:
+            att.deadline_at = new
+            changed += 1
+    return changed
 
 
 async def expire_if_needed(session: AsyncSession, att: Attempt) -> bool:
@@ -553,9 +583,18 @@ async def unblock(session: AsyncSession, att: Attempt, extra_minutes: int = 0) -
     return att
 
 
+def may_be_reopened(att: Attempt) -> bool:
+    """Submitted for too many warnings while the activity is still open: the teacher may
+    unblock it, and the student then answers again. Until that is no longer possible the
+    student must not see marks, right / wrong or the key."""
+    return can_unblock(att) and window(att.assignment).open
+
+
 def scores_visible(att: Attempt) -> bool:
     a = att.assignment
     if att.status != AttemptStatus.submitted or not is_graded(a.activity.kind):
+        return False
+    if may_be_reopened(att):
         return False
     if a.release_mode == ReleaseMode.immediate:
         return True
@@ -566,7 +605,7 @@ def scores_visible(att: Attempt) -> bool:
 
 def answers_visible(att: Attempt) -> bool:
     a = att.assignment
-    if att.status != AttemptStatus.submitted:
+    if att.status != AttemptStatus.submitted or may_be_reopened(att):
         return False
     if a.show_answers == ShowAnswers.after_submit:
         return True

@@ -49,6 +49,10 @@ def build_snapshot(activity: Activity) -> list[dict[str, Any]]:
     for q in activity.questions:
         if q.type.value not in LIVE_TYPES:
             continue
+        # Live tiles show text only: a question whose options are pictures without text would
+        # be blank tiles on the big screen and on the phones.
+        if any(not (o.get("text") or "").strip() for o in (q.options or [])):
+            continue
         out.append(
             {
                 "id": str(q.id),

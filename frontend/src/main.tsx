@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BarChart3, BookOpen, ClipboardList, History, KeyRound, LayoutDashboard, Layers, Library, ShieldAlert, Upload, Users } from 'lucide-react';
+import { BarChart3, BookOpen, ClipboardList, History, KeyRound, LayoutDashboard, Layers, Library, PieChart, ShieldAlert, Upload, Users } from 'lucide-react';
 import { lazy, StrictMode, Suspense, type ComponentType } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createBrowserRouter, Navigate, Outlet, RouterProvider } from 'react-router';
@@ -30,6 +30,7 @@ function page<M extends Record<string, unknown>>(load: () => Promise<M>, name = 
 
 const adminNav: NavItem[] = [
   { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
+  { to: '/admin/stats', label: 'Statistics', icon: PieChart },
   { to: '/admin/users', label: 'Users', icon: Users },
   { to: '/admin/sections', label: 'Sections', icon: Layers },
   { to: '/admin/subjects', label: 'Subjects', icon: BookOpen },
@@ -112,6 +113,7 @@ const router = createBrowserRouter([
       ),
       children: [
         { index: true, lazy: page(() => import('./pages/admin/DashboardPage')) },
+        { path: 'stats', lazy: page(() => import('./pages/admin/StatsPage')) },
         { path: 'users', lazy: page(() => import('./pages/admin/UsersPage')) },
         { path: 'sections', lazy: page(() => import('./pages/admin/OrgPage'), 'SectionsPage') },
         { path: 'subjects', lazy: page(() => import('./pages/admin/OrgPage'), 'SubjectsPage') },

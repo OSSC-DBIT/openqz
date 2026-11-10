@@ -151,6 +151,9 @@ export default function PlayerPage() {
     [attemptId, q, handleErr],
   );
 
+  // The latest answer save that was not awaited (a tap on a tile).
+  const inFlight = useRef<Promise<void>>(Promise.resolve());
+
   const total = state?.total ?? 0;
   const index = q?.index ?? 0;
   const isLast = index >= total - 1;
@@ -162,6 +165,8 @@ export default function PlayerPage() {
         clearTimeout(saveTimer.current);
         await save(resp, false);
       }
+      // An answer tapped a moment ago may still be on its way: it must land before the submit.
+      await inFlight.current;
       await api(`/attempts/${attemptId}/submit`, { method: 'POST' });
       finish();
     } catch (e) {
@@ -184,39 +189,74 @@ export default function PlayerPage() {
     [loadQuestion, q, resp, save, total],
   );
 
-  // activity deadline: let the server auto-submit, then go to the summary
+  // Activity deadline: the server auto-submits a few seconds after it; ask once it has, then
+  // every few seconds until it answers. One request at a time, and a whole class is spread
+  // over two seconds so the deadline is not a stampede. If the teacher moved the deadline
+  // meanwhile, the new one is picked up here.
   const deadline = state?.deadline_at ? Date.parse(state.deadline_at) : null;
   useEffect(() => {
-    if (deadline && now >= deadline + 1000) {
-      api<AttemptState>(`/attempts/${attemptId}`)
-        .then((s) => (s.status === 'submitted' ? finish('timer') : undefined))
-        .catch(() => {});
-    }
-  }, [deadline, now, attemptId, finish]);
+    if (!deadline) return;
+    let stopped = false;
+    let timer: ReturnType<typeof setTimeout>;
+    const check = async () => {
+      if (stopped) return;
+      try {
+        const s = await api<AttemptState>(`/attempts/${attemptId}`);
+        if (stopped) return;
+        if (s.status === 'submitted') return finish('timer');
+        setState((prev) => (prev && prev.deadline_at !== s.deadline_at ? { ...prev, deadline_at: s.deadline_at } : prev));
+      } catch {
+        // offline for a moment: try again below
+      }
+      if (!stopped) timer = setTimeout(() => void check(), 3000);
+    };
+    const wait = deadline + 6000 - (Date.now() + offset) + Math.random() * 2000;
+    timer = setTimeout(() => void check(), Math.min(Math.max(wait, 0), 2_000_000_000));
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+    };
+  }, [deadline, attemptId, finish, offset]);
 
   // question timer: lock and auto-advance when it runs out
   const qDeadline = q?.question_deadline ? Date.parse(q.question_deadline) : null;
   const qLimit = q?.question.time_limit_seconds ?? null;
   const advanced = useRef<number | null>(null);
+  const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const gotoRef = useRef(goto);
+  useEffect(() => {
+    gotoRef.current = goto;
+  }, [goto]);
   useEffect(() => {
     if (!q || !qDeadline || advanced.current === q.index) return;
     if (now >= qDeadline) {
-      advanced.current = q.index;
+      const from = q.index;
+      advanced.current = from;
       setQ((cur) => (cur ? { ...cur, locked: true } : cur));
-      const t = setTimeout(() => void goto(q.index + 1), feedback ? 2500 : 1200);
-      return () => clearTimeout(t);
+      // Kept in a ref: this effect runs again at once (the lock above changes `q`), and a
+      // cleanup here would cancel the move to the next question.
+      advanceTimer.current = setTimeout(() => void gotoRef.current(from + 1), feedback ? 2500 : 1200);
     }
-  }, [now, qDeadline, q, goto, feedback]);
+  }, [now, qDeadline, q, feedback]);
+  // Cancel a pending auto-advance when the question changes (the student pressed Next) or on leaving.
+  const shownIndex = q?.index;
+  useEffect(
+    () => () => {
+      if (advanceTimer.current) clearTimeout(advanceTimer.current);
+      advanceTimer.current = null;
+    },
+    [shownIndex],
+  );
 
   const choose = (patch: Resp, finalNow: boolean) => {
     if (!q || q.locked || feedback) return;
     const next = { ...(resp ?? {}), ...patch };
     setResp(next);
     if (saveTimer.current) clearTimeout(saveTimer.current);
-    if (finalNow) void save(next, state?.instant_feedback ?? false);
+    if (finalNow) inFlight.current = save(next, state?.instant_feedback ?? false);
     // Taps on tiles save at once (nothing is lost if the attempt is auto-submitted a moment
     // later); typing is debounced.
-    else if (!('text' in patch) && !('blanks' in patch)) void save(next, false);
+    else if (!('text' in patch) && !('blanks' in patch)) inFlight.current = save(next, false);
     else saveTimer.current = setTimeout(() => void save(next, false), 1200);
   };
 
