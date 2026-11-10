@@ -21,6 +21,12 @@ async function signIn(page: Page, email: string, pw: string) {
   await page.getByRole('button', { name: 'Sign in' }).click();
 }
 
+test('landing page', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: /Discover a/i })).toBeVisible();
+  await audit(page);
+});
+
 test('login page', async ({ page }) => {
   await page.goto('/login');
   await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
@@ -70,6 +76,12 @@ test('faculty home', async ({ page }) => {
 /** The same checks with the phone or laptop set to dark mode (colour contrast flips with the theme). */
 test.describe('dark mode', () => {
   test.use({ colorScheme: 'dark' });
+
+  test('landing page', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByRole('heading', { name: /Discover a/i })).toBeVisible();
+    await audit(page);
+  });
 
   test('login, student home and join page', async ({ page }) => {
     await page.goto('/login');

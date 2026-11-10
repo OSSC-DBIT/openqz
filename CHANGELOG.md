@@ -39,6 +39,7 @@ All notable changes to OpenQZ. Format: [Keep a Changelog](https://keepachangelog
 - Admin Sections page and report tabs no longer scroll sideways on phones (cards with wide tables now shrink to the screen; tab bars scroll).
 
 ### Added
+- Public landing page at "/": space-themed hero with interactive feature overview, "How to Use" sequence, role cards linking to user guides, and assessment integrity highlights; signed-in users and standalone PWAs bypass it directly to their dashboard or login.
 - CI: browser tests run on pull requests and by hand only; deploys after a merge run the backend and frontend checks (the pull request already passed the browser tests).
 - Production data can live in host folders per environment (`DB_HOST_DIR`, `REDIS_HOST_DIR`, `MEDIA_HOST_DIR`); on the OSSC server everything is under `/srv/server-data/<env>/openqz/` (db, redis, media, backups). Backup and restore follow it.
 - Continuous deployment to the OSSC server, the same way as PCMS and PageCraft: push `dev` deploys staging (`openqz-staging.webuildnow.in`, port 8092), push `main` deploys production (`openqz.webuildnow.in`, port 8093) through a self-hosted runner and the Cloudflare tunnel. `deploy/server/` (deploy with backup, migrations and health check; rollback; one-command environment setup with secrets, nightly backup cron and the `openqz` helper; runner install), `.github/workflows/deploy.yml`, guide `docs/deploy-ossc-server.md`. The health check reports the release (`version`); nginx takes the visitor address from Cloudflare's `CF-Connecting-IP`.
