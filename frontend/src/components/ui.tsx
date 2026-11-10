@@ -52,7 +52,7 @@ export function PasswordInput({ label, className, ...rest }: PasswordInputProps)
   const [visible, setVisible] = useState(false);
   return (
     <span className="relative block">
-      <Input type={visible ? 'text' : 'password'} className={cx('pr-11', className)} {...rest} />
+      <Input type={visible ? 'text' : 'password'} className={cx('pr-11', className)} {...rest} aria-label={label} />
       <button
         type="button"
         aria-label={visible ? `Hide ${label}` : `Show ${label}`}
