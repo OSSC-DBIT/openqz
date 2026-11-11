@@ -105,9 +105,21 @@ function GuestJoin({ onRoom }: { onRoom: (code: string) => void }) {
 }
 
 /** Shown instead of the sign-in form in a browser other than Chrome, Safari or Edge. */
-function UnsupportedBrowser() {
-  const [copied, setCopied] = useState(false);
-  const link = window.location.origin;
+function UnsupportedBrowser({ from }: { from?: string }) {
+  const [copied, setCopied] = useState<'no' | 'yes' | 'failed'>('no');
+  // Keep the page they were sent here from (a room or live game link), so the address they
+  // paste into the other browser takes them there after signing in. Paths on this site only.
+  const path = from && from.startsWith('/') && !from.startsWith('//') ? from : '';
+  const link = window.location.origin + path;
+  const copy = async () => {
+    try {
+      // Needs https and the browser's permission; either can be missing.
+      await navigator.clipboard.writeText(link);
+      setCopied('yes');
+    } catch {
+      setCopied('failed');
+    }
+  };
   return (
     <div className="grid min-h-dvh place-items-center bg-gradient-to-br from-brand-50 via-surface to-surface px-4 py-8">
       <div className="w-full max-w-sm">
@@ -120,15 +132,15 @@ function UnsupportedBrowser() {
             This browser is not supported, so quizzes may not work properly here (timers, full screen, saving answers). Please open OpenQZ in <b>Google Chrome</b>, <b>Safari</b> or <b>Microsoft Edge</b>.
           </p>
           <p className="text-sm text-muted">Opened this from another app (WhatsApp, Instagram)? Use its menu and choose "Open in browser".</p>
-          <p className="break-all rounded-xl bg-brand-50 px-3 py-2 font-mono text-sm">{link}</p>
-          <Button
-            className="w-full"
-            onClick={() => {
-              void navigator.clipboard?.writeText(link).then(() => setCopied(true));
-            }}
-          >
-            {copied ? 'Copied' : 'Copy the address'}
+          <p className="select-all break-all rounded-xl bg-brand-50 px-3 py-2 font-mono text-sm">{link}</p>
+          <Button className="w-full" onClick={() => void copy()}>
+            {copied === 'yes' ? 'Copied' : 'Copy the address'}
           </Button>
+          {copied === 'failed' && (
+            <p role="status" className="text-sm font-semibold">
+              Could not copy it for you. Press and hold the address above, choose Copy, and paste it into Chrome, Safari or Edge.
+            </p>
+          )}
         </div>
       </div>
     </div>
@@ -160,7 +172,7 @@ export default function LoginPage() {
     return (loc.state as { from?: string } | null)?.from ?? homeFor(me.role);
   };
 
-  if (!supported && !user) return <UnsupportedBrowser />;
+  if (!supported && !user) return <UnsupportedBrowser from={(loc.state as { from?: string } | null)?.from} />;
 
   // Also the redirect right after signing in: it renders before `go` below can navigate.
   if (user) return <Navigate to={target(user)} replace />;

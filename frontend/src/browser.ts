@@ -1,7 +1,7 @@
 export type Browser = 'chrome' | 'edge' | 'safari' | 'other';
 
 /** Browsers built on Chrome or Safari that are not one of the three we support, and in-app browsers. */
-const OTHER = /Firefox|FxiOS|OPR\/|Opera|OPT\/|SamsungBrowser|UCBrowser|YaBrowser|Vivaldi|DuckDuckGo|MiuiBrowser|HuaweiBrowser|Brave|; wv\)|FBAN|FBAV|Instagram|Line\//;
+const OTHER = /Firefox|FxiOS|OPR\/|OPX\/|Opera|OPT\/|SamsungBrowser|UCBrowser|YaBrowser|Vivaldi|DuckDuckGo|MiuiBrowser|HuaweiBrowser|Brave|; wv\)|FBAN|FBAV|Instagram|Line\//;
 
 /**
  * Which browser this is, from its user agent. OpenQZ is tested on Chrome, Safari and
