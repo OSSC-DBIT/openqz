@@ -6,6 +6,7 @@ import { api, ApiError } from '../api/client';
 import type { AuthConfig, Me } from '../api/types';
 import { homeFor, useAuth } from '../auth/AuthProvider';
 import { GoogleButton } from '../auth/GoogleButton';
+import { isSupportedBrowser } from '../browser';
 import { Button, ErrorText, Field, Input, PasswordInput } from '../components/ui';
 import { Logo } from '../layouts/AppShell';
 
@@ -103,7 +104,39 @@ function GuestJoin({ onRoom }: { onRoom: (code: string) => void }) {
   );
 }
 
+/** Shown instead of the sign-in form in a browser other than Chrome, Safari or Edge. */
+function UnsupportedBrowser() {
+  const [copied, setCopied] = useState(false);
+  const link = window.location.origin;
+  return (
+    <div className="grid min-h-dvh place-items-center bg-gradient-to-br from-brand-50 via-surface to-surface px-4 py-8">
+      <div className="w-full max-w-sm">
+        <div className="mb-8 flex justify-center">
+          <Logo />
+        </div>
+        <div role="alert" className="space-y-3 rounded-2xl border border-line bg-card p-6 shadow-sm">
+          <h1 className="text-xl font-bold">Open OpenQZ in Chrome, Safari or Edge</h1>
+          <p className="text-sm text-muted">
+            This browser is not supported, so quizzes may not work properly here (timers, full screen, saving answers). Please open OpenQZ in <b>Google Chrome</b>, <b>Safari</b> or <b>Microsoft Edge</b>.
+          </p>
+          <p className="text-sm text-muted">Opened this from another app (WhatsApp, Instagram)? Use its menu and choose "Open in browser".</p>
+          <p className="break-all rounded-xl bg-brand-50 px-3 py-2 font-mono text-sm">{link}</p>
+          <Button
+            className="w-full"
+            onClick={() => {
+              void navigator.clipboard?.writeText(link).then(() => setCopied(true));
+            }}
+          >
+            {copied ? 'Copied' : 'Copy the address'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function LoginPage() {
+  const supported = useState(isSupportedBrowser)[0];
   const { user, login, loginWithGoogle } = useAuth();
   const nav = useNavigate();
   const loc = useLocation();
@@ -126,6 +159,8 @@ export default function LoginPage() {
     if (room && me.role === 'student') return `/join/${room}`;
     return (loc.state as { from?: string } | null)?.from ?? homeFor(me.role);
   };
+
+  if (!supported && !user) return <UnsupportedBrowser />;
 
   // Also the redirect right after signing in: it renders before `go` below can navigate.
   if (user) return <Navigate to={target(user)} replace />;

@@ -5,7 +5,7 @@ OpenQZ is tested at five layers. CI runs all of them on every pull request; a re
 | Layer | Tool | Where | Count (2026-11-08) |
 | --- | --- | --- | --- |
 | Backend unit + API | pytest, httpx | `backend/tests/` | 107 tests, 91% line coverage (CI gate: 85%), about 4 minutes |
-| Frontend unit | Vitest, Testing Library, happy-dom | `frontend/src/test/` | 16 tests |
+| Frontend unit | Vitest, Testing Library, happy-dom | `frontend/src/test/` | 20 tests |
 | Browser journeys | Playwright (desktop Chrome + Pixel 7) | `frontend/e2e/` | 18 tests (9 journeys + 6 axe checks + 3 dark-mode axe checks) x 2 devices, 3 guide tests x 2, 3 screen-size tests and 1 live-game test (both desktop project only): 50 runs, 46 run and 4 skipped by design. The password-reset journey skips locally without Mailpit but fails in CI. |
 | Accessibility | axe-core in Playwright (WCAG 2.1 AA) | `frontend/e2e/a11y.spec.ts` | landing page, login, student home, join page, create dialog with class picker, faculty library, faculty home (and its quick-create tile); in **dark mode** again: landing page, login, student home, join, faculty home, library, reports, an assignment report, the editor, and the admin dashboard, users, sections, imports and audit log |
 | Load | k6 | `tests/load/student-exam.js` | see [performance.md](performance.md) |

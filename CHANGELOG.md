@@ -10,6 +10,7 @@ All notable changes to OpenQZ. Format: [Keep a Changelog](https://keepachangelog
 - **Instructions** (optional) when assigning or hosting a room: faculty and club organisers write a note that students read before they start (also in the join preview and the email).
 - **Scheduled start**: an activity with a later start time shows on the student's home page as **not started** with its opening time, and opens by itself. Students get an email when it is assigned (with the opening time) and another when it opens.
 - **Join code on the sign-in page**: type the 6-digit code or **scan the QR code** with the camera. A live game opens at once (guests need no account); a room code takes the student to the room after signing in.
+- **Supported browsers**: the sign-in page opens only in Chrome, Safari and Microsoft Edge (computer, Android, iPhone). Other browsers and in-app browsers see a note asking them to switch, with the address to copy.
 - `robots.txt`, `sitemap.xml` and `/.well-known/security.txt` (RFC 9116), served by the web server with the site's own address.
 
 ### Security

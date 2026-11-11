@@ -115,3 +115,19 @@ test('a question timer moves on by itself when time runs out', async ({ page, re
   await expect(page.getByText('Second timed question?')).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText('First timed question?')).toHaveCount(0);
 });
+
+test('the sign-in page asks other browsers to switch to Chrome, Safari or Edge', async ({ browser, baseURL }) => {
+  const firefox = await browser.newContext({ baseURL, userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:132.0) Gecko/20100101 Firefox/132.0' });
+  const page = await firefox.newPage();
+  await page.goto('/login');
+  await expect(page.getByRole('heading', { name: 'Open OpenQZ in Chrome, Safari or Edge' })).toBeVisible();
+  await expect(page.getByLabel('Email')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Sign in' })).toHaveCount(0);
+  await firefox.close();
+
+  const safari = await browser.newContext({ baseURL, userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1' });
+  const ok2 = await safari.newPage();
+  await ok2.goto('/login');
+  await expect(ok2.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+  await safari.close();
+});
