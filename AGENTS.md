@@ -18,7 +18,7 @@ Roles: `admin`, `faculty`, `student`, `club` (club organisers host rooms only).
 | Classes | Teachers pick **Branch, then semesters and sections**, only from sections mapped to them (`faculty_assignments`). Picks may span branches. Clubs pick no classes. |
 | Full screen | Assignments have `require_fullscreen` (default on). The player hides questions until full screen, except where the browser has no full screen (iPhone). Leaving full screen is a warning. |
 | Integrity | Tab or app switch, Back, reload and full-screen exit are counted on the server; auto-submit at the assignment's limit. Browsers cannot block screenshots; do not add watermark or "screenshot blocking" code (decided against). |
-| Sign-in | Email + password, and Google for imported users only (`GOOGLE_CLIENT_ID`). The sign-in page works only in Chrome, Safari and Edge (`src/browser.ts`); other browsers see a note to switch. Only the sign-in page checks. |
+| Sign-in | Email + password, and Google for imported users only (`GOOGLE_CLIENT_ID`). The sign-in page works only in Chrome, Safari and Edge (`src/browser.ts`); other browsers see a note to switch. Only the sign-in page checks. On phones a Chromium browser must carry the "Google Chrome" or "Microsoft Edge" brand (`navigator.userAgentData`); browser tests pass because `navigator.webdriver` is set. |
 | Answer keys | Never send keys or rubrics to students before review rules allow it (`grading.strip_key`). |
 | Writing style | No en dash or em dash characters anywhere (code, UI, docs). Use a hyphen, "to", a comma or "|". Keep emojis out. |
 
