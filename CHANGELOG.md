@@ -2,9 +2,18 @@
 
 All notable changes to OpenQZ. Format: [Keep a Changelog](https://keepachangelog.com/).
 
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:295644c700d4400113e04aa5c51b2d88abb1019d22607cccc6cd4a8af231a4fa -->
+
 ## [Unreleased]
 
+### Fixed
+- The browser switch notice preserves the current address and room destination when copying, and offers a link to join a live game as a guest.
+
 ### Added
+
+<!-- /coderabbit-ai-generated:v1 -->
 - **Admin statistics** (`/admin/stats`, *Statistics* in the admin menu): totals for the college, a table per department (students, faculty, sections, class assignments, completion, average marks) and a table per teacher and club organiser (activities, class assignments, rooms, live games, completion, average marks, answers waiting for grading). Filter by day range and department; export as Excel (3 sheets) or CSV.
 - **More details when adding a user by hand**: phone, designation (or club and position), a student's section, and **several departments for one faculty member** (the first is the main one). The pencil icon in **Users** edits all of them; the list can be filtered by department and searched by phone.
 - **Instructions** (optional) when assigning or hosting a room: faculty and club organisers write a note that students read before they start (also in the join preview and the email).

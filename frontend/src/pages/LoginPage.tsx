@@ -109,8 +109,15 @@ function UnsupportedBrowser({ from }: { from?: string }) {
   const [copied, setCopied] = useState<'no' | 'yes' | 'failed'>('no');
   // Keep the page they were sent here from (a room or live game link), so the address they
   // paste into the other browser takes them there after signing in. Paths on this site only.
-  const path = from && from.startsWith('/') && !from.startsWith('//') ? from : '';
-  const link = window.location.origin + path;
+  let link = window.location.href;
+  if (from) {
+    try {
+      const destination = new URL(from, window.location.origin);
+      if (destination.origin === window.location.origin) link = destination.href;
+    } catch {
+      // Keep the current address if the destination is invalid.
+    }
+  }
   const copy = async () => {
     try {
       // Needs https and the browser's permission; either can be missing.
@@ -142,6 +149,9 @@ function UnsupportedBrowser({ from }: { from?: string }) {
             </p>
           )}
         </div>
+        <Link to="/live" className="mt-4 block text-center text-sm text-brand-ink hover:underline">
+          Join a live game as a guest
+        </Link>
       </div>
     </div>
   );
