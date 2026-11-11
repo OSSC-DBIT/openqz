@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { KeyRound, Lock, Pencil, Plus, Search } from 'lucide-react';
+import { KeyRound, Lock, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { api } from '../../api/client';
 import type { Department, Page, Role, Section, User } from '../../api/types';
+import { DeleteForever } from '../../components/DeleteForever';
 import {
   Badge,
   Button,
@@ -267,6 +268,57 @@ function EditUser({ user, onClose, depts, sections }: { user: User; onClose: () 
   );
 }
 
+interface Impact {
+  username: string;
+  attempts: number;
+  activities: number;
+  assignments: number;
+  attempts_by_students: number;
+  live_games: number;
+  blocked_by: string | null;
+}
+
+/** Delete a person for good: first show what goes with them. */
+function DeleteUser({ user, onClose }: { user: User; onClose: () => void }) {
+  const qc = useQueryClient();
+  const impact = useQuery({ queryKey: ['user-impact', user.id], queryFn: () => api<Impact>(`/admin/data/users/${user.id}/impact`), staleTime: 0 });
+  const i = impact.data;
+  if (!i) {
+    return (
+      <Modal open onClose={onClose} title={`Delete ${user.full_name}`}>
+        {impact.error ? <ErrorText error={impact.error} /> : <Spinner />}
+      </Modal>
+    );
+  }
+  return (
+    <DeleteForever
+      title={`Delete ${user.full_name}`}
+      endpoint={`/admin/data/users/${user.id}/delete`}
+      confirmWord={user.username}
+      blocked={i.blocked_by}
+      onClose={onClose}
+      onDone={() => {
+        void qc.invalidateQueries({ queryKey: ['users'] });
+        onClose();
+      }}
+    >
+      <p className="mt-1">This removes the account of {user.full_name} and:</p>
+      <ul className="mt-1 list-inside list-disc">
+        <li>
+          {i.attempts} of their own attempts (answers and marks)
+        </li>
+        {(i.activities > 0 || i.live_games > 0) && (
+          <li>
+            {i.activities} activities they made, with {i.assignments} assignments and <b>{i.attempts_by_students} attempts by students</b>
+          </li>
+        )}
+        {i.live_games > 0 && <li>{i.live_games} live games they hosted</li>}
+      </ul>
+      <p className="mt-1">To stop someone signing in but keep their work, use Disable instead.</p>
+    </DeleteForever>
+  );
+}
+
 function UserStatus({ u, locked }: { u: User; locked: boolean }) {
   return (
     <>
@@ -288,6 +340,7 @@ export default function UsersPage() {
   const [creating, setCreating] = useState(false);
   const [temp, setTemp] = useState<{ username: string; email: string | null; password: string } | null>(null);
   const [editing, setEditing] = useState<User | null>(null);
+  const [deleting, setDeleting] = useState<User | null>(null);
 
   const depts = useQuery({ queryKey: ['departments'], queryFn: () => api<Department[]>('/departments') });
   const sections = useQuery({ queryKey: ['sections', 'all'], queryFn: () => api<Section[]>('/sections') });
@@ -435,8 +488,11 @@ export default function UsersPage() {
                   >
                     <KeyRound className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" className="col-span-2" onClick={() => toggle.mutate(u)}>
+                  <Button variant="ghost" onClick={() => toggle.mutate(u)}>
                     {u.is_active ? 'Disable' : 'Enable'}
+                  </Button>
+                  <Button variant="ghost" title="Delete for good" aria-label={`Delete ${u.username} for good`} className="hover:!bg-red-50 hover:!text-red-700 dark:hover:!bg-red-950" onClick={() => setDeleting(u)}>
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               </Td>
@@ -461,6 +517,7 @@ export default function UsersPage() {
 
       <CreateUser open={creating} onClose={() => setCreating(false)} depts={depts.data ?? []} sections={sections.data ?? []} />
       {temp && <TempPassword {...temp} onClose={() => setTemp(null)} />}
+      {deleting && <DeleteUser user={deleting} onClose={() => setDeleting(null)} />}
       {editing && <EditUser user={editing} onClose={() => setEditing(null)} depts={depts.data ?? []} sections={sections.data ?? []} />}
     </>
   );

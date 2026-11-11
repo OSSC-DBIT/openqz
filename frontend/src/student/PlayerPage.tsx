@@ -510,7 +510,7 @@ function Answers({
         {Array.from({ length: n }, (_, i) => (
           <div key={i}>
             <input
-              className="w-full select-text rounded-2xl bg-white px-4 py-3 text-lg text-ink outline-none disabled:opacity-80"
+              className="w-full select-text rounded-2xl border-2 border-transparent bg-white px-4 py-3 text-lg text-[#1d1b2c] placeholder:text-[#1d1b2c]/45 outline-none focus:border-brand-500 disabled:opacity-80"
               placeholder={`Blank ${i + 1}`}
               aria-label={`Blank ${i + 1}`}
               value={vals[i] ?? ''}
@@ -586,7 +586,7 @@ function Answers({
   const textArea = (t.type === 'open_ended' || t.type === 'justify') && (
     <textarea
       rows={t.type === 'justify' ? 3 : 6}
-      className="mt-3 w-full select-text rounded-2xl bg-white p-4 text-ink outline-none disabled:opacity-80"
+      className="mt-3 block min-h-32 w-full select-text resize-y rounded-2xl border-2 border-transparent bg-white p-4 text-base leading-relaxed text-[#1d1b2c] placeholder:text-[#1d1b2c]/45 shadow-lg outline-none focus:border-brand-500 disabled:opacity-80"
       placeholder={t.type === 'justify' ? 'Explain why you chose this answer' : 'Type your answer'}
       aria-label={t.type === 'justify' ? 'Your justification' : 'Your answer'}
       value={String(resp?.text ?? '')}
@@ -613,7 +613,7 @@ function Flashcards({ q, total, onGoto, onFinish, busy }: { q: PlayQuestion; tot
       </div>
       <button
         onClick={() => setFlipped((f) => !f)}
-        className="flex min-h-[45vh] w-full max-w-xl flex-col items-center justify-center rounded-3xl bg-white p-8 text-center text-2xl font-semibold text-ink shadow-2xl"
+        className="flex min-h-[45vh] w-full max-w-xl flex-col items-center justify-center rounded-3xl bg-white p-8 text-center text-2xl font-semibold text-[#1d1b2c] shadow-2xl"
       >
         {!flipped && q.question.stem_image_id && <AuthImage id={q.question.stem_image_id} className="mb-3 max-h-48 rounded-xl" />}
         <span className="whitespace-pre-wrap">{flipped ? q.question.back : q.question.stem}</span>

@@ -24,6 +24,7 @@ Found a security issue? Do **not** open a public issue. Report it privately thro
 | API surface | reconnaissance | Swagger (`/api/docs`) and `/api/openapi.json` answer 404 on staging and production; nginx refuses them too |
 | Cross-origin | another site reading or embedding our data | CORS only for the exact https origins in `CORS_ORIGINS` (the API refuses to start with `*` or `http://` on staging / production); API answers carry `X-Frame-Options: DENY`, `Cross-Origin-Resource-Policy: same-origin`, `Content-Security-Policy: default-src 'none'`; the refresh cookie is `SameSite=Strict` |
 | Reporting | no way to reach us | `/.well-known/security.txt` (RFC 9116; renew its `Expires` line in `frontend/nginx.conf` once a year), `robots.txt` keeps signed-in areas and the API out of search engines |
+| Deleting data | a stolen or unattended admin session wiping work; a slip of the finger | admin role only; each delete needs the admin's password again in the same request and the name typed out; 5 wrong passwords lock deleting for 10 minutes per admin; no self-delete, no deleting the last admin; the audit log records every delete (with counts of what went) and every refused try |
 | Transport | sniffing | TLS at the edge (Let's Encrypt), HSTS one year |
 | Accountability | misuse | audit log of sign-ins, failures, lockouts, resets, imports, credential downloads, assignments and score releases |
 | Dependencies | known CVEs | pip-audit and pnpm audit block CI |

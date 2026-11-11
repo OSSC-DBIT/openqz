@@ -68,7 +68,7 @@ For each question:
 | Setting | What it does |
 | --- | --- |
 | **Type** | Multiple choice, True / False, Multi-select, Fill in the blanks, Justify your answer, Open ended. |
-| **Timer** | No timer, or 5 seconds to 10 minutes. Type any number of seconds (5 to 3600) in **Custom s**. |
+| **Timer** | No timer, or 5 seconds to 10 minutes. For any other time choose **Custom...** in the list: a clock opens where you set minutes and seconds (5 seconds to 60 minutes). |
 | **Marks** | How many marks the question is worth. |
 | **Image** | Add an image to the question and to any answer tile (PNG, JPEG, GIF or WebP, up to 5 MB). |
 | **Answer explanation** | Shown to students after they answer (if you allow it). |

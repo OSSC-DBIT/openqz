@@ -53,6 +53,7 @@ Re-importing the same sheet is safe: existing people are updated, nobody is dupl
 | Unlock an account | **Users**, lock icon (accounts lock for 15 minutes after 5 wrong passwords). |
 | Change someone's sign-in email | **Users**, pencil icon. Their old Google link is removed. |
 | Find people | Search by name, email, phone or ID; filter by role and by department (faculty appear under every department they belong to). |
+| Delete a person for good | **Users**, bin icon. OpenQZ first shows what goes with them (their attempts; for a teacher, the activities they made and all student work on those). Type their ID and **your own password** to confirm. This cannot be undone: to keep the work, **Disable** instead. You cannot delete yourself or the last admin. |
 | Disable / enable an account | **Users**, **Disable**. Disabled people cannot sign in; their work is kept. |
 | Departments and sections | **Sections**. Sections belong to an academic year (for example 2026-27). |
 | Subjects | **Subjects**. |
@@ -78,7 +79,14 @@ A club organiser (tech club, cultural committee, placement cell) can build activ
 - **Statistics**: how OpenQZ is used across the college. Tiles for the totals, a table **by department** (students, faculty, sections, class assignments, students assigned, submitted, completion and average marks) and a table **by teacher and organiser** (activities made, class assignments, rooms, live games, completion, average marks, answers waiting for grading). Choose a day range (by the day an activity was assigned) and a department. **Excel** downloads everything in one file (Summary, Departments, Faculty); the two **CSV** buttons download one table each.
 - **Dashboard**: counts of students, faculty, sections and teaching assignments for the current academic year.
 
-Admins can also open the faculty **Library** and **Reports** to see every activity.
+Admins can also open the faculty **Library** and **Reports** to see everything:
+
+- **Questions and answer keys**: **Library**, open any activity. The editor shows every question with its correct answer, marks and timer; **Preview** shows it as a student sees it.
+- **What each student answered**: **Reports**, open an assignment, then a student's row: every answer, the marks given and any warnings.
+- **Delete an activity for good**: in the activity editor, **Delete for good (admin)** removes the activity with every assignment and all student attempts. (A teacher's own Delete only archives an activity that students have attempted.)
+- **Delete the results of one assignment**: in its report, **Delete results**. The activity and its questions stay.
+
+Both deletes ask you to type the activity's title and your own password. After 5 wrong passwords deleting is locked for 10 minutes, and every delete is recorded in the **Audit log**.
 
 ## 6. Privacy
 
