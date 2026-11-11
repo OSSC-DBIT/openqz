@@ -18,7 +18,7 @@ Roles: `admin`, `faculty`, `student`, `club` (club organisers host rooms only).
 | Classes | Teachers pick **Branch, then semesters and sections**, only from sections mapped to them (`faculty_assignments`). Picks may span branches. Clubs pick no classes. |
 | Full screen | Assignments have `require_fullscreen` (default on). The player hides questions until full screen, except where the browser has no full screen (iPhone). Leaving full screen is a warning. |
 | Integrity | Tab or app switch, Back, reload and full-screen exit are counted on the server; auto-submit at the assignment's limit. Browsers cannot block screenshots; do not add watermark or "screenshot blocking" code (decided against). |
-| Sign-in | Email + password, and Google for imported users only (`GOOGLE_CLIENT_ID`). |
+| Sign-in | Email + password, and Google for imported users only (`GOOGLE_CLIENT_ID`). The sign-in page works only in Chrome, Safari and Edge (`src/browser.ts`); other browsers see a note to switch. Only the sign-in page checks. |
 | Answer keys | Never send keys or rubrics to students before review rules allow it (`grading.strip_key`). |
 | Writing style | No en dash or em dash characters anywhere (code, UI, docs). Use a hyphen, "to", a comma or "|". Keep emojis out. |
 
@@ -26,7 +26,7 @@ Roles: `admin`, `faculty`, `student`, `club` (club organisers host rooms only).
 
 ```
 backend/            FastAPI app (Python 3.12)
-  app/api/v1/       routers: auth, users(+audit), org, imports, activities, results, play, live, media, integrity, stats, health
+  app/api/v1/       routers: auth, users(+audit), org, imports, activities, results, play, live, media, integrity, stats, admin_data, health
   app/services/     business logic (attempt_service, grading, auth_service, import_*, email, assignment_view)
   app/models/       SQLAlchemy 2 models
   app/worker/       ARQ jobs (imports, emails, sweep_attempts cron)
@@ -128,6 +128,7 @@ cd frontend && pnpm guides
 - **Questions lock once an attempt exists** (`activities._editable`, 409 `has_attempts`). Tests and scripts that need to edit must do it before the first `start`, or work on a duplicate.
 - **Writes to an attempt take a row lock** (`play.my_attempt(..., lock=True)`): answer saves, submit, violations and the deadline check run one after the other. Keep new write endpoints on it.
 - **Scheduled start:** `start_notified_at` is set at once when an assignment is already open; the worker cron `notify_started` sends the "open now" email for the rest and marks them. New rows made by scripts must set it, or students get a late email.
+- **Permanent deletes live in `api/v1/admin_data.py` only** (admin role, `_step_up` password check, typed name, audit). Do not add other hard-delete endpoints for people, activities or attempts; ordinary deletes archive or refuse once student work exists.
 - **API docs are development only:** `/api/docs` and `/api/openapi.json` are 404 when `ENVIRONMENT` is `staging` or `production`. `scripts/export_openapi.py` still works everywhere.
 - **Run Playwright from `frontend/`**, not the repo root (it writes `test-results/` where it runs).
 

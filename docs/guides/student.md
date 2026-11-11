@@ -28,6 +28,8 @@ flowchart TD
 
 ## 1. Sign in
 
+Use **Google Chrome**, **Safari** or **Microsoft Edge**. In any other browser (Firefox, Opera, Samsung Internet, or a link opened inside WhatsApp or Instagram) the sign-in page asks you to switch and shows the address to copy.
+
 1. Open the OpenQZ address your college gave you (for example `https://openqz.dbit.co.in`). Visitors see the landing page; choose **Login** in the top navigation to reach the sign-in screen.
 2. Sign in with your **email** and the **temporary password** from the slip your class teacher gave you. Or tap **Continue with Google** if your Google account uses the same email.
 3. The first time you use the temporary password, OpenQZ asks you to **choose your own password**: at least 8 characters, with upper and lower case letters and a digit.

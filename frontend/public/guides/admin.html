@@ -91,6 +91,10 @@
 <td>Search by name, email, phone or ID; filter by role and by department (faculty appear under every department they belong to).</td>
 </tr>
 <tr>
+<td>Delete a person for good</td>
+<td><strong>Users</strong>, bin icon. OpenQZ first shows what goes with them (their attempts; for a teacher, the activities they made and all student work on those). Type their ID and <strong>your own password</strong> to confirm. This cannot be undone: to keep the work, <strong>Disable</strong> instead. You cannot delete yourself or the last admin.</td>
+</tr>
+<tr>
 <td>Disable / enable an account</td>
 <td><strong>Users</strong>, <strong>Disable</strong>. Disabled people cannot sign in; their work is kept.</td>
 </tr>
@@ -127,7 +131,14 @@
 <li><strong>Statistics</strong>: how OpenQZ is used across the college. Tiles for the totals, a table <strong>by department</strong> (students, faculty, sections, class assignments, students assigned, submitted, completion and average marks) and a table <strong>by teacher and organiser</strong> (activities made, class assignments, rooms, live games, completion, average marks, answers waiting for grading). Choose a day range (by the day an activity was assigned) and a department. <strong>Excel</strong> downloads everything in one file (Summary, Departments, Faculty); the two <strong>CSV</strong> buttons download one table each.</li>
 <li><strong>Dashboard</strong>: counts of students, faculty, sections and teaching assignments for the current academic year.</li>
 </ul>
-<p>Admins can also open the faculty <strong>Library</strong> and <strong>Reports</strong> to see every activity.</p>
+<p>Admins can also open the faculty <strong>Library</strong> and <strong>Reports</strong> to see everything:</p>
+<ul>
+<li><strong>Questions and answer keys</strong>: <strong>Library</strong>, open any activity. The editor shows every question with its correct answer, marks and timer; <strong>Preview</strong> shows it as a student sees it.</li>
+<li><strong>What each student answered</strong>: <strong>Reports</strong>, open an assignment, then a student&#39;s row: every answer, the marks given and any warnings.</li>
+<li><strong>Delete an activity for good</strong>: in the activity editor, <strong>Delete for good (admin)</strong> removes the activity with every assignment and all student attempts. (A teacher&#39;s own Delete only archives an activity that students have attempted.)</li>
+<li><strong>Delete the results of one assignment</strong>: in its report, <strong>Delete results</strong>. The activity and its questions stay.</li>
+</ul>
+<p>Both deletes ask you to type the activity&#39;s title and your own password. After 5 wrong passwords deleting is locked for 10 minutes, and every delete is recorded in the <strong>Audit log</strong>.</p>
 <h2>6. Privacy</h2>
 <ul>
 <li>Credential slips contain passwords: print, hand out, then delete the PDF from the server.</li>

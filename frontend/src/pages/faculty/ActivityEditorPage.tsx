@@ -3,10 +3,13 @@ import { ArrowDown, ArrowLeft, ArrowUp, CheckCircle2, Copy, Eye, GripVertical, P
 import { useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { api } from '../../api/client';
+import { useAuth } from '../../auth/AuthProvider';
+import { DeleteForever } from '../../components/DeleteForever';
 import type { Activity, AssignmentInfo, Question, QuestionData, QuestionType } from '../../api/types';
 import { ClassPicker, KindCover, Pill, TYPE_ICON, TypePicker } from '../../components/pieces';
 import { Badge, Button, ErrorText, Modal, Select, Spinner, cx } from '../../components/ui';
-import { AuthImage, KIND_LABEL, MARK_PRESETS, TILE_COLORS, TIMER_PRESETS, TYPES_FOR, TYPE_LABEL, fmtSeconds } from '../../components/quiz';
+import { AuthImage, KIND_LABEL, MARK_PRESETS, TILE_COLORS, TYPES_FOR, TYPE_LABEL } from '../../components/quiz';
+import { TimerSelect } from '../../components/TimerSelect';
 import { AssignDrawer } from './AssignDrawer';
 import { useClassOptions } from './LibraryPage';
 import { PreviewModal } from './PreviewModal';
@@ -41,6 +44,8 @@ export default function ActivityEditorPage() {
   const [classDlg, setClassDlg] = useState(false);
   const [dragFrom, setDragFrom] = useState<number | null>(null);
   const a = act.data;
+  const { user } = useAuth();
+  const [forever, setForever] = useState(false);
 
   const refresh = (data?: Activity) => {
     if (data) qc.setQueryData(['activity', id], data);
@@ -171,6 +176,15 @@ export default function ActivityEditorPage() {
                 <Trash2 className="h-4 w-4" /> Delete
               </button>
             </div>
+            {user?.role === 'admin' && (
+              <button
+                type="button"
+                className="flex w-full items-center justify-center gap-1.5 border-t border-line py-2.5 text-sm font-semibold text-red-700 hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-950"
+                onClick={() => setForever(true)}
+              >
+                <Trash2 className="h-4 w-4" /> Delete for good (admin)
+              </button>
+            )}
           </div>
           {timed && a.questions.length > 0 && <BulkBar activity={a} onDone={(d) => refresh(d)} />}
         </aside>
@@ -215,21 +229,12 @@ export default function ActivityEditorPage() {
                     {q.rubric?.length ? <Pill>rubric</Pill> : null}
                     <div className="ml-auto flex flex-wrap items-center gap-1">
                       {timed && (
-                        <select
+                        <TimerSelect
                           className="rounded-lg border border-line bg-card px-2 py-1 text-xs font-semibold"
                           aria-label={`Question ${i + 1} timer`}
-                          value={q.time_limit_seconds ?? ''}
-                          onChange={(e) => quick.mutate({ q, patch: { time_limit_seconds: e.target.value ? Number(e.target.value) : null } })}
-                        >
-                          <option value="">No timer</option>
-                          {[...new Set([...TIMER_PRESETS, ...(q.time_limit_seconds ? [q.time_limit_seconds] : [])])]
-                            .sort((x, y) => x - y)
-                            .map((s) => (
-                              <option key={s} value={s}>
-                                {fmtSeconds(s)}
-                              </option>
-                            ))}
-                        </select>
+                          value={q.time_limit_seconds ? String(q.time_limit_seconds) : ''}
+                          onChange={(v) => quick.mutate({ q, patch: { time_limit_seconds: v ? Number(v) : null } })}
+                        />
                       )}
                       {graded && (
                         <select
@@ -350,6 +355,22 @@ export default function ActivityEditorPage() {
         }}
       />
       {preview && <PreviewModal activity={a} onClose={() => setPreview(false)} />}
+      {forever && (
+        <DeleteForever
+          title={`Delete "${a.title}" for good`}
+          endpoint={`/admin/data/activities/${a.id}/delete`}
+          confirmWord={a.title}
+          onClose={() => setForever(false)}
+          onDone={() => {
+            void qc.invalidateQueries({ queryKey: ['activities'] });
+            nav('/faculty/library');
+          }}
+        >
+          <p className="mt-1">
+            This removes the activity, its {a.questions.length} questions, every assignment and room of it ({a.assignment_count}), and <b>all student attempts and marks</b> on them.
+          </p>
+        </DeleteForever>
+      )}
       {classDlg && <ClassDialog activity={a} onClose={() => setClassDlg(false)} onDone={(d) => (setClassDlg(false), refresh(d))} />}
     </div>
   );
@@ -405,15 +426,16 @@ function BulkBar({ activity, onDone }: { activity: Activity; onDone: (a: Activit
   return (
     <div className="space-y-3 rounded-2xl border border-line bg-card p-4 shadow-sm">
       <div className="text-sm font-extrabold">Timer / marks for all</div>
-      <Select value={timer} onChange={(e) => setTimer(e.target.value)} aria-label="Timer for all questions">
-        <option value="keep">Timer: keep each question's</option>
-        <option value="none">No timer</option>
-        {TIMER_PRESETS.map((s) => (
-          <option key={s} value={s}>
-            {fmtSeconds(s)}
-          </option>
-        ))}
-      </Select>
+      <TimerSelect
+        className="w-full rounded-xl border border-line bg-card px-3.5 py-2.5 text-sm text-ink outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200"
+        aria-label="Timer for all questions"
+        value={timer}
+        onChange={setTimer}
+        head={[
+          ['keep', "Timer: keep each question's"],
+          ['none', 'No timer'],
+        ]}
+      />
       {graded && (
         <Select value={marks} onChange={(e) => setMarks(e.target.value)} aria-label="Marks for all questions">
           <option value="keep">Marks: keep each question's</option>

@@ -10,6 +10,8 @@ All notable changes to OpenQZ. Format: [Keep a Changelog](https://keepachangelog
 - **Instructions** (optional) when assigning or hosting a room: faculty and club organisers write a note that students read before they start (also in the join preview and the email).
 - **Scheduled start**: an activity with a later start time shows on the student's home page as **not started** with its opening time, and opens by itself. Students get an email when it is assigned (with the opening time) and another when it opens.
 - **Join code on the sign-in page**: type the 6-digit code or **scan the QR code** with the camera. A live game opens at once (guests need no account); a room code takes the student to the room after signing in.
+- **Admin: delete for good.** A person (**Users**, bin icon: first shows what goes with them), an activity with all its results (activity editor, *Delete for good*), or the results of one assignment (report, *Delete results*). Each needs the name typed out and the admin's own password again; 5 wrong passwords lock deleting for 10 minutes; every delete and every refused try is in the audit log. An admin cannot delete their own account or the last admin.
+- **Supported browsers**: the sign-in page opens only in Chrome, Safari and Microsoft Edge (computer, Android, iPhone). Other browsers and in-app browsers see a note asking them to switch, with the address to copy.
 - `robots.txt`, `sitemap.xml` and `/.well-known/security.txt` (RFC 9116), served by the web server with the site's own address.
 
 ### Security
@@ -22,6 +24,7 @@ All notable changes to OpenQZ. Format: [Keep a Changelog](https://keepachangelog
 - Rate limits now apply per real client address. Before, the web proxy limited sign-ins for the whole site at once, and the per-address limit could be dodged with a fake `X-Forwarded-For` header.
 
 ### Changed
+- **Question timer**: the separate "Custom s" box is gone. The timer list has a **Custom...** choice that opens a clock (minutes : seconds, 5 seconds to 60 minutes), also in the question list and in "Timer / marks for all".
 - **Questions lock once a student has started**: adding, editing, deleting questions or "apply to all" answers 409 (`has_attempts`); duplicate the activity to change it. Before, later students got a different paper and the report mixed two versions.
 - Sign-in limit per client address raised from 60 to 300 a minute (`LOGIN_RATE_PER_MINUTE`): a whole college behind one campus address signs in together before an exam. Password guessing is still stopped by the per-account lockout. Guests of a live game (counted per address) get 15 times the per-person limit.
 - CI: GitHub Actions moved to their current major versions (Node 24), uv cache keyed on `backend/pyproject.toml`, runners pinned to `ubuntu-24.04`.
@@ -34,6 +37,7 @@ All notable changes to OpenQZ. Format: [Keep a Changelog](https://keepachangelog
 - Lighter queries on the student home page and answer saves.
 
 ### Fixed
+- Quiz player in dark mode: text typed into the answer box (open-ended, justify, fill in the blank) and the flashcard text were white on white. Those boxes now keep dark text, show a border when focused, and the answer box can be resized.
 - Changing the **deadline** or "allow late" now reaches attempts already in progress: an extended deadline gives those students the extra time, and a new deadline on an open-ended activity closes them.
 - At the deadline every open player asked the server 4 times a second until the auto-submit; it now asks once, then every 3 seconds, spread over the class.
 - The **question timer** did not move on by itself when time ran out; the student had to press Next.

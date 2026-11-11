@@ -115,3 +115,83 @@ test('a question timer moves on by itself when time runs out', async ({ page, re
   await expect(page.getByText('Second timed question?')).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText('First timed question?')).toHaveCount(0);
 });
+
+test('the sign-in page asks other browsers to switch to Chrome, Safari or Edge', async ({ browser, baseURL }) => {
+  const firefox = await browser.newContext({ baseURL, userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:132.0) Gecko/20100101 Firefox/132.0' });
+  const page = await firefox.newPage();
+  await page.goto('/login');
+  await expect(page.getByRole('heading', { name: 'Open OpenQZ in Chrome, Safari or Edge' })).toBeVisible();
+  await expect(page.getByLabel('Email')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Sign in' })).toHaveCount(0);
+  await firefox.close();
+
+  const safari = await browser.newContext({ baseURL, userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1' });
+  const ok2 = await safari.newPage();
+  await ok2.goto('/login');
+  await expect(ok2.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+  await safari.close();
+});
+
+test('a custom question time is set on the clock; the answer box stays readable in dark mode', async ({ page, request }) => {
+  const c = await seedClass(request);
+  const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { email: c.facEmail, password: PW } }));
+  const H = { Authorization: `Bearer ${t.access_token}` };
+  const title = `Clock ${c.tag}`;
+  const act = await ok<{ id: string }>(await request.post('/api/v1/activities', { headers: H, data: { title, kind: 'quiz' } }));
+  await ok(await request.post(`/api/v1/activities/${act.id}/questions`, { headers: H, data: { type: 'open_ended', stem: 'Explain recursion in your words', marks: 2 } }));
+
+  // teacher: Custom... in the timer list opens the clock
+  await login(page, c.facEmail);
+  await page.goto(`/faculty/activities/${act.id}`);
+  const timer = page.getByLabel('Question 1 timer');
+  await timer.selectOption('custom');
+  const clock = page.getByRole('dialog', { name: 'Custom time' });
+  await clock.getByLabel('Minutes', { exact: true }).fill('2');
+  await clock.getByLabel('Seconds', { exact: true }).fill('15');
+  await clock.getByRole('button', { name: 'Set timer' }).click();
+  await expect(clock).toHaveCount(0);
+  await expect(timer).toHaveValue('135');
+  await expect(timer.locator('option:checked')).toHaveText('2 min 15 s');
+  await ok(await request.post(`/api/v1/activities/${act.id}/assign`, { headers: H, data: { section_ids: [c.sectionId], require_fullscreen: false } }));
+
+  // student, dark mode: what they type is dark text on the white box
+  await page.evaluate(() => window.localStorage.clear());
+  await page.context().clearCookies();
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await login(page, c.stuEmail);
+  await page.locator('div.rounded-2xl', { has: page.getByRole('heading', { name: title }) }).getByRole('button', { name: 'Start', exact: true }).click();
+  const box = page.getByLabel('Your answer');
+  await box.fill('A function that calls itself');
+  const seen = await box.evaluate((el) => {
+    const s = getComputedStyle(el);
+    return { color: s.color, background: s.backgroundColor };
+  });
+  expect(seen).toEqual({ color: 'rgb(29, 27, 44)', background: 'rgb(255, 255, 255)' });
+  if (process.env.E2E_SHOTS_DIR) await page.screenshot({ path: `${process.env.E2E_SHOTS_DIR}/answer-box-${test.info().project.name}.png` });
+});
+
+test('admin deletes a person for good: sees what goes, types the ID and their own password', async ({ page, request }) => {
+  const c = await seedClass(request);
+  const id = `ES${c.tag}`.toUpperCase();
+  await login(page, ADMIN, ADMIN_PW);
+  await page.goto('/admin/users');
+  await page.getByPlaceholder('Search by name, email, phone or USN').fill(id);
+  await page.getByRole('button', { name: `Delete ${id} for good` }).click();
+  const dlg = page.getByRole('dialog');
+  await expect(dlg.getByText('This cannot be undone.')).toBeVisible();
+  const go = dlg.getByRole('button', { name: 'Delete for good' });
+  await expect(go).toBeDisabled();
+
+  // a wrong password is refused and nothing is deleted
+  await dlg.getByLabel(`Type "${id}" to confirm`).fill(id);
+  await dlg.getByRole('textbox', { name: 'Your password', exact: true }).fill('not-the-password');
+  await go.click();
+  await expect(dlg.getByRole('alert')).toContainText('not your password');
+
+  await dlg.getByRole('textbox', { name: 'Your password', exact: true }).fill(ADMIN_PW);
+  await go.click();
+  await expect(dlg).toHaveCount(0);
+  await expect(page.getByText('No users found')).toBeVisible();
+  const gone = await request.post('/api/v1/auth/login', { data: { email: c.stuEmail, password: PW } });
+  expect(gone.status()).toBe(401);
+});

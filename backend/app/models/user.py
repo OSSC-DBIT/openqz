@@ -47,7 +47,11 @@ class User(UUIDPk, Timestamped, Base):
     # and ECE); `department_id` above is the main one and is always in this list. Not loaded
     # by default (the user row is read on every request): ask with selectinload(User.departments).
     departments = relationship(
-        "Department", secondary="user_departments", lazy="raise", order_by="Department.code"
+        "Department",
+        secondary="user_departments",
+        lazy="raise",
+        order_by="Department.code",
+        passive_deletes=True,  # the database removes the membership rows with the user
     )
 
     @property

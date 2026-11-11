@@ -906,6 +906,28 @@
         "title": "ChangePasswordIn",
         "type": "object"
       },
+      "ConfirmIn": {
+        "properties": {
+          "confirm": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Confirm",
+            "type": "string"
+          },
+          "password": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "password",
+          "confirm"
+        ],
+        "title": "ConfirmIn",
+        "type": "object"
+      },
       "DepartmentIn": {
         "properties": {
           "code": {
@@ -1296,6 +1318,65 @@
           "header_map"
         ],
         "title": "HeaderMapIn",
+        "type": "object"
+      },
+      "Impact": {
+        "description": "What goes away with a person.",
+        "properties": {
+          "activities": {
+            "title": "Activities",
+            "type": "integer"
+          },
+          "assignments": {
+            "title": "Assignments",
+            "type": "integer"
+          },
+          "attempts": {
+            "title": "Attempts",
+            "type": "integer"
+          },
+          "attempts_by_students": {
+            "title": "Attempts By Students",
+            "type": "integer"
+          },
+          "blocked_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocked By"
+          },
+          "full_name": {
+            "title": "Full Name",
+            "type": "string"
+          },
+          "live_games": {
+            "title": "Live Games",
+            "type": "integer"
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "full_name",
+          "role",
+          "attempts",
+          "activities",
+          "assignments",
+          "attempts_by_students",
+          "live_games"
+        ],
+        "title": "Impact",
         "type": "object"
       },
       "ImportFieldsOut": {
@@ -4972,6 +5053,211 @@
         "summary": "Results Xlsx",
         "tags": [
           "results"
+        ]
+      }
+    },
+    "/api/v1/admin/data/activities/{activity_id}/delete": {
+      "post": {
+        "description": "Delete an activity for good, with every assignment, attempt and live game of it.\n(A teacher's own Delete only archives an activity that students have attempted.)",
+        "operationId": "delete_activity_api_v1_admin_data_activities__activity_id__delete_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "activity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Activity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Activity",
+        "tags": [
+          "admin data"
+        ]
+      }
+    },
+    "/api/v1/admin/data/assignments/{assignment_id}/delete": {
+      "post": {
+        "description": "Delete one assignment (or room) with all its attempts and marks. The activity stays.",
+        "operationId": "delete_assignment_api_v1_admin_data_assignments__assignment_id__delete_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assignment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Assignment",
+        "tags": [
+          "admin data"
+        ]
+      }
+    },
+    "/api/v1/admin/data/users/{user_id}/delete": {
+      "post": {
+        "description": "Delete a person and everything that belongs to them: their attempts, and (for a teacher\nor organiser) the activities they made with all student work on them. To keep the work,\ndisable the account instead.",
+        "operationId": "delete_user_api_v1_admin_data_users__user_id__delete_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete User",
+        "tags": [
+          "admin data"
+        ]
+      }
+    },
+    "/api/v1/admin/data/users/{user_id}/impact": {
+      "get": {
+        "description": "What deleting this person would remove. Shown before the admin confirms.",
+        "operationId": "user_impact_api_v1_admin_data_users__user_id__impact_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Impact"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "User Impact",
+        "tags": [
+          "admin data"
         ]
       }
     },
