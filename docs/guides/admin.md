@@ -81,7 +81,7 @@ A club organiser (tech club, cultural committee, placement cell) can build activ
 
 Admins can also open the faculty **Library** and **Reports** to see everything:
 
-- **Questions and answer keys**: **Library**, open any activity. The editor shows every question with its correct answer, marks and timer; **Preview** shows it as a student sees it.
+- **Questions and answer keys**: **Library**, open any activity. The editor shows every question with its correct answer, marks and timer; **Preview** shows it as a student sees it. To change the correct answer, press **Edit** on a question and press **Correct** on the right option. A report's **Questions** tab also marks the correct answer of every question.
 - **What each student answered**: **Reports**, open an assignment, then a student's row: every answer, the marks given and any warnings.
 - **Delete an activity for good**: in the activity editor, **Delete for good (admin)** removes the activity with every assignment and all student attempts. (A teacher's own Delete only archives an activity that students have attempted.)
 - **Delete the results of one assignment**: in its report, **Delete results**. The activity and its questions stay.

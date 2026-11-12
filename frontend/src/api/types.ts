@@ -386,7 +386,9 @@ export interface ReportQuestion {
   pending: number;
   accuracy: number | null;
   avg_score: string | null;
-  options: { id: string; text: string; count: number }[];
+  options: { id: string; text: string; count: number; correct?: boolean }[];
+  /** The key of a fill-in-the-blank question (graded activities only); options carry their own. */
+  answer?: { blanks?: string[][] } | null;
 }
 
 export interface Report {

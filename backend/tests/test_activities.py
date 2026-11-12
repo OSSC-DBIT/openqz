@@ -288,6 +288,10 @@ async def test_full_loop_grading_review_results(client: AsyncClient) -> None:
     assert rep["summary"]["completion"] == 50.0 and rep["summary"]["avg_accuracy"] == 85.0
     mcq = next(q for q in rep["questions"] if q["type"] == "mcq")
     assert mcq["accuracy"] == 0.0 and mcq["answered"] == 1
+    # the report carries the key for the staff who own it
+    assert [o["text"] for o in mcq["options"] if o["correct"]] == ["4"]
+    blank = next((q for q in rep["questions"] if q["type"] == "fill_blank"), None)
+    assert blank is None or blank["answer"]["blanks"]
     statuses = {s["usn"]: s["status"] for s in rep["students"]}
     assert statuses == {"1DB23CS001": "submitted", "1DB23CS002": "not_started"}
 

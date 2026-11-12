@@ -183,12 +183,13 @@ export function QuestionEditor({
                     <button
                       type="button"
                       onClick={() => setOption(i, { correct: !o.correct })}
-                      className={`grid h-8 w-8 place-items-center rounded-full border-2 border-white ${o.correct ? 'bg-emerald-500' : 'bg-black/15 hover:bg-black/25'}`}
+                      className={`inline-flex items-center gap-1.5 rounded-full border-2 border-white px-3 py-1.5 text-sm font-bold ${o.correct ? 'bg-emerald-700 text-white' : 'bg-white text-[#1d1b2c] hover:bg-emerald-50'}`}
                       aria-label={`Mark option ${i + 1} correct`}
                       aria-pressed={!!o.correct}
-                      title={o.correct ? 'Correct answer' : 'Mark as correct'}
+                      title={o.correct ? 'This is the correct answer' : 'Mark as the correct answer'}
                     >
-                      {o.correct ? <CheckCircle2 className="h-5 w-5" /> : <Circle className="h-4 w-4 opacity-0" />}
+                      {o.correct ? <CheckCircle2 className="h-4 w-4" aria-hidden /> : <Circle className="h-4 w-4" aria-hidden />}
+                      Correct
                     </button>
                   ) : (
                     <span className="text-xs font-semibold opacity-90">Option {i + 1}</span>
