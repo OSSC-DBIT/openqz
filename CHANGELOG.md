@@ -4,7 +4,15 @@ All notable changes to OpenQZ. Format: [Keep a Changelog](https://keepachangelog
 
 ## [Unreleased]
 
+### Changed
+- **Browser tests no longer run on pull requests in GitHub Actions**; they are run locally before a pull request and can be started by hand (Actions, CI, Run workflow).
+
+### Fixed
+- **Users and Statistics tables on Linux**: with wider system fonts the Users table was a few pixels too wide for its box, and wide tables could not be reached with the keyboard to scroll them.
+
 ### Added
+- **Admin deletes departments, sections and subjects** (bin icon on *Sections* and *Subjects*). Before deleting, OpenQZ shows what goes with it. A department goes only when it has no sections and no people; a section is refused while work assigned to it has student attempts; a subject takes its teacher mappings with it. Every delete is in the audit log.
+- **Every delete asks twice**: what will go, then "Are you sure?" with the buttons the other way round. This covers departments, sections, subjects, faculty mappings, the credential PDF, activities and questions. (Deletes for good already ask for the name and the admin's password.)
 - **Admin statistics** (`/admin/stats`, *Statistics* in the admin menu): totals for the college, a table per department (students, faculty, sections, class assignments, completion, average marks) and a table per teacher and club organiser (activities, class assignments, rooms, live games, completion, average marks, answers waiting for grading). Filter by day range and department; export as Excel (3 sheets) or CSV.
 - **More details when adding a user by hand**: phone, designation (or club and position), a student's section, and **several departments for one faculty member** (the first is the main one). The pencil icon in **Users** edits all of them; the list can be filtered by department and searched by phone.
 - **Instructions** (optional) when assigning or hosting a room: faculty and club organisers write a note that students read before they start (also in the join preview and the email).

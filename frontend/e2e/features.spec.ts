@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { ADMIN, ADMIN_PW, login, ok, PW, seedClass } from './helpers';
+import { ADMIN, ADMIN_PW, adminHeaders, login, ok, PW, seedClass } from './helpers';
 
 /** A one-question quiz assigned to the class through the API, with the given settings. */
 async function assignQuiz(request: Parameters<typeof seedClass>[0], c: Awaited<ReturnType<typeof seedClass>>, title: string, settings: Record<string, unknown>) {
@@ -229,4 +229,49 @@ test('admin changes the correct answer with the Correct button; the report shows
   await expect(right.getByText('Correct answer')).toBeVisible();
   await expect(page.locator('div.text-sm', { hasText: 'Mysuru' }).first().getByText('Correct answer')).toHaveCount(0);
   if (process.env.E2E_SHOTS_DIR) await page.screenshot({ path: `${process.env.E2E_SHOTS_DIR}/report-key-${test.info().project.name}.png` });
+});
+
+test('admin deletes a section, a subject and a department; every delete asks twice', async ({ page, request }) => {
+  const H = await adminHeaders(request);
+  const tag = `${Date.now().toString(36)}${Math.floor(Math.random() * 1e3).toString(36)}`.slice(-6).toUpperCase();
+  const code = `D${tag}`;
+  const dept = await ok<{ id: number }>(await request.post('/api/v1/departments', { headers: H, data: { code, name: 'Delete test' } }));
+  await ok(await request.post('/api/v1/sections', { headers: H, data: { department_id: dept.id, semester: 1, name: 'Z', academic_year: '2026-27' } }));
+  const subject = `S${tag}`;
+  await ok(await request.post('/api/v1/subjects', { headers: H, data: { code: subject, name: 'Delete test subject', department_id: dept.id } }));
+
+  await login(page, ADMIN, ADMIN_PW);
+  await page.goto('/admin/sections');
+  const dlg = page.getByRole('dialog');
+
+  // a department that still has a section is refused, with the reason
+  await page.getByRole('button', { name: `Delete department ${code}` }).click();
+  await expect(dlg.getByRole('alert')).toContainText('still has 1 sections');
+  await expect(dlg.getByRole('button', { name: 'Continue' })).toHaveCount(0);
+  await dlg.getByRole('button', { name: 'Close' }).click();
+
+  // the section: first question, then "are you sure"; saying no keeps it
+  const del = page.getByRole('button', { name: `Delete section ${code} Sem 1 Z` });
+  await del.click();
+  await dlg.getByRole('button', { name: 'Continue' }).click();
+  await expect(dlg.getByText('Are you sure?')).toBeVisible();
+  await dlg.getByRole('button', { name: 'No, keep it' }).click();
+  await expect(del).toBeVisible();
+  await del.click();
+  await dlg.getByRole('button', { name: 'Continue' }).click();
+  if (process.env.E2E_SHOTS_DIR) await page.screenshot({ path: `${process.env.E2E_SHOTS_DIR}/confirm-twice-${test.info().project.name}.png` });
+  await dlg.getByRole('button', { name: 'Yes, delete' }).click();
+  await expect(del).toHaveCount(0);
+
+  // now the empty department goes
+  await page.getByRole('button', { name: `Delete department ${code}` }).click();
+  await dlg.getByRole('button', { name: 'Continue' }).click();
+  await dlg.getByRole('button', { name: 'Yes, delete' }).click();
+  await expect(page.getByRole('button', { name: `Delete department ${code}` })).toHaveCount(0);
+
+  await page.goto('/admin/subjects');
+  await page.getByRole('button', { name: `Delete subject ${subject}` }).click();
+  await dlg.getByRole('button', { name: 'Continue' }).click();
+  await dlg.getByRole('button', { name: 'Yes, delete' }).click();
+  await expect(page.getByText(subject)).toHaveCount(0);
 });

@@ -5,6 +5,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { api } from '../../api/client';
 import { useAuth } from '../../auth/AuthProvider';
 import { DeleteForever } from '../../components/DeleteForever';
+import { ConfirmDelete } from '../../components/ConfirmDelete';
 import type { Activity, AssignmentInfo, Question, QuestionData, QuestionType } from '../../api/types';
 import { ClassPicker, KindCover, Pill, TYPE_ICON, TypePicker } from '../../components/pieces';
 import { Badge, Button, ErrorText, Modal, Select, Spinner, cx } from '../../components/ui';
@@ -67,7 +68,8 @@ export default function ActivityEditorPage() {
     mutationFn: ({ q, patch }: { q: Question; patch: Partial<QuestionData> }) => api<Question>(`/activities/${id}/questions/${q.id}`, { method: 'PUT', json: asBody({ ...toData(q), ...patch }) }),
     onSuccess: () => refresh(),
   });
-  const del = useMutation({ mutationFn: (qid: string) => api(`/activities/${id}/questions/${qid}`, { method: 'DELETE' }), onSuccess: () => refresh() });
+  const [delQ, setDelQ] = useState<{ id: string; n: number } | null>(null);
+  const [removing, setRemoving] = useState(false);
   const dupQ = useMutation({ mutationFn: (q: Question) => api(`/activities/${id}/questions`, { method: 'POST', json: asBody(toData(q)) }), onSuccess: () => refresh() });
   const reorder = useMutation({ mutationFn: (ids: string[]) => api<Activity>(`/activities/${id}/order`, { method: 'PUT', json: { question_ids: ids } }), onSuccess: (d) => refresh(d) });
   const patch = useMutation({ mutationFn: (body: Record<string, unknown>) => api<Activity>(`/activities/${id}`, { method: 'PATCH', json: body }), onSuccess: (d) => refresh(d) });
@@ -76,13 +78,6 @@ export default function ActivityEditorPage() {
     onSuccess: (d) => {
       void qc.invalidateQueries({ queryKey: ['activities'] });
       nav(`/faculty/activities/${d.id}`);
-    },
-  });
-  const remove = useMutation({
-    mutationFn: () => api(`/activities/${id}`, { method: 'DELETE' }),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['activities'] });
-      nav('/faculty/library');
     },
   });
 
@@ -171,7 +166,7 @@ export default function ActivityEditorPage() {
               <button
                 type="button"
                 className="flex flex-1 items-center justify-center gap-1.5 border-l border-line py-2.5 text-sm font-semibold text-muted hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950"
-                onClick={() => confirm('Delete this activity? Activities with student attempts are archived instead.') && remove.mutate()}
+                onClick={() => setRemoving(true)}
               >
                 <Trash2 className="h-4 w-4" /> Delete
               </button>
@@ -199,7 +194,7 @@ export default function ActivityEditorPage() {
               <Plus className="h-4 w-4" /> Add question
             </Button>
           </div>
-          <ErrorText error={patch.error || del.error || reorder.error || quick.error} />
+          <ErrorText error={patch.error || reorder.error || quick.error} />
 
           {a.questions.length === 0 && (
             <div className="rounded-2xl border border-line bg-card p-10 text-center">
@@ -264,7 +259,7 @@ export default function ActivityEditorPage() {
                       <IconBtn label={`Duplicate question ${i + 1}`} onClick={() => dupQ.mutate(q)}>
                         <Copy className="h-4 w-4" />
                       </IconBtn>
-                      <IconBtn label={`Delete question ${i + 1}`} onClick={() => confirm('Delete this question?') && del.mutate(q.id)}>
+                      <IconBtn label={`Delete question ${i + 1}`} onClick={() => setDelQ({ id: q.id, n: i + 1 })}>
                         <Trash2 className="h-4 w-4" />
                       </IconBtn>
                     </div>
@@ -355,6 +350,32 @@ export default function ActivityEditorPage() {
         }}
       />
       {preview && <PreviewModal activity={a} onClose={() => setPreview(false)} />}
+      {delQ && (
+        <ConfirmDelete
+          title="Delete question"
+          what={`question ${delQ.n}`}
+          run={() => api(`/activities/${id}/questions/${delQ.id}`, { method: 'DELETE' })}
+          onClose={() => setDelQ(null)}
+          onDone={() => {
+            setDelQ(null);
+            refresh();
+          }}
+        />
+      )}
+      {removing && (
+        <ConfirmDelete
+          title="Delete activity"
+          what={`"${a.title}"`}
+          run={() => api(`/activities/${id}`, { method: 'DELETE' })}
+          onClose={() => setRemoving(false)}
+          onDone={() => {
+            void qc.invalidateQueries({ queryKey: ['activities'] });
+            nav('/faculty/library');
+          }}
+        >
+          <p className="mt-1">It leaves your library. If students have already attempted it, it is archived instead and their results are kept.</p>
+        </ConfirmDelete>
+      )}
       {forever && (
         <DeleteForever
           title={`Delete "${a.title}" for good`}

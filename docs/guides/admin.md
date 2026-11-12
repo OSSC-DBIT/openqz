@@ -57,8 +57,13 @@ Re-importing the same sheet is safe: existing people are updated, nobody is dupl
 | Disable / enable an account | **Users**, **Disable**. Disabled people cannot sign in; their work is kept. |
 | Departments and sections | **Sections**. Sections belong to an academic year (for example 2026-27). |
 | Subjects | **Subjects**. |
+| Delete a section | **Sections**, bin icon. Students keep their accounts and only leave the section; its teacher mappings go. Refused while work assigned to the section has student attempts: delete those results first. |
+| Delete a subject | **Subjects**, bin icon. Teacher mappings through this subject go; activities keep their questions and results. |
+| Delete a department | **Sections**, bin icon next to the department. Only an empty department can go: delete its sections and move its people first. |
 | Who teaches what | **Faculty mapping**. Faculty only see and assign to sections mapped here. Map a teacher to sections of several branches (for example first-year maths for CSE and ECE) and they can pick any of them. |
 | Club accounts | **Users**, then **Add user**, role **Club organiser**. Use the club's shared email (for example `techclub@...`). |
+
+Every delete asks twice: first it shows what will go, then **Are you sure?**. Press **No, keep it** to back out.
 
 On a phone the lists stay narrow: a person's role and status show under their name, and department and last sign-in appear on wider screens.
 
