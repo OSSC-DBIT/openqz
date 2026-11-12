@@ -1,15 +1,20 @@
 """Departments, sections, subjects and faculty-section-subject mapping."""
 
 import uuid
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Response, status
 from pydantic import BaseModel
-from sqlalchemy import delete, func, select
+from sqlalchemy import Select, delete, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import AdminUser, CurrentUser, SessionDep, StaffUser
 from app.models import (
+    Activity,
+    ActivitySection,
+    AssignmentTarget,
+    Attempt,
     Department,
     FacultyAssignment,
     Role,
@@ -17,6 +22,7 @@ from app.models import (
     StudentSection,
     Subject,
     User,
+    UserDepartment,
 )
 from app.schemas.org import (
     AssignmentIn,
@@ -68,7 +74,143 @@ async def create_department(
     return dept
 
 
+class DeleteImpact(BaseModel):
+    """What deleting a department, section or subject takes with it (shown before confirming)."""
+
+    name: str
+    counts: dict[str, int]
+    # A reason it cannot be deleted yet. Set when people or student work still hang on it.
+    blocked: str | None = None
+
+
+async def _count(session: AsyncSession, stmt: Select[Any]) -> int:
+    return int(await session.scalar(stmt) or 0)
+
+
+def _refuse(impact: DeleteImpact) -> None:
+    if impact.blocked:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, detail={"code": "in_use", "message": impact.blocked}
+        )
+
+
+async def _department_impact(session: AsyncSession, dept: Department) -> DeleteImpact:
+    sections = await _count(
+        session, select(func.count()).select_from(Section).where(Section.department_id == dept.id)
+    )
+    people = await _count(
+        session,
+        select(func.count(func.distinct(User.id)))
+        .outerjoin(UserDepartment, UserDepartment.user_id == User.id)
+        .where((User.department_id == dept.id) | (UserDepartment.department_id == dept.id)),
+    )
+    subjects = await _count(
+        session, select(func.count()).select_from(Subject).where(Subject.department_id == dept.id)
+    )
+    blocked = None
+    if sections or people:
+        blocked = (
+            f"{dept.code} still has {sections} sections and {people} people. "
+            "Delete its sections and move its people to another department first."
+        )
+    return DeleteImpact(
+        name=f"{dept.code} {dept.name}",
+        counts={"sections": sections, "people": people, "subjects": subjects},
+        blocked=blocked,
+    )
+
+
+@router.get("/departments/{department_id}/delete-impact", response_model=DeleteImpact)
+async def department_impact(department_id: int, session: SessionDep, _: AdminUser) -> DeleteImpact:
+    dept = await session.get(Department, department_id)
+    if dept is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Department not found")
+    return await _department_impact(session, dept)
+
+
+@router.delete("/departments/{department_id}", status_code=204)
+async def delete_department(department_id: int, session: SessionDep, admin: AdminUser) -> Response:
+    """Only an empty department goes: one with sections or people is refused, so no class is
+    lost by one click. Its subjects stay, without a department."""
+    dept = await session.get(Department, department_id)
+    if dept is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Department not found")
+    impact = await _department_impact(session, dept)
+    _refuse(impact)
+    await session.delete(dept)
+    audit.record(
+        session, "department_deleted", actor_id=admin.id, target=dept.code, meta=impact.counts
+    )
+    await session.commit()
+    return Response(status_code=204)
+
+
 # ---------- sections ----------
+
+
+async def _section_impact(session: AsyncSession, section: Section) -> DeleteImpact:
+    students = await _count(
+        session,
+        select(func.count())
+        .select_from(StudentSection)
+        .where(StudentSection.section_id == section.id),
+    )
+    mappings = await _count(
+        session,
+        select(func.count())
+        .select_from(FacultyAssignment)
+        .where(FacultyAssignment.section_id == section.id),
+    )
+    activities = await _count(
+        session,
+        select(func.count())
+        .select_from(ActivitySection)
+        .where(ActivitySection.section_id == section.id),
+    )
+    targets = select(AssignmentTarget.assignment_id).where(
+        AssignmentTarget.section_id == section.id
+    )
+    assignments = await _count(
+        session,
+        select(func.count(func.distinct(AssignmentTarget.assignment_id))).where(
+            AssignmentTarget.section_id == section.id
+        ),
+    )
+    # Only this section's own students: an assignment may target other sections too, and
+    # their attempts do not hang on this one.
+    members = select(StudentSection.student_id).where(StudentSection.section_id == section.id)
+    attempts = await _count(
+        session,
+        select(func.count())
+        .select_from(Attempt)
+        .where(Attempt.assignment_id.in_(targets), Attempt.student_id.in_(members)),
+    )
+    blocked = None
+    if attempts:
+        blocked = (
+            f"Students of this section have {attempts} attempts on work assigned to it. "
+            "Deleting the section would leave those reports without their class. "
+            "Delete those results first (report page, Delete results)."
+        )
+    return DeleteImpact(
+        name=section_label(section),
+        counts={
+            "students": students,
+            "teacher_mappings": mappings,
+            "activities": activities,
+            "assignments": assignments,
+            "attempts": attempts,
+        },
+        blocked=blocked,
+    )
+
+
+@router.get("/sections/{section_id}/delete-impact", response_model=DeleteImpact)
+async def section_impact(section_id: int, session: SessionDep, _: AdminUser) -> DeleteImpact:
+    section = await session.get(Section, section_id)
+    if section is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Section not found")
+    return await _section_impact(session, section)
 
 
 async def _section_out(session: AsyncSession, sections: list[Section]) -> list[SectionOut]:
@@ -128,8 +270,16 @@ async def delete_section(section_id: int, session: SessionDep, admin: AdminUser)
     section = await session.get(Section, section_id)
     if section is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Section not found")
+    impact = await _section_impact(session, section)
+    _refuse(impact)
     await session.delete(section)
-    audit.record(session, "section_deleted", actor_id=admin.id, target=str(section_id))
+    audit.record(
+        session,
+        "section_deleted",
+        actor_id=admin.id,
+        target=impact.name,
+        meta={"id": section_id, **impact.counts},
+    )
     await session.commit()
     return Response(status_code=204)
 
@@ -194,6 +344,46 @@ async def create_subject(body: SubjectIn, session: SessionDep, admin: AdminUser)
     audit.record(session, "subject_created", actor_id=admin.id, target=subject.code)
     await _commit_or_409(session, "Subject")
     return subject
+
+
+async def _subject_impact(session: AsyncSession, subject: Subject) -> DeleteImpact:
+    mappings = await _count(
+        session,
+        select(func.count())
+        .select_from(FacultyAssignment)
+        .where(FacultyAssignment.subject_id == subject.id),
+    )
+    activities = await _count(
+        session, select(func.count()).select_from(Activity).where(Activity.subject_id == subject.id)
+    )
+    return DeleteImpact(
+        name=f"{subject.code} {subject.name}",
+        counts={"teacher_mappings": mappings, "activities": activities},
+    )
+
+
+@router.get("/subjects/{subject_id}/delete-impact", response_model=DeleteImpact)
+async def subject_impact(subject_id: int, session: SessionDep, _: AdminUser) -> DeleteImpact:
+    subject = await session.get(Subject, subject_id)
+    if subject is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Subject not found")
+    return await _subject_impact(session, subject)
+
+
+@router.delete("/subjects/{subject_id}", status_code=204)
+async def delete_subject(subject_id: int, session: SessionDep, admin: AdminUser) -> Response:
+    """The teacher mappings of the subject go with it; activities keep their questions and
+    results and only lose the subject label."""
+    subject = await session.get(Subject, subject_id)
+    if subject is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Subject not found")
+    impact = await _subject_impact(session, subject)
+    await session.delete(subject)
+    audit.record(
+        session, "subject_deleted", actor_id=admin.id, target=subject.code, meta=impact.counts
+    )
+    await session.commit()
+    return Response(status_code=204)
 
 
 # ---------- faculty assignments ----------

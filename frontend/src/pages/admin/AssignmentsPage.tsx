@@ -3,6 +3,7 @@ import { Trash2 } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { api } from '../../api/client';
 import type { Assignment, Page, Section, Subject, User } from '../../api/types';
+import { ConfirmDelete } from '../../components/ConfirmDelete';
 import { Button, Card, EmptyState, ErrorText, PageHeader, Select, Spinner, Table, Td } from '../../components/ui';
 
 export default function AssignmentsPage() {
@@ -21,10 +22,7 @@ export default function AssignmentsPage() {
       }),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['assignments'] }),
   });
-  const del = useMutation({
-    mutationFn: (id: number) => api(`/assignments/${id}`, { method: 'DELETE' }),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ['assignments'] }),
-  });
+  const [gone, setGone] = useState<Assignment | null>(null);
 
   return (
     <>
@@ -66,7 +64,7 @@ export default function AssignmentsPage() {
           </Button>
         </form>
         <div className="mt-2">
-          <ErrorText error={add.error || del.error} />
+          <ErrorText error={add.error} />
         </div>
       </Card>
 
@@ -90,7 +88,7 @@ export default function AssignmentsPage() {
                 <span className="font-mono font-semibold">{r.subject_code}</span> {r.subject_name}
               </Td>
               <Td className="text-right">
-                <Button variant="ghost" title="Remove" aria-label={`Remove ${r.faculty_name}: ${r.section_label}, ${r.subject_code}`} onClick={() => del.mutate(r.id)}>
+                <Button variant="ghost" title="Remove" aria-label={`Remove ${r.faculty_name}: ${r.section_label}, ${r.subject_code}`} onClick={() => setGone(r)}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </Td>
@@ -99,6 +97,21 @@ export default function AssignmentsPage() {
         </Table>
       ) : (
         <EmptyState title="No faculty mapped yet">Assign above or import a mapping sheet.</EmptyState>
+      )}
+      {gone && (
+        <ConfirmDelete
+          title="Remove faculty mapping"
+          action="Remove"
+          what={`${gone.faculty_name}: ${gone.section_label}, ${gone.subject_code}`}
+          run={() => api(`/assignments/${gone.id}`, { method: 'DELETE' })}
+          onClose={() => setGone(null)}
+          onDone={() => {
+            setGone(null);
+            void qc.invalidateQueries({ queryKey: ['assignments'] });
+          }}
+        >
+          <p className="mt-1">The teacher can no longer assign work to this section for this subject. Work already assigned stays.</p>
+        </ConfirmDelete>
       )}
     </>
   );

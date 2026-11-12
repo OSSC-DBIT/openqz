@@ -1,5 +1,5 @@
 import { Eye, EyeOff } from 'lucide-react';
-import { useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
+import { useEffect, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
 
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ');
 
@@ -166,7 +166,8 @@ export function EmptyState({ title, children }: { title: string; children?: Reac
  */
 export function Table({ head, children, cols, compact }: { head: ReactNode[]; children: ReactNode; cols?: (string | undefined)[]; compact?: boolean }) {
   return (
-    <div className="overflow-x-auto rounded-2xl border border-line bg-card">
+    // tabIndex: a table wider than its box scrolls sideways, and keyboard users must reach it
+    <div tabIndex={0} className="overflow-x-auto rounded-2xl border border-line bg-card outline-none focus-visible:ring-2 focus-visible:ring-brand-200">
       <table className={cx('w-full text-left text-sm', !compact && 'min-w-[560px]')}>
         <thead className="border-b border-line text-xs uppercase tracking-wide text-muted">
           <tr>
@@ -187,16 +188,45 @@ export function Td({ children, className }: { children?: ReactNode; className?: 
   return <td className={cx('px-3 py-3 align-top sm:px-4', className)}>{children}</td>;
 }
 
+const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 export function Modal({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: ReactNode }) {
+  const box = useRef<HTMLDivElement>(null);
+  // Keyboard users: focus moves into the dialog when it opens and back to where it was on close.
+  useEffect(() => {
+    if (!open) return;
+    const before = document.activeElement as HTMLElement | null;
+    // an input with autoFocus inside the dialog keeps the focus it already took
+    if (!box.current?.contains(document.activeElement)) box.current?.focus();
+    return () => before?.focus?.();
+  }, [open]);
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4" onClick={onClose}>
       <div
+        ref={box}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="w-full max-w-lg rounded-t-2xl bg-card p-5 shadow-xl sm:rounded-2xl"
+        className="w-full max-w-lg rounded-t-2xl bg-card p-5 shadow-xl outline-none sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          // Tab stays inside the dialog
+          if (e.key !== 'Tab' || !box.current) return;
+          const items = box.current.querySelectorAll<HTMLElement>(FOCUSABLE);
+          if (!items.length) return;
+          const first = items[0];
+          const last = items[items.length - 1];
+          const at = document.activeElement;
+          if (e.shiftKey && (at === first || at === box.current)) {
+            e.preventDefault();
+            last.focus();
+          } else if (!e.shiftKey && at === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }}
       >
         <h2 className="mb-4 text-lg font-bold">{title}</h2>
         {children}

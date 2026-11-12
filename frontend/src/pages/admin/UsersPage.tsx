@@ -469,7 +469,7 @@ export default function UsersPage() {
               <Td className="hidden text-muted xl:table-cell">{u.last_login_at ? new Date(u.last_login_at).toLocaleString() : 'never'}</Td>
               <Td>
                 {/* phones: a 2 x 2 grid of actions; wider screens: one row */}
-                <div className="grid grid-cols-[auto_auto] justify-end gap-1 sm:flex sm:justify-end">
+                <div className="grid grid-cols-[auto_auto] justify-end gap-1 sm:flex sm:justify-end [&>button]:!px-2.5">
                   {locked(u) && (
                     <Button variant="ghost" title="Unlock" aria-label={`Unlock ${u.username}`} onClick={() => unlock.mutate(u)}>
                       <Lock className="h-4 w-4" />

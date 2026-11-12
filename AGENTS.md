@@ -84,7 +84,7 @@ cd frontend && pnpm guides
 
 1. Backend: ruff, ruff format, mypy, pytest green; coverage stays at or above 85% (currently about 90%).
 2. Frontend: eslint, tsc, vitest, build green.
-3. Playwright suite green on **both** projects (desktop and mobile). New screens get an axe check in `e2e/a11y.spec.ts` and a line in `e2e/responsive.spec.ts` (must fit 320 to 2560 px wide).
+3. Playwright suite green on **both** projects (desktop and mobile), run on your machine: CI does not run it on pull requests (only by hand: Actions, CI, Run workflow), so this step is on you. New screens get an axe check in `e2e/a11y.spec.ts` and a line in `e2e/responsive.spec.ts` (must fit 320 to 2560 px wide).
 4. Docs updated in the same change:
    - user-visible: the guide in `docs/guides/` and `pnpm guides`;
    - API: regenerate `docs/api/openapi.json`;
@@ -128,6 +128,7 @@ cd frontend && pnpm guides
 - **Questions lock once an attempt exists** (`activities._editable`, 409 `has_attempts`). Tests and scripts that need to edit must do it before the first `start`, or work on a duplicate.
 - **Writes to an attempt take a row lock** (`play.my_attempt(..., lock=True)`): answer saves, submit, violations and the deadline check run one after the other. Keep new write endpoints on it.
 - **Scheduled start:** `start_notified_at` is set at once when an assignment is already open; the worker cron `notify_started` sends the "open now" email for the rest and marks them. New rows made by scripts must set it, or students get a late email.
+- **Every delete button asks twice** through `components/ConfirmDelete.tsx` (what goes, then "Are you sure?"); never `confirm()` or a bare click. Departments, sections and subjects have a `/delete-impact` endpoint in `api/v1/org.py` that the dialog shows, and the delete itself refuses (409 `in_use`) while people or student attempts hang on it.
 - **Permanent deletes live in `api/v1/admin_data.py` only** (admin role, `_step_up` password check, typed name, audit). Do not add other hard-delete endpoints for people, activities or attempts; ordinary deletes archive or refuse once student work exists.
 - **API docs are development only:** `/api/docs` and `/api/openapi.json` are 404 when `ENVIRONMENT` is `staging` or `production`. `scripts/export_openapi.py` still works everywhere.
 - **Run Playwright from `frontend/`**, not the repo root (it writes `test-results/` where it runs).
