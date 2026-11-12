@@ -928,6 +928,39 @@
         "title": "ConfirmIn",
         "type": "object"
       },
+      "DeleteImpact": {
+        "description": "What deleting a department, section or subject takes with it (shown before confirming).",
+        "properties": {
+          "blocked": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocked"
+          },
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Counts",
+            "type": "object"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "counts"
+        ],
+        "title": "DeleteImpact",
+        "type": "object"
+      },
       "DepartmentIn": {
         "properties": {
           "code": {
@@ -6583,6 +6616,94 @@
         ]
       }
     },
+    "/api/v1/departments/{department_id}": {
+      "delete": {
+        "description": "Only an empty department goes: one with sections or people is refused, so no class is\nlost by one click. Its subjects stay, without a department.",
+        "operationId": "delete_department_api_v1_departments__department_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "department_id",
+            "required": true,
+            "schema": {
+              "title": "Department Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Department",
+        "tags": [
+          "organisation"
+        ]
+      }
+    },
+    "/api/v1/departments/{department_id}/delete-impact": {
+      "get": {
+        "operationId": "department_impact_api_v1_departments__department_id__delete_impact_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "department_id",
+            "required": true,
+            "schema": {
+              "title": "Department Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteImpact"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Department Impact",
+        "tags": [
+          "organisation"
+        ]
+      }
+    },
     "/api/v1/health": {
       "get": {
         "operationId": "health_api_v1_health_get",
@@ -8208,6 +8329,53 @@
         ]
       }
     },
+    "/api/v1/sections/{section_id}/delete-impact": {
+      "get": {
+        "operationId": "section_impact_api_v1_sections__section_id__delete_impact_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "section_id",
+            "required": true,
+            "schema": {
+              "title": "Section Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteImpact"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Section Impact",
+        "tags": [
+          "organisation"
+        ]
+      }
+    },
     "/api/v1/sections/{section_id}/students": {
       "get": {
         "description": "Students of a section; faculty may only list sections they teach.",
@@ -8455,6 +8623,94 @@
           }
         ],
         "summary": "Create Subject",
+        "tags": [
+          "organisation"
+        ]
+      }
+    },
+    "/api/v1/subjects/{subject_id}": {
+      "delete": {
+        "description": "The teacher mappings of the subject go with it; activities keep their questions and\nresults and only lose the subject label.",
+        "operationId": "delete_subject_api_v1_subjects__subject_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "subject_id",
+            "required": true,
+            "schema": {
+              "title": "Subject Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Subject",
+        "tags": [
+          "organisation"
+        ]
+      }
+    },
+    "/api/v1/subjects/{subject_id}/delete-impact": {
+      "get": {
+        "operationId": "subject_impact_api_v1_subjects__subject_id__delete_impact_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "subject_id",
+            "required": true,
+            "schema": {
+              "title": "Subject Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteImpact"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Subject Impact",
         "tags": [
           "organisation"
         ]
