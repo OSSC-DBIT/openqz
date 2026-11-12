@@ -234,9 +234,17 @@ async def build_report(session: AsyncSession, a: ActivityAssignment) -> dict[str
             "correct": 0,
             "score_sum": Decimal("0"),
             "pending": 0,
+            # The key, for the staff who own this report (students never get this endpoint).
             "options": [
-                {"id": o["id"], "text": o.get("text", ""), "count": 0} for o in q.options or []
+                {
+                    "id": o["id"],
+                    "text": o.get("text", ""),
+                    "count": 0,
+                    "correct": bool(o.get("correct")) and graded,
+                }
+                for o in q.options or []
             ],
+            "answer": q.answer if graded and q.type.value == "fill_blank" else None,
         }
     # student x question grid (the report's Overview tab)
     cells: dict[uuid.UUID, dict[str, str]] = {}

@@ -195,3 +195,38 @@ test('admin deletes a person for good: sees what goes, types the ID and their ow
   const gone = await request.post('/api/v1/auth/login', { data: { email: c.stuEmail, password: PW } });
   expect(gone.status()).toBe(401);
 });
+
+test('admin changes the correct answer with the Correct button; the report shows the correct answer', async ({ page, request }) => {
+  const c = await seedClass(request);
+  const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { email: c.facEmail, password: PW } }));
+  const H = { Authorization: `Bearer ${t.access_token}` };
+  const act = await ok<{ id: string }>(await request.post('/api/v1/activities', { headers: H, data: { title: `Key ${c.tag}`, kind: 'quiz' } }));
+  await ok(
+    await request.post(`/api/v1/activities/${act.id}/questions`, {
+      headers: H,
+      data: { type: 'mcq', stem: 'Capital of Karnataka?', marks: 1, options: [{ text: 'Mysuru', correct: true }, { text: 'Bengaluru' }] },
+    }),
+  );
+
+  await login(page, ADMIN, ADMIN_PW);
+  await page.goto(`/faculty/activities/${act.id}`);
+  await page.getByRole('button', { name: 'Edit question 1' }).click();
+  const first = page.getByRole('button', { name: 'Mark option 1 correct' });
+  const second = page.getByRole('button', { name: 'Mark option 2 correct' });
+  await expect(first).toHaveText('Correct');
+  await expect(first).toHaveAttribute('aria-pressed', 'true');
+  await second.click();
+  await expect(second).toHaveAttribute('aria-pressed', 'true');
+  await expect(first).toHaveAttribute('aria-pressed', 'false');
+  if (process.env.E2E_SHOTS_DIR) await page.screenshot({ path: `${process.env.E2E_SHOTS_DIR}/correct-button-${test.info().project.name}.png` });
+  await page.getByRole('button', { name: 'Save question' }).click();
+  await expect(page.getByText('Q1.')).toBeVisible();
+
+  const asg = await ok<{ id: string }>(await request.post(`/api/v1/activities/${act.id}/assign`, { headers: H, data: { section_ids: [c.sectionId], require_fullscreen: false } }));
+  await page.goto(`/faculty/reports/${asg.id}`);
+  await page.getByRole('button', { name: 'Questions', exact: true }).click();
+  const right = page.locator('div.text-sm', { hasText: 'Bengaluru' }).first();
+  await expect(right.getByText('Correct answer')).toBeVisible();
+  await expect(page.locator('div.text-sm', { hasText: 'Mysuru' }).first().getByText('Correct answer')).toHaveCount(0);
+  if (process.env.E2E_SHOTS_DIR) await page.screenshot({ path: `${process.env.E2E_SHOTS_DIR}/report-key-${test.info().project.name}.png` });
+});

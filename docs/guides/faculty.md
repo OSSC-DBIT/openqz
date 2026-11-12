@@ -160,7 +160,7 @@ Live games use the **multiple choice, true / false and multi-select** questions 
 - **Tiles:** completion, average marks (with average accuracy), highest / lowest marks, how many still need marking.
 - **Overview:** each student's **marks obtained** (out of the total, with accuracy), then a grid of every student against every question: green correct, amber partly correct, red incorrect, blue to grade, grey not answered. Click a name to open the attempt.
 - **Participants:** each student's status, **marks obtained**, accuracy and flags (*to grade*, *late*, *N violations*, *auto-submitted*). **View** opens the full attempt.
-- **Questions:** accuracy per question, average marks and, for options, how many students chose each one. Low accuracy questions show what to re-teach.
+- **Questions:** accuracy per question, average marks, the correct answer (marked in green) and, for options, how many students chose each one. Low accuracy questions show what to re-teach.
 - **Grading:** every written answer waiting for marks. Enter marks (per criterion if there is a rubric) and optional feedback, then **Save**.
 
 Buttons at the top:

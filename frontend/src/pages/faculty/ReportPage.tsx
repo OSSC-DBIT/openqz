@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Download, FileSpreadsheet, LockOpen, Send, Trash2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Download, FileSpreadsheet, LockOpen, Send, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { api, downloadFile } from '../../api/client';
@@ -186,21 +186,33 @@ export default function ReportPage() {
                 {q.answered} answered{q.avg_score !== null ? ` | avg ${q.avg_score} / ${Number(q.marks)}` : ''}
                 {q.pending ? ` | ${q.pending} to grade` : ''}
               </div>
-              {q.options.length > 0 && q.answered > 0 && (
+              {q.options.length > 0 && (
                 <div className="mt-3 space-y-1.5">
                   {q.options.map((o) => (
                     <div key={o.id} className="text-sm">
-                      <div className="flex justify-between">
-                        <span>{o.text || '(image)'}</span>
+                      <div className="flex justify-between gap-2">
+                        <span className={o.correct ? 'inline-flex items-center gap-1.5 font-semibold' : undefined}>
+                          {o.text || '(image)'}
+                          {o.correct && (
+                            <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                              <CheckCircle2 className="h-4 w-4" aria-hidden /> Correct answer
+                            </span>
+                          )}
+                        </span>
                         <span className="text-muted">{o.count}</span>
                       </div>
                       <div className="h-2 rounded-full bg-line">
-                        <div className="h-2 rounded-full bg-brand-500" style={{ width: `${(o.count / Math.max(1, q.answered)) * 100}%` }} />
+                        <div className={`h-2 rounded-full ${o.correct ? 'bg-emerald-500' : 'bg-brand-500'}`} style={{ width: `${(o.count / Math.max(1, q.answered)) * 100}%` }} />
                       </div>
                     </div>
                   ))}
                 </div>
               )}
+              {q.type === 'fill_blank' && q.answer?.blanks?.length ? (
+                <p className="mt-3 text-sm">
+                  <span className="font-bold text-emerald-700 dark:text-emerald-300">Correct answer:</span> {q.answer.blanks.map((b) => b.join(' / ')).join(' ; ')}
+                </p>
+              ) : null}
             </Card>
           ))}
         </div>
