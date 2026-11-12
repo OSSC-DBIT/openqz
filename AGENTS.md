@@ -84,7 +84,7 @@ cd frontend && pnpm guides
 
 1. Backend: ruff, ruff format, mypy, pytest green; coverage stays at or above 85% (currently about 90%).
 2. Frontend: eslint, tsc, vitest, build green.
-3. Playwright suite green on **both** projects (desktop and mobile). New screens get an axe check in `e2e/a11y.spec.ts` and a line in `e2e/responsive.spec.ts` (must fit 320 to 2560 px wide).
+3. Playwright suite green on **both** projects (desktop and mobile), run on your machine: CI does not run it on pull requests (only by hand: Actions, CI, Run workflow), so this step is on you. New screens get an axe check in `e2e/a11y.spec.ts` and a line in `e2e/responsive.spec.ts` (must fit 320 to 2560 px wide).
 4. Docs updated in the same change:
    - user-visible: the guide in `docs/guides/` and `pnpm guides`;
    - API: regenerate `docs/api/openapi.json`;

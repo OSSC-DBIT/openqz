@@ -4,9 +4,9 @@ OpenQZ is tested at five layers. CI runs all of them on every pull request; a re
 
 | Layer | Tool | Where | Count (2026-11-08) |
 | --- | --- | --- | --- |
-| Backend unit + API | pytest, httpx | `backend/tests/` | 118 tests, 91% line coverage (CI gate: 85%), about 5 minutes |
+| Backend unit + API | pytest, httpx | `backend/tests/` | 119 tests, 91% line coverage (CI gate: 85%), about 5 minutes |
 | Frontend unit | Vitest, Testing Library, happy-dom | `frontend/src/test/` | 24 tests |
-| Browser journeys | Playwright (desktop Chrome + Pixel 7) | `frontend/e2e/` | 37 tests in 11 spec files (19 journeys and feature checks, 11 axe checks including dark mode, 3 guide tests, 4 screen-size tests) x 2 devices: 74 runs, 5 skipped by design (the screen-size tests and one live-game test run on the desktop project only). The password-reset journey also skips locally without Mailpit or email, but fails in CI. |
+| Browser journeys | Playwright (desktop Chrome + Pixel 7) | `frontend/e2e/` | Run locally before every pull request; GitHub Actions runs them only by hand (Actions, CI, Run workflow). 37 tests in 11 spec files (19 journeys and feature checks, 11 axe checks including dark mode, 3 guide tests, 4 screen-size tests) x 2 devices: 74 runs, 5 skipped by design (the screen-size tests and one live-game test run on the desktop project only). The password-reset journey also skips locally without Mailpit or email, but fails in CI. |
 | Accessibility | axe-core in Playwright (WCAG 2.1 AA) | `frontend/e2e/a11y.spec.ts` | landing page, login, student home, join page, create dialog with class picker, faculty library, faculty home (and its quick-create tile); in **dark mode** again: landing page, login, student home, join, faculty home, library, reports, an assignment report, the editor, and the admin dashboard, users, sections, imports and audit log |
 | Load | k6 | `tests/load/student-exam.js` | see [performance.md](performance.md) |
 | Security | OWASP ZAP baseline, pip-audit, pnpm audit | CI + `docs/reports/` | see [security.md](security.md) |

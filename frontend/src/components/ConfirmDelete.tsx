@@ -57,7 +57,8 @@ export function ConfirmDelete({
   const waiting = !!impactUrl && impact.isLoading;
 
   return (
-    <Modal open onClose={onClose} title={title}>
+    // While the request is on its way the dialog stays: closing it would look like a cancel.
+    <Modal open onClose={del.isPending ? () => undefined : onClose} title={title}>
       <div className="space-y-3">
         {step === 1 ? (
           <>
@@ -105,7 +106,7 @@ export function ConfirmDelete({
               <Button type="button" variant="danger" loading={del.isPending} onClick={() => del.mutate()}>
                 Yes, {action.toLowerCase()}
               </Button>
-              <Button type="button" onClick={onClose}>
+              <Button type="button" disabled={del.isPending} onClick={onClose}>
                 No, keep it
               </Button>
             </div>

@@ -112,7 +112,7 @@ Development: `compose.dev.yaml` points email at Mailpit, a fake inbox at http://
 
 ```mermaid
 flowchart LR
-    A["Merge to main"] --> B["CI: checks, browser tests,<br/>images pushed to GHCR"]
+    A["Merge to main"] --> B["CI: checks,<br/>images pushed to GHCR"]
     B --> C["Tag a release v1.x.y<br/>images get the version tag"]
     C --> D["Local production check<br/>scripts/prod_smoke.sh (optional)"]
     D --> E["Staging: set image tags<br/>make staging-up"]

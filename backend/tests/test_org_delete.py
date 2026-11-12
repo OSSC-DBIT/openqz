@@ -5,7 +5,7 @@ from httpx import AsyncClient
 from sqlalchemy import func, select
 
 from app.core.db import SessionLocal
-from app.models import Attempt, AuditLog, FacultyAssignment, Role, StudentSection
+from app.models import Attempt, AuditLog, FacultyAssignment, Role, Section, StudentSection
 from tests.conftest import PASSWORD, login, make_user
 from tests.test_activities import A, assign, make_quiz, setup_class
 
@@ -74,6 +74,39 @@ async def test_section_with_attempts_is_refused_then_deleted_when_clean(
         assert await s.scalar(select(func.count()).select_from(FacultyAssignment)) == 0
     log = await _audit("section_deleted")
     assert len(log) == 1 and log[0].meta is not None and log[0].meta["students"] == 2
+
+
+async def test_attempts_of_another_section_do_not_block(client: AsyncClient) -> None:
+    """One assignment for sections A and B: an attempt by a student of B does not hold A."""
+    c = await setup_class(client)
+    await make_user("admin", Role.admin, full_name="Admin")
+    admin = await login(client, "admin")
+    async with SessionLocal() as s:
+        first = await s.get(Section, c["sec"])
+        assert first is not None
+        other = Section(
+            department_id=first.department_id, semester=5, name="B", academic_year="2026-27"
+        )
+        s.add(other)
+        await s.flush()
+        subject_id = await s.scalar(select(FacultyAssignment.subject_id))
+        s.add(FacultyAssignment(faculty_id=c["fac_id"], section_id=other.id, subject_id=subject_id))
+        s.add(StudentSection(student_id=c["outsider_id"], section_id=other.id))
+        await s.commit()
+        b_id = other.id
+    act = await make_quiz(client, c["fac"])
+    asg = await assign(client, c["fac"], act["id"], section_ids=[c["sec"], b_id])
+    started = await client.post(f"{A}/me/assignments/{asg['id']}/start", headers=c["out"])
+    assert started.status_code in (200, 201), started.text
+
+    a_imp = (await client.get(f"{A}/sections/{c['sec']}/delete-impact", headers=admin)).json()
+    b_imp = (await client.get(f"{A}/sections/{b_id}/delete-impact", headers=admin)).json()
+    assert a_imp["counts"]["attempts"] == 0 and a_imp["blocked"] is None
+    assert b_imp["counts"]["attempts"] == 1 and b_imp["blocked"]
+    assert (await client.delete(f"{A}/sections/{b_id}", headers=admin)).status_code == 409
+    assert (await client.delete(f"{A}/sections/{c['sec']}", headers=admin)).status_code == 204
+    async with SessionLocal() as s:
+        assert await s.scalar(select(func.count()).select_from(Attempt)) == 1
 
 
 async def test_section_without_work_is_deleted(client: AsyncClient) -> None:

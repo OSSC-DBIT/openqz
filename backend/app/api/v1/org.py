@@ -176,14 +176,19 @@ async def _section_impact(session: AsyncSession, section: Section) -> DeleteImpa
             AssignmentTarget.section_id == section.id
         ),
     )
+    # Only this section's own students: an assignment may target other sections too, and
+    # their attempts do not hang on this one.
+    members = select(StudentSection.student_id).where(StudentSection.section_id == section.id)
     attempts = await _count(
         session,
-        select(func.count()).select_from(Attempt).where(Attempt.assignment_id.in_(targets)),
+        select(func.count())
+        .select_from(Attempt)
+        .where(Attempt.assignment_id.in_(targets), Attempt.student_id.in_(members)),
     )
     blocked = None
     if attempts:
         blocked = (
-            f"Work assigned to this section has {attempts} student attempts. "
+            f"Students of this section have {attempts} attempts on work assigned to it. "
             "Deleting the section would leave those reports without their class. "
             "Delete those results first (report page, Delete results)."
         )

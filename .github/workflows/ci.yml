@@ -93,9 +93,9 @@ jobs:
         run: pnpm audit --prod
 
   e2e:
-    # Browser tests run on pull requests (required to merge into dev and main) and by hand,
-    # not again when deploy.yml runs CI for the merged commit.
-    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    # Browser tests are run locally before a pull request (scripts/prod_smoke.sh, or
+    # "npx playwright test" from frontend/). Here they run only by hand: Actions, CI, Run workflow.
+    if: github.event_name == 'workflow_dispatch'
     needs: [backend, frontend]
     runs-on: ubuntu-24.04
     steps:
