@@ -22,7 +22,7 @@ test('admin signs in and sees the dashboard, users and imports', async ({ page }
   await page.goto('/admin/users');
   await expect(page.getByRole('heading', { name: 'Users' })).toBeVisible();
   // the list is paginated (and grows with every test run), so search like an admin would
-  await page.getByPlaceholder('Search by name, email or USN').fill('1DB23CS001');
+  await page.getByPlaceholder('Search by name, email, phone or USN').fill('1DB23CS001');
   await expect(page.getByText('1DB23CS001')).toBeVisible();
   await expect(page.getByText('asha@example.com')).toBeVisible();
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/${info.project.name}-users.png`, fullPage: true });

@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from app.api.v1 import (
     activities,
+    admin_data,
     auth,
     health,
     imports,
@@ -11,6 +12,7 @@ from app.api.v1 import (
     org,
     play,
     results,
+    stats,
     users,
 )
 
@@ -27,3 +29,5 @@ api_router.include_router(play.router)
 api_router.include_router(live.router)
 api_router.include_router(media.router)
 api_router.include_router(users.audit_router)
+api_router.include_router(stats.router)
+api_router.include_router(admin_data.router)

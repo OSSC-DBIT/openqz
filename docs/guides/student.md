@@ -28,7 +28,9 @@ flowchart TD
 
 ## 1. Sign in
 
-1. Open the OpenQZ address your college gave you (for example `https://openqz.dbit.co.in`).
+Use **Google Chrome**, **Safari** or **Microsoft Edge**. In any other browser (Firefox, Opera, Samsung Internet, or a link opened inside WhatsApp or Instagram) the sign-in page asks you to switch and shows the address to copy.
+
+1. Open the OpenQZ address your college gave you (for example `https://openqz.dbit.co.in`). Visitors see the landing page; choose **Login** in the top navigation to reach the sign-in screen.
 2. Sign in with your **email** and the **temporary password** from the slip your class teacher gave you. Or tap **Continue with Google** if your Google account uses the same email.
 3. The first time you use the temporary password, OpenQZ asks you to **choose your own password**: at least 8 characters, with upper and lower case letters and a digit.
 4. Use the eye button next to a password field to show or hide what you typed; the field starts hidden.
@@ -38,6 +40,8 @@ flowchart TD
 **Forgot your password?** Tap **Forgot your password?** on the sign-in page (if your college has turned on email). You get a link that works once, for 30 minutes. Otherwise ask your class teacher or the OpenQZ admin to reset it.
 
 After 5 wrong passwords your account locks for 15 minutes.
+
+**Have a join code?** The sign-in page has a **Have a join code?** box: type the 6-digit code from the host's screen, or tap **Scan QR code** and point the camera at it. A live game opens at once (as a guest you only pick a nickname, when the host allows guests). For a room, sign in first and you go straight to it.
 
 ## 2. Install it like an app (optional)
 
@@ -55,7 +59,9 @@ The home page has two tabs:
 
 Buttons on each card:
 
-- **Start**: begin the activity.
+- **Start**: begin the activity. If your teacher wrote **instructions**, you read them first and then press **Start now**.
+- **Not started yet**: the activity is assigned but opens later. The card shows the opening time and the Start button appears by itself when it opens (you also get an email, if your college has email set up).
+- **Instructions**: read your teacher's note again before you start.
 - **Resume**: continue an attempt you left. Your answers were saved.
 - **Review**: see your answers and marks after submitting.
 

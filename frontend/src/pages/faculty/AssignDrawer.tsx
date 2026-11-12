@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router';
 import { api } from '../../api/client';
 import type { Activity, AssignmentInfo, StudentBrief } from '../../api/types';
 import { ClassPicker } from '../../components/pieces';
-import { Button, ErrorText, Field, Input, Modal, Select, cx } from '../../components/ui';
+import { Button, ErrorText, Field, Input, Modal, Select, Textarea, cx } from '../../components/ui';
 import { fromLocalInput, toLocalInput } from '../../components/quiz';
 import { useClassOptions } from './LibraryPage';
 import { SCORING_LABEL, type HostView, type LiveScoring } from '../../live/api';
@@ -52,6 +52,7 @@ export function AssignDrawer({
   const [maxViol, setMaxViol] = useState(activity.kind === 'flashcards' || activity.kind === 'poll' ? 0 : 3);
   const [notify, setNotify] = useState(true);
   const [fullscreen, setFullscreen] = useState(true);
+  const [instructions, setInstructions] = useState('');
 
   const students = useQuery({
     queryKey: ['section-students', pickStudentsFrom],
@@ -79,6 +80,7 @@ export function AssignDrawer({
           max_violations: maxViol,
           require_fullscreen: fullscreen,
           notify,
+          instructions: instructions.trim() || null,
         },
       }),
     onSuccess: onDone,
@@ -176,7 +178,7 @@ export function AssignDrawer({
         )}
 
         <section className="grid gap-3 sm:grid-cols-2">
-          <Field label="Start (blank = now)">
+          <Field label="Start (blank = now)" hint="With a later start, students see it as Not started until then.">
             <Input type="datetime-local" value={startAt} onChange={(e) => setStartAt(e.target.value)} />
           </Field>
           <Field label="Deadline">
@@ -184,6 +186,10 @@ export function AssignDrawer({
           </Field>
           <div className="sm:col-span-2">{check('Allow late submissions', allowLate, setAllowLate, 'Students can still start after the deadline; marked late.')}</div>
         </section>
+
+        <Field label="Instructions for students (optional)" hint="Shown before they start, and in the email. For example: what to keep ready, rules, how marks are given.">
+          <Textarea rows={3} maxLength={5000} value={instructions} onChange={(e) => setInstructions(e.target.value)} placeholder="Keep your calculator ready. No negative marks." />
+        </Field>
 
         <section className="grid gap-3 sm:grid-cols-2">
           {activity.kind !== 'flashcards' && (
@@ -216,7 +222,7 @@ export function AssignDrawer({
               </Field>
             </div>
           )}
-          {check('Email students about it', notify, setNotify, 'Sends an email when assigned and when you release marks (if email is set up).')}
+          {check('Email students about it', notify, setNotify, 'Sends an email when assigned, when a scheduled start time comes, and when you release marks (if email is set up).')}
           {check('Require full screen', fullscreen, setFullscreen, 'Questions stay hidden until the student is in full screen; leaving it counts as a warning. (iPhone browsers have no full screen, so it is skipped there.)')}
           <Field label="Tab switches / Back / reload allowed before auto-submit (0 = only record)">
             <Input type="number" min={0} max={50} value={maxViol} onChange={(e) => setMaxViol(Number(e.target.value))} />

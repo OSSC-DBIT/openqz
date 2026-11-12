@@ -11,6 +11,7 @@ from openpyxl import load_workbook
 
 from app.core.config import get_settings
 from app.core.db import SessionLocal
+from app.core.redis import get_redis
 from app.models import Department, FacultyAssignment, Role, Section, Subject, User
 from app.services import email
 from tests.conftest import PASSWORD, email_for, login, make_user
@@ -156,9 +157,33 @@ async def test_forgot_password_flow(client: AsyncClient, mail: list[email.Mail])
 
 async def test_forgot_is_throttled_per_email(client: AsyncClient, mail: list[email.Mail]) -> None:
     await make_user("stud1")
-    for _ in range(5):
-        await client.post(f"{A}/auth/forgot", json={"email": email_for("stud1")})
+    who = email_for("stud1")
+
+    async def ask(times: int, address: str = who) -> None:
+        for _ in range(times):
+            r = await client.post(f"{A}/auth/forgot", json={"email": address})
+            assert r.status_code == 202  # always the same answer, throttled or not
+
+    # one email a minute: the impatient taps send nothing more
+    await ask(5)
+    assert len(mail) == 1
+    # a different spelling of the same address is the same person
+    await ask(1, who.upper())
+    assert len(mail) == 1
+
+    # a minute later (cooldown over): the next one goes out, up to 3 in the hour
+    r = get_redis()
+    for _ in range(4):
+        await r.delete(f"rl:reset:cd:{who}")
+        await ask(1)
     assert len(mail) == 3
+
+    # the next hour: the daily cap (6) is what stops it
+    await r.delete(f"rl:reset:h:{who}")
+    for _ in range(6):
+        await r.delete(f"rl:reset:cd:{who}")
+        await ask(1)
+    assert len(mail) == 6
 
 
 async def test_forgot_disabled_without_smtp(client: AsyncClient) -> None:

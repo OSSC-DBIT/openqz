@@ -42,6 +42,7 @@ async def assignment_out(session: AsyncSession, a: ActivityAssignment) -> Assign
         max_violations=a.max_violations,
         require_fullscreen=a.require_fullscreen,
         notify=a.notify,
+        instructions=a.instructions,
         is_room=a.is_room,
         join_code=a.join_code,
         accepting_joins=a.accepting_joins,

@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { KeyRound, Lock, Mail, Plus, Search } from 'lucide-react';
+import { KeyRound, Lock, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { api } from '../../api/client';
-import type { Department, Page, Role, User } from '../../api/types';
+import type { Department, Page, Role, Section, User } from '../../api/types';
+import { DeleteForever } from '../../components/DeleteForever';
 import {
   Badge,
   Button,
@@ -16,6 +17,7 @@ import {
   Spinner,
   Table,
   Td,
+  cx,
 } from '../../components/ui';
 
 function TempPassword({ username, email, password, onClose }: { username: string; email: string | null; password: string; onClose: () => void }) {
@@ -37,26 +39,150 @@ function TempPassword({ username, email, password, onClose }: { username: string
   );
 }
 
-function CreateUser({ open, onClose, depts }: { open: boolean; onClose: () => void; depts: Department[] }) {
+interface UserForm {
+  username: string;
+  full_name: string;
+  email: string;
+  phone: string;
+  designation: string;
+  role: Role;
+  /** Main department first. Faculty may have several. */
+  department_ids: number[];
+  section_id: string;
+}
+
+const EMPTY: UserForm = { username: '', full_name: '', email: '', phone: '', designation: '', role: 'student', department_ids: [], section_id: '' };
+
+const ROLE_HINT: Record<Role, string> = {
+  student: 'Takes quizzes and assignments given to their section.',
+  faculty: 'Builds activities and assigns them to the classes mapped to them.',
+  club: 'Builds activities and hosts rooms and live games with a join code. No class lists.',
+  admin: 'Manages users, sections, imports and sees every report.',
+};
+
+/** The fields shared by "Add user" and "Edit user". */
+function UserFields({ form, set, depts, sections, creating }: { form: UserForm; set: (f: UserForm) => void; depts: Department[]; sections: Section[]; creating: boolean }) {
+  const isStudent = form.role === 'student';
+  const isFaculty = form.role === 'faculty';
+  const toggleDept = (id: number) =>
+    set({ ...form, department_ids: form.department_ids.includes(id) ? form.department_ids.filter((x) => x !== id) : [...form.department_ids, id] });
+  const main = form.department_ids[0];
+  // Sections of the chosen department first; all of them when no department is chosen.
+  const shownSections = sections.filter((x) => !main || x.department_id === main || String(x.id) === form.section_id);
+  return (
+    <>
+      {creating && (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Username (USN / employee ID)">
+            <Input required minLength={2} maxLength={64} pattern="[A-Za-z0-9._\-]+" title="Letters, digits, dot, dash or underscore" value={form.username} onChange={(e) => set({ ...form, username: e.target.value })} />
+          </Field>
+          <Field label="Role" hint={ROLE_HINT[form.role]}>
+            <Select value={form.role} onChange={(e) => set({ ...form, role: e.target.value as Role, department_ids: form.department_ids.slice(0, 1), section_id: '' })}>
+              <option value="student">Student</option>
+              <option value="faculty">Faculty</option>
+              <option value="club">Club organiser</option>
+              <option value="admin">Admin</option>
+            </Select>
+          </Field>
+        </div>
+      )}
+      <Field label="Full name">
+        <Input required maxLength={200} value={form.full_name} onChange={(e) => set({ ...form, full_name: e.target.value })} />
+      </Field>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="Email (used to sign in)">
+          <Input type="email" required value={form.email} onChange={(e) => set({ ...form, email: e.target.value })} />
+        </Field>
+        <Field label="Phone (optional)">
+          <Input type="tel" inputMode="tel" maxLength={20} placeholder="+91 98765 43210" value={form.phone} onChange={(e) => set({ ...form, phone: e.target.value })} />
+        </Field>
+      </div>
+      {!isStudent && (
+        <Field label={form.role === 'club' ? 'Club and position (optional)' : 'Designation (optional)'}>
+          <Input maxLength={120} placeholder={form.role === 'club' ? 'Coding Club, coordinator' : 'Assistant Professor'} value={form.designation} onChange={(e) => set({ ...form, designation: e.target.value })} />
+        </Field>
+      )}
+      {isFaculty ? (
+        <div className="space-y-1.5">
+          <div className="text-sm font-medium text-ink" id="dept-group">
+            Departments
+          </div>
+          <div className="flex flex-wrap gap-2" role="group" aria-labelledby="dept-group">
+            {depts.map((d) => {
+              const on = form.department_ids.includes(d.id);
+              return (
+                <button
+                  key={d.id}
+                  type="button"
+                  aria-pressed={on}
+                  title={d.name}
+                  onClick={() => toggleDept(d.id)}
+                  className={cx('rounded-full border px-3 py-1 text-sm', on ? 'border-brand-600 bg-brand-600 font-semibold text-white' : 'border-line hover:border-brand-500')}
+                >
+                  {d.code}
+                  {on && d.id === main && form.department_ids.length > 1 ? ' (main)' : ''}
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-xs text-muted">Pick every department this teacher works in. The first one you pick is the main department.</p>
+        </div>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Department">
+            <Select value={main ?? ''} onChange={(e) => set({ ...form, department_ids: e.target.value ? [Number(e.target.value)] : [], section_id: '' })}>
+              <option value="">None</option>
+              {depts.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.code}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          {isStudent && (
+            <Field label="Section" hint="Needed to receive class assignments.">
+              <Select value={form.section_id} onChange={(e) => set({ ...form, section_id: e.target.value })}>
+                <option value="">None</option>
+                {shownSections.map((x) => (
+                  <option key={x.id} value={x.id}>
+                    {x.department_code} Sem {x.semester} {x.name} ({x.academic_year})
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
+
+/** What the API takes for the shared fields. */
+function userPayload(form: UserForm) {
+  return {
+    full_name: form.full_name.trim(),
+    email: form.email.trim().toLowerCase(),
+    phone: form.phone.trim() || null,
+    designation: form.role === 'student' ? null : form.designation.trim() || null,
+    department_ids: form.department_ids,
+    ...(form.role === 'student' ? { section_id: form.section_id ? Number(form.section_id) : null } : {}),
+  };
+}
+
+function CreateUser({ open, onClose, depts, sections }: { open: boolean; onClose: () => void; depts: Department[]; sections: Section[] }) {
   const qc = useQueryClient();
-  const [form, setForm] = useState({ username: '', full_name: '', email: '', role: 'student' as Role, department_id: '' });
+  const [form, setForm] = useState<UserForm>(EMPTY);
   const [created, setCreated] = useState<{ username: string; email: string | null; password: string } | null>(null);
   const m = useMutation({
     mutationFn: () =>
       api<{ user: User; temporary_password: string }>('/users', {
         method: 'POST',
-        json: {
-          username: form.username.trim().toUpperCase(),
-          full_name: form.full_name.trim(),
-          email: form.email.trim().toLowerCase(),
-          role: form.role,
-          department_id: form.department_id ? Number(form.department_id) : null,
-        },
+        json: { username: form.username.trim().toUpperCase(), role: form.role, ...userPayload(form) },
       }),
     onSuccess: (r) => {
       void qc.invalidateQueries({ queryKey: ['users'] });
       setCreated({ username: r.user.username, email: r.user.email, password: r.temporary_password });
-      setForm({ username: '', full_name: '', email: '', role: 'student', department_id: '' });
+      setForm(EMPTY);
     },
   });
 
@@ -79,38 +205,8 @@ function CreateUser({ open, onClose, depts }: { open: boolean; onClose: () => vo
 
   return (
     <Modal open={open} onClose={onClose} title="Add user">
-      <form onSubmit={submit} className="space-y-3">
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Username (USN / employee ID)">
-            <Input required value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} />
-          </Field>
-          <Field label="Role">
-            <Select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as Role })}>
-              <option value="student">Student</option>
-              <option value="faculty">Faculty</option>
-              <option value="club">Club organiser</option>
-              <option value="admin">Admin</option>
-            </Select>
-          </Field>
-        </div>
-        <Field label="Full name">
-          <Input required value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
-        </Field>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Email (used to sign in)">
-            <Input type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-          </Field>
-          <Field label="Department">
-            <Select value={form.department_id} onChange={(e) => setForm({ ...form, department_id: e.target.value })}>
-              <option value="">None</option>
-              {depts.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.code}
-                </option>
-              ))}
-            </Select>
-          </Field>
-        </div>
+      <form onSubmit={submit} className="max-h-[75vh] space-y-3 overflow-y-auto pr-1">
+        <UserFields form={form} set={setForm} depts={depts} sections={sections} creating />
         <ErrorText error={m.error} />
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="secondary" onClick={onClose}>
@@ -125,28 +221,39 @@ function CreateUser({ open, onClose, depts }: { open: boolean; onClose: () => vo
   );
 }
 
-function EditEmail({ user, onClose }: { user: User; onClose: () => void }) {
+function EditUser({ user, onClose, depts, sections }: { user: User; onClose: () => void; depts: Department[]; sections: Section[] }) {
   const qc = useQueryClient();
-  const [email, setEmail] = useState(user.email ?? '');
+  const [form, setForm] = useState<UserForm>({
+    username: user.username,
+    full_name: user.full_name,
+    email: user.email ?? '',
+    phone: user.phone ?? '',
+    designation: user.designation ?? '',
+    role: user.role,
+    department_ids: user.department_ids,
+    section_id: user.section_id ? String(user.section_id) : '',
+  });
   const save = useMutation({
-    mutationFn: () => api(`/users/${user.id}`, { method: 'PATCH', json: { email: email.trim().toLowerCase() } }),
+    mutationFn: () => api(`/users/${user.id}`, { method: 'PATCH', json: userPayload(form) }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['users'] });
       onClose();
     },
   });
   return (
-    <Modal open onClose={onClose} title={`Email for ${user.full_name}`}>
+    <Modal open onClose={onClose} title={`Edit ${user.full_name}`}>
       <form
-        className="space-y-3"
+        className="max-h-[75vh] space-y-3 overflow-y-auto pr-1"
         onSubmit={(e: FormEvent) => {
           e.preventDefault();
           save.mutate();
         }}
       >
-        <Field label="Email (used to sign in)" hint={user.google_linked ? 'Changing it unlinks their Google account.' : undefined}>
-          <Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-        </Field>
+        <p className="text-sm text-muted">
+          <span className="font-mono">{user.username}</span> | {user.role === 'club' ? 'club organiser' : user.role}
+          {user.google_linked ? ' | changing the email unlinks their Google account' : ''}
+        </p>
+        <UserFields form={form} set={setForm} depts={depts} sections={sections} creating={false} />
         <ErrorText error={save.error} />
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>
@@ -158,6 +265,57 @@ function EditEmail({ user, onClose }: { user: User; onClose: () => void }) {
         </div>
       </form>
     </Modal>
+  );
+}
+
+interface Impact {
+  username: string;
+  attempts: number;
+  activities: number;
+  assignments: number;
+  attempts_by_students: number;
+  live_games: number;
+  blocked_by: string | null;
+}
+
+/** Delete a person for good: first show what goes with them. */
+function DeleteUser({ user, onClose }: { user: User; onClose: () => void }) {
+  const qc = useQueryClient();
+  const impact = useQuery({ queryKey: ['user-impact', user.id], queryFn: () => api<Impact>(`/admin/data/users/${user.id}/impact`), staleTime: 0 });
+  const i = impact.data;
+  if (!i) {
+    return (
+      <Modal open onClose={onClose} title={`Delete ${user.full_name}`}>
+        {impact.error ? <ErrorText error={impact.error} /> : <Spinner />}
+      </Modal>
+    );
+  }
+  return (
+    <DeleteForever
+      title={`Delete ${user.full_name}`}
+      endpoint={`/admin/data/users/${user.id}/delete`}
+      confirmWord={user.username}
+      blocked={i.blocked_by}
+      onClose={onClose}
+      onDone={() => {
+        void qc.invalidateQueries({ queryKey: ['users'] });
+        onClose();
+      }}
+    >
+      <p className="mt-1">This removes the account of {user.full_name} and:</p>
+      <ul className="mt-1 list-inside list-disc">
+        <li>
+          {i.attempts} of their own attempts (answers and marks)
+        </li>
+        {(i.activities > 0 || i.live_games > 0) && (
+          <li>
+            {i.activities} activities they made, with {i.assignments} assignments and <b>{i.attempts_by_students} attempts by students</b>
+          </li>
+        )}
+        {i.live_games > 0 && <li>{i.live_games} live games they hosted</li>}
+      </ul>
+      <p className="mt-1">To stop someone signing in but keep their work, use Disable instead.</p>
+    </DeleteForever>
   );
 }
 
@@ -176,18 +334,22 @@ function UserStatus({ u, locked }: { u: User; locked: boolean }) {
 export default function UsersPage() {
   const qc = useQueryClient();
   const [role, setRole] = useState<Role | ''>('');
+  const [dept, setDept] = useState('');
   const [q, setQ] = useState('');
   const [page, setPage] = useState(1);
   const [creating, setCreating] = useState(false);
   const [temp, setTemp] = useState<{ username: string; email: string | null; password: string } | null>(null);
   const [editing, setEditing] = useState<User | null>(null);
+  const [deleting, setDeleting] = useState<User | null>(null);
 
   const depts = useQuery({ queryKey: ['departments'], queryFn: () => api<Department[]>('/departments') });
+  const sections = useQuery({ queryKey: ['sections', 'all'], queryFn: () => api<Section[]>('/sections') });
   const params = new URLSearchParams({ page: String(page), size: '50' });
   if (role) params.set('role', role);
+  if (dept) params.set('department_id', dept);
   if (q.trim()) params.set('q', q.trim());
   const users = useQuery({
-    queryKey: ['users', role, q, page],
+    queryKey: ['users', role, dept, q, page],
     queryFn: () => api<Page<User>>(`/users?${params}`),
     placeholderData: (prev) => prev,
   });
@@ -206,7 +368,7 @@ export default function UsersPage() {
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['users'] }),
   });
 
-  const deptCode = (id: number | null) => depts.data?.find((d) => d.id === id)?.code ?? '';
+  const deptCodes = (u: User) => u.department_ids.map((id) => depts.data?.find((d) => d.id === id)?.code).filter(Boolean).join(', ');
   const totalPages = users.data ? Math.max(1, Math.ceil(users.data.total / users.data.size)) : 1;
   const locked = (u: User) => !!u.locked_until && new Date(u.locked_until) > new Date();
 
@@ -226,7 +388,7 @@ export default function UsersPage() {
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
           <Input
             className="pl-9"
-            placeholder="Search by name, email or USN"
+            placeholder="Search by name, email, phone or USN"
             value={q}
             onChange={(e) => {
               setQ(e.target.value);
@@ -249,6 +411,22 @@ export default function UsersPage() {
           <option value="club">Club organisers</option>
           <option value="admin">Admins</option>
         </Select>
+        <Select
+          className="sm:w-44"
+          aria-label="Filter by department"
+          value={dept}
+          onChange={(e) => {
+            setDept(e.target.value);
+            setPage(1);
+          }}
+        >
+          <option value="">All departments</option>
+          {depts.data?.map((d) => (
+            <option key={d.id} value={d.id}>
+              {d.code}
+            </option>
+          ))}
+        </Select>
       </div>
 
       <ErrorText error={users.error || reset.error || toggle.error} />
@@ -258,7 +436,7 @@ export default function UsersPage() {
         <EmptyState title="No users found">Import a sheet from the Imports page or add a user.</EmptyState>
       ) : (
         <Table
-          head={['User', 'Role', 'Dept', 'Status', 'Last login', '']}
+          head={['User', 'Role', 'Dept / section', 'Status', 'Last login', '']}
           cols={[undefined, 'hidden sm:table-cell', 'hidden md:table-cell', 'hidden sm:table-cell', 'hidden xl:table-cell', 'w-px']}
           compact
         >
@@ -268,6 +446,8 @@ export default function UsersPage() {
                 <div className="font-semibold">{u.full_name}</div>
                 <div className="break-all text-xs text-muted">{u.email ?? <span className="text-red-600">no email</span>}</div>
                 <div className="break-all font-mono text-xs text-muted">{u.username}</div>
+                {(u.designation || u.phone) && <div className="text-xs text-muted">{[u.designation, u.phone].filter(Boolean).join(' | ')}</div>}
+                <div className="text-xs text-muted md:hidden">{[deptCodes(u), u.section_label].filter(Boolean).join(' | ')}</div>
                 {/* phones: role and status under the name (their columns are hidden) */}
                 <div className="mt-1.5 flex flex-wrap gap-1 sm:hidden">
                   <Badge tone={u.role === 'admin' ? 'brand' : 'neutral'}>{u.role}</Badge>
@@ -277,7 +457,10 @@ export default function UsersPage() {
               <Td className="hidden sm:table-cell">
                 <Badge tone={u.role === 'admin' ? 'brand' : 'neutral'}>{u.role}</Badge>
               </Td>
-              <Td className="hidden md:table-cell">{deptCode(u.department_id)}</Td>
+              <Td className="hidden md:table-cell">
+                {deptCodes(u)}
+                {u.section_label && <div className="text-xs text-muted">{u.section_label}</div>}
+              </Td>
               <Td className="hidden sm:table-cell">
                 <div className="flex flex-wrap gap-1">
                   <UserStatus u={u} locked={locked(u)} />
@@ -292,8 +475,8 @@ export default function UsersPage() {
                       <Lock className="h-4 w-4" />
                     </Button>
                   )}
-                  <Button variant="ghost" title="Change email" aria-label={`Change email for ${u.username}`} onClick={() => setEditing(u)}>
-                    <Mail className="h-4 w-4" />
+                  <Button variant="ghost" title="Edit details" aria-label={`Edit details of ${u.username}`} onClick={() => setEditing(u)}>
+                    <Pencil className="h-4 w-4" />
                   </Button>
                   <Button
                     variant="ghost"
@@ -305,8 +488,11 @@ export default function UsersPage() {
                   >
                     <KeyRound className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" className="col-span-2" onClick={() => toggle.mutate(u)}>
+                  <Button variant="ghost" onClick={() => toggle.mutate(u)}>
                     {u.is_active ? 'Disable' : 'Enable'}
+                  </Button>
+                  <Button variant="ghost" title="Delete for good" aria-label={`Delete ${u.username} for good`} className="hover:!bg-red-50 hover:!text-red-700 dark:hover:!bg-red-950" onClick={() => setDeleting(u)}>
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               </Td>
@@ -329,9 +515,10 @@ export default function UsersPage() {
         </div>
       )}
 
-      <CreateUser open={creating} onClose={() => setCreating(false)} depts={depts.data ?? []} />
+      <CreateUser open={creating} onClose={() => setCreating(false)} depts={depts.data ?? []} sections={sections.data ?? []} />
       {temp && <TempPassword {...temp} onClose={() => setTemp(null)} />}
-      {editing && <EditEmail user={editing} onClose={() => setEditing(null)} />}
+      {deleting && <DeleteUser user={deleting} onClose={() => setDeleting(null)} />}
+      {editing && <EditUser user={editing} onClose={() => setEditing(null)} depts={depts.data ?? []} sections={sections.data ?? []} />}
     </>
   );
 }

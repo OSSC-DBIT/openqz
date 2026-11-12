@@ -68,10 +68,15 @@ async def update_assignment(
     assignment_id: uuid.UUID, body: AssignUpdate, session: SessionDep, user: CreatorUser
 ) -> AssignmentOut:
     a = await owned(session, assignment_id, user)
-    for k, v in body.model_dump(exclude_unset=True).items():
+    data = body.model_dump(exclude_unset=True)
+    for k, v in data.items():
         setattr(a, k, v)
     if a.due_at and a.due_at <= a.start_at:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Deadline must be after the start time")
+    if "instructions" in data:
+        a.instructions = (a.instructions or "").strip() or None
+    if {"due_at", "allow_late"} & data.keys():
+        await svc.apply_new_deadline(session, a)
     await session.commit()
     return await assignment_out(session, a)
 
@@ -229,9 +234,17 @@ async def build_report(session: AsyncSession, a: ActivityAssignment) -> dict[str
             "correct": 0,
             "score_sum": Decimal("0"),
             "pending": 0,
+            # The key, for the staff who own this report (students never get this endpoint).
             "options": [
-                {"id": o["id"], "text": o.get("text", ""), "count": 0} for o in q.options or []
+                {
+                    "id": o["id"],
+                    "text": o.get("text", ""),
+                    "count": 0,
+                    "correct": bool(o.get("correct")) and graded,
+                }
+                for o in q.options or []
             ],
+            "answer": q.answer if graded and q.type.value == "fill_blank" else None,
         }
     # student x question grid (the report's Overview tab)
     cells: dict[uuid.UUID, dict[str, str]] = {}

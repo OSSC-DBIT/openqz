@@ -38,13 +38,16 @@ class IssuedTokens:
     user: User
 
 
-async def check_rate_limit(redis: Redis, ip: str, scope: str = "login") -> None:
+async def check_rate_limit(
+    redis: Redis, ip: str, scope: str = "login", limit: int | None = None
+) -> None:
+    """Per client address and minute. `limit` defaults to LOGIN_RATE_PER_MINUTE."""
     s = get_settings()
     key = f"rl:{scope}:{ip}:{int(datetime.now(UTC).timestamp() // 60)}"
     count = await redis.incr(key)
     if count == 1:
         await redis.expire(key, 70)
-    if count > s.login_rate_per_minute:
+    if count > (limit if limit is not None else s.login_rate_per_minute):
         what = "sign-in attempts" if scope == "login" else "requests"
         raise AuthError("rate_limited", f"Too many {what}, try again in a minute", 429)
 
@@ -168,6 +171,25 @@ async def issue_tokens(
     return IssuedTokens(access_token=access, refresh_token=raw, user=user)
 
 
+# How long a just-rotated refresh token is still accepted (see rotate_refresh).
+REFRESH_REUSE_GRACE = timedelta(seconds=20)
+
+
+async def _was_rotated(session: AsyncSession, token: RefreshToken) -> bool:
+    """True when `token` was replaced by a newer one that is still valid (a normal refresh),
+    as opposed to revoked by sign-out, a password change or reuse detection."""
+    assert token.revoked_at is not None
+    successor = await session.scalar(
+        select(RefreshToken.id).where(
+            RefreshToken.family_id == token.family_id,
+            RefreshToken.id != token.id,
+            RefreshToken.revoked_at.is_(None),
+            RefreshToken.created_at >= token.revoked_at - timedelta(seconds=2),
+        )
+    )
+    return successor is not None
+
+
 async def rotate_refresh(session: AsyncSession, raw: str) -> IssuedTokens:
     now = datetime.now(UTC)
     token = await session.scalar(
@@ -175,6 +197,20 @@ async def rotate_refresh(session: AsyncSession, raw: str) -> IssuedTokens:
     )
     if token is None:
         raise AuthError("invalid_refresh", "Session expired, please log in again")
+
+    if (
+        token.revoked_at is not None
+        and now - token.revoked_at <= REFRESH_REUSE_GRACE
+        and await _was_rotated(session, token)
+    ):
+        # The same token again within seconds of its rotation: the answer to the first refresh
+        # was lost on a weak connection, or two tabs refreshed together. Not theft: give a
+        # fresh pair. (A token revoked by sign-out or a password change has no live successor,
+        # so it never gets here.)
+        user = await session.get(User, token.user_id)
+        if user is None or not user.is_active or token.expires_at <= now:
+            raise AuthError("invalid_refresh", "Session expired, please log in again")
+        return await issue_tokens(session, user, family_id=token.family_id)
 
     if token.revoked_at is not None:
         # Reuse of a rotated token: assume theft, kill the whole family.
@@ -238,7 +274,29 @@ async def change_password(
 
 # ---------------------------------------------------------------- forgot / reset password
 
+# Reset emails to one address: one a minute, 3 an hour, 6 a day. Each window starts at the
+# first request (not on the clock hour), so nobody gets a double ration around a boundary.
+RESET_COOLDOWN_SECONDS = 60
 RESET_PER_EMAIL_PER_HOUR = 3
+RESET_PER_EMAIL_PER_DAY = 6
+
+
+async def _reset_mail_allowed(redis: Redis, email: str) -> bool:
+    who = normalize_email(email)
+    # Not counted while cooling down, so impatient taps do not use up the hour.
+    if not await redis.set(f"rl:reset:cd:{who}", "1", nx=True, ex=RESET_COOLDOWN_SECONDS):
+        return False
+    for window, seconds, limit in (
+        ("h", 3600, RESET_PER_EMAIL_PER_HOUR),
+        ("d", 86400, RESET_PER_EMAIL_PER_DAY),
+    ):
+        key = f"rl:reset:{window}:{who}"
+        n = await redis.incr(key)
+        if n == 1:
+            await redis.expire(key, seconds)
+        if n > limit:
+            return False
+    return True
 
 
 async def request_password_reset(
@@ -247,11 +305,7 @@ async def request_password_reset(
     """Create a one-time reset token. Returns None (silently) for unknown or throttled emails,
     so the response never reveals whether an account exists."""
     s = get_settings()
-    key = f"rl:reset:{normalize_email(email)}:{int(datetime.now(UTC).timestamp() // 3600)}"
-    n = await redis.incr(key)
-    if n == 1:
-        await redis.expire(key, 3700)
-    if n > RESET_PER_EMAIL_PER_HOUR:
+    if not await _reset_mail_allowed(redis, email):
         return None
     user = await find_by_email(session, email)
     if user is None or not user.is_active:

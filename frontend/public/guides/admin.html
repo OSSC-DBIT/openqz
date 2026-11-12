@@ -68,7 +68,11 @@
 </thead>
 <tbody><tr>
 <td>Add one person</td>
-<td><strong>Users</strong>, then <strong>Add user</strong> (gives a temporary password to hand over).</td>
+<td><strong>Users</strong>, then <strong>Add user</strong> (gives a temporary password to hand over). Fill in the ID, role, name and email; optionally phone and designation. For a <strong>student</strong> choose the department and <strong>section</strong> (needed to receive class assignments). For <strong>faculty</strong> tap every <strong>department</strong> they work in: the first one is the main department.</td>
+</tr>
+<tr>
+<td>Edit a person</td>
+<td><strong>Users</strong>, pencil icon: name, email, phone, designation, departments, section.</td>
 </tr>
 <tr>
 <td>Reset a password</td>
@@ -80,7 +84,15 @@
 </tr>
 <tr>
 <td>Change someone&#39;s sign-in email</td>
-<td><strong>Users</strong>, mail icon. Their old Google link is removed.</td>
+<td><strong>Users</strong>, pencil icon. Their old Google link is removed.</td>
+</tr>
+<tr>
+<td>Find people</td>
+<td>Search by name, email, phone or ID; filter by role and by department (faculty appear under every department they belong to).</td>
+</tr>
+<tr>
+<td>Delete a person for good</td>
+<td><strong>Users</strong>, bin icon. OpenQZ first shows what goes with them (their attempts; for a teacher, the activities they made and all student work on those). Type their ID and <strong>your own password</strong> to confirm. This cannot be undone: to keep the work, <strong>Disable</strong> instead. You cannot delete yourself or the last admin.</td>
 </tr>
 <tr>
 <td>Disable / enable an account</td>
@@ -116,9 +128,17 @@
 <ul>
 <li><strong>Integrity log</strong>: tab switches, Back presses, reloads during quizzes.</li>
 <li><strong>Audit log</strong>: sign-ins, failed sign-ins, lockouts, password resets, imports, credential downloads, score releases. Filter by action or search by person.</li>
+<li><strong>Statistics</strong>: how OpenQZ is used across the college. Tiles for the totals, a table <strong>by department</strong> (students, faculty, sections, class assignments, students assigned, submitted, completion and average marks) and a table <strong>by teacher and organiser</strong> (activities made, class assignments, rooms, live games, completion, average marks, answers waiting for grading). Choose a day range (by the day an activity was assigned) and a department. <strong>Excel</strong> downloads everything in one file (Summary, Departments, Faculty); the two <strong>CSV</strong> buttons download one table each.</li>
 <li><strong>Dashboard</strong>: counts of students, faculty, sections and teaching assignments for the current academic year.</li>
 </ul>
-<p>Admins can also open the faculty <strong>Library</strong> and <strong>Reports</strong> to see every activity.</p>
+<p>Admins can also open the faculty <strong>Library</strong> and <strong>Reports</strong> to see everything:</p>
+<ul>
+<li><strong>Questions and answer keys</strong>: <strong>Library</strong>, open any activity. The editor shows every question with its correct answer, marks and timer; <strong>Preview</strong> shows it as a student sees it. To change the correct answer, press <strong>Edit</strong> on a question and press <strong>Correct</strong> on the right option. A report&#39;s <strong>Questions</strong> tab also marks the correct answer of every question.</li>
+<li><strong>What each student answered</strong>: <strong>Reports</strong>, open an assignment, then a student&#39;s row: every answer, the marks given and any warnings.</li>
+<li><strong>Delete an activity for good</strong>: in the activity editor, <strong>Delete for good (admin)</strong> removes the activity with every assignment and all student attempts. (A teacher&#39;s own Delete only archives an activity that students have attempted.)</li>
+<li><strong>Delete the results of one assignment</strong>: in its report, <strong>Delete results</strong>. The activity and its questions stay.</li>
+</ul>
+<p>Both deletes ask you to type the activity&#39;s title and your own password. After 5 wrong passwords deleting is locked for 10 minutes, and every delete is recorded in the <strong>Audit log</strong>.</p>
 <h2>6. Privacy</h2>
 <ul>
 <li>Credential slips contain passwords: print, hand out, then delete the PDF from the server.</li>

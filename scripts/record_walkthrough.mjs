@@ -202,7 +202,7 @@ await scene('01-admin-imports', 'Admin: import faculty, students and who teaches
 
   await page.goto(`${BASE}/admin/users`);
   await say('Users: search, reset a password, unlock, change an email or disable an account', 2000);
-  await type(page.getByPlaceholder(/Search by name, email or USN/), tag.toLowerCase());
+  await type(page.getByPlaceholder(/Search by name, email, phone or USN/), tag.toLowerCase());
   await say(`The new teacher and students of CSE Sem 5 ${SECTION} are ready`, 2600);
 
   await page.goto(`${BASE}/admin/assignments`);

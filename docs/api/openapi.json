@@ -435,6 +435,18 @@
             "title": "Instant Feedback",
             "type": "boolean"
           },
+          "instructions": {
+            "anyOf": [
+              {
+                "maxLength": 5000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instructions"
+          },
           "max_violations": {
             "default": 3,
             "maximum": 50.0,
@@ -565,6 +577,18 @@
               }
             ],
             "title": "Instant Feedback"
+          },
+          "instructions": {
+            "anyOf": [
+              {
+                "maxLength": 5000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instructions"
           },
           "max_violations": {
             "anyOf": [
@@ -882,6 +906,28 @@
         "title": "ChangePasswordIn",
         "type": "object"
       },
+      "ConfirmIn": {
+        "properties": {
+          "confirm": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Confirm",
+            "type": "string"
+          },
+          "password": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "password",
+          "confirm"
+        ],
+        "title": "ConfirmIn",
+        "type": "object"
+      },
       "DepartmentIn": {
         "properties": {
           "code": {
@@ -929,6 +975,213 @@
           "id"
         ],
         "title": "DepartmentOut",
+        "type": "object"
+      },
+      "DepartmentStats": {
+        "properties": {
+          "activities": {
+            "title": "Activities",
+            "type": "integer"
+          },
+          "assigned": {
+            "title": "Assigned",
+            "type": "integer"
+          },
+          "assignments": {
+            "title": "Assignments",
+            "type": "integer"
+          },
+          "avg_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Percent"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "completion": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completion"
+          },
+          "department_id": {
+            "title": "Department Id",
+            "type": "integer"
+          },
+          "faculty": {
+            "title": "Faculty",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "sections": {
+            "title": "Sections",
+            "type": "integer"
+          },
+          "students": {
+            "title": "Students",
+            "type": "integer"
+          },
+          "submitted": {
+            "title": "Submitted",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "department_id",
+          "code",
+          "name",
+          "students",
+          "faculty",
+          "sections",
+          "activities",
+          "assignments",
+          "assigned",
+          "submitted",
+          "completion",
+          "avg_percent"
+        ],
+        "title": "DepartmentStats",
+        "type": "object"
+      },
+      "FacultyStats": {
+        "properties": {
+          "activities": {
+            "title": "Activities",
+            "type": "integer"
+          },
+          "assigned": {
+            "title": "Assigned",
+            "type": "integer"
+          },
+          "assignments": {
+            "title": "Assignments",
+            "type": "integer"
+          },
+          "avg_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Percent"
+          },
+          "classes": {
+            "title": "Classes",
+            "type": "integer"
+          },
+          "completion": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completion"
+          },
+          "departments": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Departments",
+            "type": "array"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "last_assigned_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Assigned At"
+          },
+          "live_games": {
+            "title": "Live Games",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "pending_grading": {
+            "title": "Pending Grading",
+            "type": "integer"
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role"
+          },
+          "rooms": {
+            "title": "Rooms",
+            "type": "integer"
+          },
+          "submitted": {
+            "title": "Submitted",
+            "type": "integer"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "name",
+          "username",
+          "email",
+          "role",
+          "departments",
+          "classes",
+          "activities",
+          "assignments",
+          "rooms",
+          "live_games",
+          "assigned",
+          "submitted",
+          "completion",
+          "avg_percent",
+          "pending_grading",
+          "last_assigned_at"
+        ],
+        "title": "FacultyStats",
         "type": "object"
       },
       "ForgotIn": {
@@ -1065,6 +1318,65 @@
           "header_map"
         ],
         "title": "HeaderMapIn",
+        "type": "object"
+      },
+      "Impact": {
+        "description": "What goes away with a person.",
+        "properties": {
+          "activities": {
+            "title": "Activities",
+            "type": "integer"
+          },
+          "assignments": {
+            "title": "Assignments",
+            "type": "integer"
+          },
+          "attempts": {
+            "title": "Attempts",
+            "type": "integer"
+          },
+          "attempts_by_students": {
+            "title": "Attempts By Students",
+            "type": "integer"
+          },
+          "blocked_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocked By"
+          },
+          "full_name": {
+            "title": "Full Name",
+            "type": "string"
+          },
+          "live_games": {
+            "title": "Live Games",
+            "type": "integer"
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "full_name",
+          "role",
+          "attempts",
+          "activities",
+          "assignments",
+          "attempts_by_students",
+          "live_games"
+        ],
+        "title": "Impact",
         "type": "object"
       },
       "ImportFieldsOut": {
@@ -2116,6 +2428,72 @@
         "title": "ShowAnswers",
         "type": "string"
       },
+      "StatsOut": {
+        "properties": {
+          "date_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date From"
+          },
+          "date_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date To"
+          },
+          "department_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Department Id"
+          },
+          "departments": {
+            "items": {
+              "$ref": "#/components/schemas/DepartmentStats"
+            },
+            "title": "Departments",
+            "type": "array"
+          },
+          "faculty": {
+            "items": {
+              "$ref": "#/components/schemas/FacultyStats"
+            },
+            "title": "Faculty",
+            "type": "array"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/Totals"
+          }
+        },
+        "required": [
+          "date_from",
+          "date_to",
+          "department_id",
+          "totals",
+          "departments",
+          "faculty"
+        ],
+        "title": "StatsOut",
+        "type": "object"
+      },
       "StudentBrief": {
         "properties": {
           "email": {
@@ -2294,6 +2672,98 @@
         "title": "TokenOut",
         "type": "object"
       },
+      "Totals": {
+        "properties": {
+          "activities": {
+            "title": "Activities",
+            "type": "integer"
+          },
+          "assigned": {
+            "title": "Assigned",
+            "type": "integer"
+          },
+          "assignments": {
+            "title": "Assignments",
+            "type": "integer"
+          },
+          "avg_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Percent"
+          },
+          "clubs": {
+            "title": "Clubs",
+            "type": "integer"
+          },
+          "completion": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completion"
+          },
+          "departments": {
+            "title": "Departments",
+            "type": "integer"
+          },
+          "faculty": {
+            "title": "Faculty",
+            "type": "integer"
+          },
+          "live_games": {
+            "title": "Live Games",
+            "type": "integer"
+          },
+          "pending_grading": {
+            "title": "Pending Grading",
+            "type": "integer"
+          },
+          "rooms": {
+            "title": "Rooms",
+            "type": "integer"
+          },
+          "sections": {
+            "title": "Sections",
+            "type": "integer"
+          },
+          "students": {
+            "title": "Students",
+            "type": "integer"
+          },
+          "submitted": {
+            "title": "Submitted",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "students",
+          "faculty",
+          "clubs",
+          "departments",
+          "sections",
+          "activities",
+          "assignments",
+          "rooms",
+          "live_games",
+          "assigned",
+          "submitted",
+          "completion",
+          "avg_percent",
+          "pending_grading"
+        ],
+        "title": "Totals",
+        "type": "object"
+      },
       "UnblockIn": {
         "properties": {
           "extra_minutes": {
@@ -2320,6 +2790,33 @@
             ],
             "title": "Department Id"
           },
+          "department_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "maxItems": 20,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Department Ids"
+          },
+          "designation": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Designation"
+          },
           "email": {
             "format": "email",
             "title": "Email",
@@ -2331,8 +2828,31 @@
             "title": "Full Name",
             "type": "string"
           },
+          "phone": {
+            "anyOf": [
+              {
+                "maxLength": 20,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
           "role": {
             "$ref": "#/components/schemas/Role"
+          },
+          "section_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section Id"
           },
           "username": {
             "maxLength": 64,
@@ -2385,6 +2905,25 @@
               }
             ],
             "title": "Department Id"
+          },
+          "department_ids": {
+            "default": [],
+            "items": {
+              "type": "integer"
+            },
+            "title": "Department Ids",
+            "type": "array"
+          },
+          "designation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Designation"
           },
           "email": {
             "anyOf": [
@@ -2442,8 +2981,41 @@
             "title": "Must Change Password",
             "type": "boolean"
           },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
           "role": {
             "$ref": "#/components/schemas/Role"
+          },
+          "section_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section Id"
+          },
+          "section_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section Label"
           },
           "username": {
             "title": "Username",
@@ -2480,6 +3052,33 @@
             ],
             "title": "Department Id"
           },
+          "department_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "maxItems": 20,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Department Ids"
+          },
+          "designation": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Designation"
+          },
           "email": {
             "anyOf": [
               {
@@ -2515,6 +3114,29 @@
               }
             ],
             "title": "Is Active"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "maxLength": 20,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "section_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section Id"
           }
         },
         "title": "UserUpdate",
@@ -2735,6 +3357,17 @@
           "instant_feedback": {
             "title": "Instant Feedback",
             "type": "boolean"
+          },
+          "instructions": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instructions"
           },
           "is_room": {
             "default": false,
@@ -4423,6 +5056,498 @@
         ]
       }
     },
+    "/api/v1/admin/data/activities/{activity_id}/delete": {
+      "post": {
+        "description": "Delete an activity for good, with every assignment, attempt and live game of it.\n(A teacher's own Delete only archives an activity that students have attempted.)",
+        "operationId": "delete_activity_api_v1_admin_data_activities__activity_id__delete_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "activity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Activity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Activity",
+        "tags": [
+          "admin data"
+        ]
+      }
+    },
+    "/api/v1/admin/data/assignments/{assignment_id}/delete": {
+      "post": {
+        "description": "Delete one assignment (or room) with all its attempts and marks. The activity stays.",
+        "operationId": "delete_assignment_api_v1_admin_data_assignments__assignment_id__delete_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assignment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Assignment",
+        "tags": [
+          "admin data"
+        ]
+      }
+    },
+    "/api/v1/admin/data/users/{user_id}/delete": {
+      "post": {
+        "description": "Delete a person and everything that belongs to them: their attempts, and (for a teacher\nor organiser) the activities they made with all student work on them. To keep the work,\ndisable the account instead.",
+        "operationId": "delete_user_api_v1_admin_data_users__user_id__delete_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete User",
+        "tags": [
+          "admin data"
+        ]
+      }
+    },
+    "/api/v1/admin/data/users/{user_id}/impact": {
+      "get": {
+        "description": "What deleting this person would remove. Shown before the admin confirms.",
+        "operationId": "user_impact_api_v1_admin_data_users__user_id__impact_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Impact"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "User Impact",
+        "tags": [
+          "admin data"
+        ]
+      }
+    },
+    "/api/v1/admin/stats": {
+      "get": {
+        "description": "Numbers for the whole college: per department and per teacher or club organiser.",
+        "operationId": "stats_api_v1_admin_stats_get",
+        "parameters": [
+          {
+            "description": "Assigned on or after this day (UTC)",
+            "in": "query",
+            "name": "date_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Assigned on or after this day (UTC)",
+              "title": "Date From"
+            }
+          },
+          {
+            "description": "Assigned on or before this day (UTC)",
+            "in": "query",
+            "name": "date_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Assigned on or before this day (UTC)",
+              "title": "Date To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "department_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Department Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Stats",
+        "tags": [
+          "admin statistics"
+        ]
+      }
+    },
+    "/api/v1/admin/stats.csv": {
+      "get": {
+        "operationId": "stats_csv_api_v1_admin_stats_csv_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "sheet",
+            "required": false,
+            "schema": {
+              "default": "departments",
+              "enum": [
+                "departments",
+                "faculty"
+              ],
+              "title": "Sheet",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Assigned on or after this day (UTC)",
+            "in": "query",
+            "name": "date_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Assigned on or after this day (UTC)",
+              "title": "Date From"
+            }
+          },
+          {
+            "description": "Assigned on or before this day (UTC)",
+            "in": "query",
+            "name": "date_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Assigned on or before this day (UTC)",
+              "title": "Date To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "department_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Department Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Stats Csv",
+        "tags": [
+          "admin statistics"
+        ]
+      }
+    },
+    "/api/v1/admin/stats.xlsx": {
+      "get": {
+        "operationId": "stats_xlsx_api_v1_admin_stats_xlsx_get",
+        "parameters": [
+          {
+            "description": "Assigned on or after this day (UTC)",
+            "in": "query",
+            "name": "date_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Assigned on or after this day (UTC)",
+              "title": "Date From"
+            }
+          },
+          {
+            "description": "Assigned on or before this day (UTC)",
+            "in": "query",
+            "name": "date_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Assigned on or before this day (UTC)",
+              "title": "Date To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "department_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Department Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Stats Xlsx",
+        "tags": [
+          "admin statistics"
+        ]
+      }
+    },
     "/api/v1/assignments": {
       "get": {
         "operationId": "list_assignments_api_v1_assignments_get",
@@ -5825,6 +6950,7 @@
     },
     "/api/v1/integrity/events": {
       "get": {
+        "description": "Admins see every event; a teacher only the events from attempts at their own activities.",
         "operationId": "list_events_api_v1_integrity_events_get",
         "parameters": [
           {

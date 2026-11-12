@@ -1,5 +1,5 @@
 import { Eye, EyeOff } from 'lucide-react';
-import { useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from 'react';
+import { useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
 
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ');
 
@@ -46,13 +46,25 @@ export function Input({ className, ...rest }: InputHTMLAttributes<HTMLInputEleme
   );
 }
 
+export function Textarea({ className, ...rest }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return (
+    <textarea
+      className={cx(
+        'w-full rounded-xl border border-line bg-card px-3.5 py-2.5 text-sm text-ink outline-none placeholder:text-muted focus:border-brand-500 focus:ring-2 focus:ring-brand-200',
+        className,
+      )}
+      {...rest}
+    />
+  );
+}
+
 type PasswordInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> & { label: string };
 
 export function PasswordInput({ label, className, ...rest }: PasswordInputProps) {
   const [visible, setVisible] = useState(false);
   return (
     <span className="relative block">
-      <Input type={visible ? 'text' : 'password'} className={cx('pr-11', className)} {...rest} />
+      <Input type={visible ? 'text' : 'password'} className={cx('pr-11', className)} {...rest} aria-label={label} />
       <button
         type="button"
         aria-label={visible ? `Hide ${label}` : `Show ${label}`}

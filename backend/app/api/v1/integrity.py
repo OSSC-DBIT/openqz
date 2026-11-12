@@ -9,7 +9,7 @@ from sqlalchemy import select
 
 from app.core.deps import CurrentUser, SessionDep, StaffUser
 from app.core.redis import get_redis
-from app.models import IntegrityEvent, User
+from app.models import Activity, ActivityAssignment, Attempt, IntegrityEvent, Role, User
 from app.schemas.integrity import IntegrityBatchIn, IntegrityEventOut
 
 router = APIRouter(prefix="/integrity", tags=["integrity"])
@@ -53,13 +53,23 @@ async def ingest(
 @router.get("/events", response_model=list[IntegrityEventOut])
 async def list_events(
     session: SessionDep,
-    _: StaffUser,
+    staff: StaffUser,
     user_id: uuid.UUID | None = None,
     attempt_id: uuid.UUID | None = None,
     kind: str | None = None,
     limit: Annotated[int, Query(ge=1, le=500)] = 200,
 ) -> list[IntegrityEventOut]:
+    """Admins see every event; a teacher only the events from attempts at their own activities."""
     stmt = select(IntegrityEvent, User).join(User, User.id == IntegrityEvent.user_id)
+    if staff.role != Role.admin:
+        stmt = stmt.where(
+            IntegrityEvent.attempt_id.in_(
+                select(Attempt.id)
+                .join(ActivityAssignment, ActivityAssignment.id == Attempt.assignment_id)
+                .join(Activity, Activity.id == ActivityAssignment.activity_id)
+                .where(Activity.owner_id == staff.id)
+            )
+        )
     if user_id:
         stmt = stmt.where(IntegrityEvent.user_id == user_id)
     if attempt_id:

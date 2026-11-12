@@ -10,7 +10,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from app.core.config import get_settings
-from app.core.deps import CurrentUser, SessionDep, StaffUser
+from app.core.deps import CreatorUser, CurrentUser, SessionDep
 from app.models import Media
 
 router = APIRouter(prefix="/media", tags=["media"])
@@ -43,7 +43,7 @@ class MediaOut(BaseModel):
 
 @router.post("", response_model=MediaOut, status_code=201)
 async def upload(
-    session: SessionDep, user: StaffUser, file: Annotated[UploadFile, File()]
+    session: SessionDep, user: CreatorUser, file: Annotated[UploadFile, File()]
 ) -> MediaOut:
     data = await file.read(MAX_IMAGE_BYTES + 1)
     if len(data) > MAX_IMAGE_BYTES:

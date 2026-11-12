@@ -8,6 +8,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
@@ -37,10 +38,14 @@ def _student(user: User) -> None:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Only students attempt activities")
 
 
-async def my_attempt(session: AsyncSession, attempt_id: uuid.UUID, user: User) -> Attempt:
+async def my_attempt(
+    session: AsyncSession, attempt_id: uuid.UUID, user: User, lock: bool = False
+) -> Attempt:
+    """`lock=True` for anything that writes: requests for the same attempt then run one after
+    the other, so a late answer save can never interleave with the submit that grades it."""
     # Hot path (every answer save): skip the activity's live question list and the assignment
     # targets; the attempt carries its own frozen snapshot.
-    att = await session.scalar(
+    stmt = (
         select(Attempt)
         .where(Attempt.id == attempt_id)
         .options(
@@ -51,6 +56,9 @@ async def my_attempt(session: AsyncSession, attempt_id: uuid.UUID, user: User) -
             selectinload(Attempt.answers),
         )
     )
+    if lock:
+        stmt = stmt.with_for_update(of=Attempt)
+    att = await session.scalar(stmt)
     if att is None or att.student_id != user.id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Attempt not found")
     return att
@@ -77,6 +85,7 @@ def attempt_state(att: Attempt) -> dict[str, Any]:
         "violations": att.violations,
         "max_violations": a.max_violations,
         "require_fullscreen": a.require_fullscreen,
+        "instructions": a.instructions,
         "attempt_no": att.attempt_no,
     }
 
@@ -104,6 +113,7 @@ async def my_activities(session: SessionDep, user: CurrentUser) -> dict[str, lis
             "start_at": a.start_at,
             "due_at": a.due_at,
             "allow_late": a.allow_late,
+            "instructions": a.instructions,
             "time_limit_seconds": a.time_limit_seconds or a.activity.time_limit_seconds,
             "attempts_used": len(atts),
             "attempts_left": attempts_left,
@@ -131,16 +141,29 @@ async def start(assignment_id: uuid.UUID, session: SessionDep, user: CurrentUser
     a = await session.get(ActivityAssignment, assignment_id)
     if a is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Activity not found")
+    user_id = user.id
     try:
         att = await svc.start_or_resume(session, a, user)
     except AttemptError as exc:
         raise http(exc) from exc
+    except IntegrityError:
+        # Two tabs (or a double tap) started at the same moment: the other one created the
+        # attempt, so this one resumes it.
+        await session.rollback()
+        a2 = await session.get(ActivityAssignment, assignment_id)
+        u2 = await session.get(User, user_id)
+        assert a2 is not None and u2 is not None
+        try:
+            att = await svc.start_or_resume(session, a2, u2)
+        except AttemptError as exc:
+            raise http(exc) from exc
     return attempt_state(att)
 
 
 @router.get("/attempts/{attempt_id}")
 async def state(attempt_id: uuid.UUID, session: SessionDep, user: CurrentUser) -> dict[str, Any]:
-    att = await my_attempt(session, attempt_id, user)
+    # Locked: at the deadline every tab asks at once, and the auto-submit must run only once.
+    att = await my_attempt(session, attempt_id, user, lock=True)
     await svc.expire_if_needed(session, att)
     return attempt_state(att)
 
@@ -165,7 +188,7 @@ class AnswerIn(BaseModel):
 async def answer(
     attempt_id: uuid.UUID, question_id: str, body: AnswerIn, session: SessionDep, user: CurrentUser
 ) -> dict[str, Any]:
-    att = await my_attempt(session, attempt_id, user)
+    att = await my_attempt(session, attempt_id, user, lock=True)
     try:
         return await svc.save_answer(session, att, question_id, body.response, body.final)
     except AttemptError as exc:
@@ -174,7 +197,7 @@ async def answer(
 
 @router.post("/attempts/{attempt_id}/submit")
 async def submit(attempt_id: uuid.UUID, session: SessionDep, user: CurrentUser) -> dict[str, Any]:
-    att = await my_attempt(session, attempt_id, user)
+    att = await my_attempt(session, attempt_id, user, lock=True)
     if not await svc.expire_if_needed(session, att):
         await svc.finalize(session, att, SubmitReason.manual)
     return svc.review(att)
@@ -190,7 +213,7 @@ class ViolationIn(BaseModel):
 async def violation(
     attempt_id: uuid.UUID, body: ViolationIn, session: SessionDep, user: CurrentUser
 ) -> dict[str, Any]:
-    att = await my_attempt(session, attempt_id, user)
+    att = await my_attempt(session, attempt_id, user, lock=True)
     return await svc.record_violation(session, att, body.kind, body.meta, body.session_id)
 
 
@@ -252,7 +275,10 @@ async def room_preview(code: str, session: SessionDep, user: CurrentUser) -> dic
         "host": host.full_name if host else None,
         "question_count": len(a.activity.questions),
         "time_limit_seconds": a.time_limit_seconds or a.activity.time_limit_seconds,
+        "start_at": a.start_at,
         "due_at": a.due_at,
+        "instructions": a.instructions,
+        "window": w.reason or ("late" if w.late else "open"),
         "open": a.accepting_joins and w.open,
         "joined": await svc.is_target(session, a, user),
     }

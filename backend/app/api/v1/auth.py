@@ -25,6 +25,9 @@ from app.services.google_auth import GoogleTokenError, verify_google_id_token
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 COOKIE_PATH = "/api/v1/auth"
+# "Forgot password" requests and reset-link uses per client address per minute (each email
+# is also limited to 3 links an hour, in auth_service).
+RESET_PER_ADDRESS_PER_MINUTE = 20
 
 
 def me_out(user: User) -> MeOut:
@@ -97,7 +100,9 @@ async def forgot(body: ForgotIn, request: Request, session: SessionDep) -> dict[
         )
     ip = client_ip(request)
     try:
-        await auth_service.check_rate_limit(get_redis(), ip, scope="forgot")
+        await auth_service.check_rate_limit(
+            get_redis(), ip, scope="forgot", limit=RESET_PER_ADDRESS_PER_MINUTE
+        )
     except AuthError as exc:
         raise _http(exc) from exc
     found = await auth_service.request_password_reset(session, get_redis(), body.email, ip)
@@ -108,8 +113,12 @@ async def forgot(body: ForgotIn, request: Request, session: SessionDep) -> dict[
 
 
 @router.post("/reset", response_model=TokenOut)
-async def reset(body: ResetIn, session: SessionDep) -> JSONResponse:
+async def reset(body: ResetIn, request: Request, session: SessionDep) -> JSONResponse:
     try:
+        # Guessing a reset token is hopeless (256 random bits), but nobody gets to try at speed.
+        await auth_service.check_rate_limit(
+            get_redis(), client_ip(request), scope="reset_done", limit=RESET_PER_ADDRESS_PER_MINUTE
+        )
         user = await auth_service.reset_password_with_token(session, body.token, body.new_password)
         tokens = await auth_service.issue_tokens(session, user)
     except AuthError as exc:

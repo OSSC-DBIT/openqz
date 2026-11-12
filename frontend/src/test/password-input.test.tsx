@@ -18,7 +18,9 @@ describe('PasswordInput', () => {
 
     await user.click(screen.getByRole('button', { name: 'Show Password' }));
     expect(input).toHaveAttribute('type', 'text');
-    expect(screen.getByRole('textbox', { name: 'Password' })).toBe(input);
+    expect(screen.getByRole('textbox', { name: /^Password$/ })).toBe(input);
+    // Chromium adds the nested toggle button's name to the label text, so keep an explicit name.
+    expect(input).toHaveAttribute('aria-label', 'Password');
 
     await user.click(screen.getByRole('button', { name: 'Hide Password' }));
     expect(input).toHaveAttribute('type', 'password');

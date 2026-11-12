@@ -8,6 +8,7 @@ import { AuthProvider } from '../auth/AuthProvider';
 import { RequireRole } from '../auth/RequireRole';
 import { passwordProblem } from '../pages/ChangePasswordPage';
 import LoginPage from '../pages/LoginPage';
+import LandingPage from '../pages/LandingPage';
 import { currentAcademicYear } from '../pages/admin/OrgPage';
 
 const json = (body: unknown, status = 200) =>
@@ -76,6 +77,7 @@ describe('api client', () => {
 function renderApp(path: string) {
   const router = createMemoryRouter(
     [
+      { path: '/', element: <LandingPage /> },
       { path: '/login', element: <LoginPage /> },
       { path: '/change-password', element: <p>change password page</p> },
       {
@@ -166,5 +168,13 @@ describe('routing and auth', () => {
     mockApi((url) => (url.endsWith('/auth/refresh') ? token() : undefined));
     renderApp('/admin');
     await waitFor(() => expect(screen.getByText('student home')).toBeInTheDocument());
+  });
+
+  it('renders landing page at / with headline and login link', async () => {
+    mockApi(() => undefined);
+    renderApp('/');
+    expect(await screen.findByRole('heading', { name: /Discover a New Dimension of Learning\./i })).toBeInTheDocument();
+    const loginLinks = screen.getAllByRole('link', { name: /^Login/i });
+    expect(loginLinks.some((l) => l.getAttribute('href') === '/login')).toBe(true);
   });
 });

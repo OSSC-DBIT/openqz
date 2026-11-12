@@ -51,7 +51,7 @@ Edit each file:
 | `API_IMAGE` / `WEB_IMAGE` | `ghcr.io/ossc-dbit/openqz-api:v1.0.0` (pin a tag) |
 | `SMTP_*` | the college mail relay (see *Email* below); blank `SMTP_HOST` = no emails |
 | `WEB_CONCURRENCY` / `API_CPUS` | gunicorn workers and CPU cap for the API, e.g. `16` / `16` (see [performance.md](performance.md)) |
-| `LOGIN_RATE_PER_MINUTE` | sign-in attempts per client address per minute (default 60; a classroom often shares one Wi-Fi address) |
+| `LOGIN_RATE_PER_MINUTE` | sign-in attempts per client address per minute (default 300; a whole college often shares one address, and the per-account lockout is what stops password guessing) |
 | `DB_POOL_SIZE` / `DB_MAX_OVERFLOW` | connections per process, default `5` / `5`; keep (workers + 1) x (pool + overflow) below 200 |
 
 `chmod 600 .env.*`. Never commit them.

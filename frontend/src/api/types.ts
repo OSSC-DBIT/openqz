@@ -36,8 +36,16 @@ export interface User {
   username: string;
   full_name: string;
   email: string | null;
+  phone: string | null;
+  designation: string | null;
   role: Role;
+  /** Main department. */
   department_id: number | null;
+  /** Every department the user belongs to, main one first (faculty may have several). */
+  department_ids: number[];
+  /** Students: their section in the latest academic year. */
+  section_id: number | null;
+  section_label: string | null;
   is_active: boolean;
   must_change_password: boolean;
   google_linked: boolean;
@@ -227,6 +235,7 @@ export interface AssignmentInfo {
   max_violations: number;
   require_fullscreen: boolean;
   notify: boolean;
+  instructions: string | null;
   is_room: boolean;
   join_code: string | null;
   accepting_joins: boolean;
@@ -247,11 +256,14 @@ export interface MyActivity {
   start_at: string;
   due_at: string | null;
   allow_late: boolean;
+  /** Optional note from the teacher or club organiser, shown before starting. */
+  instructions: string | null;
   time_limit_seconds: number | null;
   attempts_used: number;
   attempts_left: number | null;
   in_progress_attempt_id: string | null;
   can_start: boolean;
+  /** open | late | not_started | closed */
   window: string;
   best_attempt_id: string | null;
   score: string | null;
@@ -374,7 +386,9 @@ export interface ReportQuestion {
   pending: number;
   accuracy: number | null;
   avg_score: string | null;
-  options: { id: string; text: string; count: number }[];
+  options: { id: string; text: string; count: number; correct?: boolean }[];
+  /** The key of a fill-in-the-blank question (graded activities only); options carry their own. */
+  answer?: { blanks?: string[][] } | null;
 }
 
 export interface Report {
@@ -455,7 +469,74 @@ export interface RoomPreview {
   host: string | null;
   question_count: number;
   time_limit_seconds: number | null;
+  start_at: string;
   due_at: string | null;
+  instructions: string | null;
+  /** open | late | not_started | closed */
+  window: string;
   open: boolean;
   joined: boolean;
+}
+
+// ---------------------------------------------------------------- admin statistics
+
+export interface StatsTotals {
+  students: number;
+  faculty: number;
+  clubs: number;
+  departments: number;
+  sections: number;
+  activities: number;
+  assignments: number;
+  rooms: number;
+  live_games: number;
+  assigned: number;
+  submitted: number;
+  completion: number | null;
+  avg_percent: number | null;
+  pending_grading: number;
+}
+
+export interface DepartmentStats {
+  department_id: number;
+  code: string;
+  name: string;
+  students: number;
+  faculty: number;
+  sections: number;
+  activities: number;
+  assignments: number;
+  assigned: number;
+  submitted: number;
+  completion: number | null;
+  avg_percent: number | null;
+}
+
+export interface FacultyStats {
+  user_id: string;
+  name: string;
+  username: string;
+  email: string | null;
+  role: Role;
+  departments: string[];
+  classes: number;
+  activities: number;
+  assignments: number;
+  rooms: number;
+  live_games: number;
+  assigned: number;
+  submitted: number;
+  completion: number | null;
+  avg_percent: number | null;
+  pending_grading: number;
+  last_assigned_at: string | null;
+}
+
+export interface AdminStats {
+  date_from: string | null;
+  date_to: string | null;
+  department_id: number | null;
+  totals: StatsTotals;
+  departments: DepartmentStats[];
+  faculty: FacultyStats[];
 }

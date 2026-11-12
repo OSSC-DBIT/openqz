@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Download, FileSpreadsheet, LockOpen, Send } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Download, FileSpreadsheet, LockOpen, Send, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { Link, useParams } from 'react-router';
+import { Link, useNavigate, useParams } from 'react-router';
 import { api, downloadFile } from '../../api/client';
+import { useAuth } from '../../auth/AuthProvider';
+import { DeleteForever } from '../../components/DeleteForever';
 import type { GradingItem, Report, ReportStudent, RubricItem } from '../../api/types';
 import { Badge, Button, Card, EmptyState, ErrorText, Input, Modal, PageHeader, Spinner, Table, Td, cx } from '../../components/ui';
 import { KIND_LABEL, TYPE_LABEL, fromLocalInput, toLocalInput } from '../../components/quiz';
@@ -27,6 +29,9 @@ export default function ReportPage() {
   const [tab, setTab] = useState<'overview' | 'students' | 'questions' | 'grading'>('overview');
   const [viewAttempt, setViewAttempt] = useState<string | null>(null);
   const [editDue, setEditDue] = useState(false);
+  const [forever, setForever] = useState(false);
+  const { user } = useAuth();
+  const nav = useNavigate();
   const [unblock, setUnblock] = useState<ReportStudent | null>(null);
   const rep = useQuery({ queryKey: ['report', id], queryFn: () => api<Report>(`/activity-assignments/${id}/results`), refetchInterval: (q) => (q.state.data?.assignment.is_room ? 5000 : 20000) });
   const queue = useQuery({ queryKey: ['grading', id], queryFn: () => api<GradingItem[]>(`/activity-assignments/${id}/grading`) });
@@ -45,6 +50,22 @@ export default function ReportPage() {
 
   return (
     <>
+      {forever && (
+        <DeleteForever
+          title={`Delete the results of "${asg.activity_title}"`}
+          endpoint={`/admin/data/assignments/${asg.id}/delete`}
+          confirmWord={asg.activity_title}
+          onClose={() => setForever(false)}
+          onDone={() => {
+            void qc.invalidateQueries({ queryKey: ['my-assignments'] });
+            nav('/faculty/reports');
+          }}
+        >
+          <p className="mt-1">
+            This removes this assignment ({asg.target_labels.join(', ') || 'join code only'}) with <b>{s.started} attempts</b> and their marks. The activity and its questions stay.
+          </p>
+        </DeleteForever>
+      )}
       <Link to="/faculty/reports" className="mb-3 inline-flex items-center gap-1 text-sm text-muted hover:text-ink">
         <ArrowLeft className="h-4 w-4" /> All reports
       </Link>
@@ -65,6 +86,11 @@ export default function ReportPage() {
             {s.graded && asg.release_mode !== 'immediate' && (
               <Button loading={release.isPending} disabled={!!asg.released_at} onClick={() => release.mutate()}>
                 <Send className="h-4 w-4" /> {asg.released_at ? 'Marks released' : 'Release marks'}
+              </Button>
+            )}
+            {user?.role === 'admin' && (
+              <Button variant="danger" onClick={() => setForever(true)}>
+                <Trash2 className="h-4 w-4" /> Delete results
               </Button>
             )}
           </>
@@ -160,21 +186,33 @@ export default function ReportPage() {
                 {q.answered} answered{q.avg_score !== null ? ` | avg ${q.avg_score} / ${Number(q.marks)}` : ''}
                 {q.pending ? ` | ${q.pending} to grade` : ''}
               </div>
-              {q.options.length > 0 && q.answered > 0 && (
+              {q.options.length > 0 && (
                 <div className="mt-3 space-y-1.5">
                   {q.options.map((o) => (
                     <div key={o.id} className="text-sm">
-                      <div className="flex justify-between">
-                        <span>{o.text || '(image)'}</span>
+                      <div className="flex justify-between gap-2">
+                        <span className={o.correct ? 'inline-flex items-center gap-1.5 font-semibold' : undefined}>
+                          {o.text || '(image)'}
+                          {o.correct && (
+                            <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                              <CheckCircle2 className="h-4 w-4" aria-hidden /> Correct answer
+                            </span>
+                          )}
+                        </span>
                         <span className="text-muted">{o.count}</span>
                       </div>
                       <div className="h-2 rounded-full bg-line">
-                        <div className="h-2 rounded-full bg-brand-500" style={{ width: `${(o.count / Math.max(1, q.answered)) * 100}%` }} />
+                        <div className={`h-2 rounded-full ${o.correct ? 'bg-emerald-500' : 'bg-brand-500'}`} style={{ width: `${(o.count / Math.max(1, q.answered)) * 100}%` }} />
                       </div>
                     </div>
                   ))}
                 </div>
               )}
+              {q.type === 'fill_blank' && q.answer?.blanks?.length ? (
+                <p className="mt-3 text-sm">
+                  <span className="font-bold text-emerald-700 dark:text-emerald-300">Correct answer:</span> {q.answer.blanks.map((b) => b.join(' / ')).join(' ; ')}
+                </p>
+              ) : null}
             </Card>
           ))}
         </div>

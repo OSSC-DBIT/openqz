@@ -68,7 +68,7 @@ For each question:
 | Setting | What it does |
 | --- | --- |
 | **Type** | Multiple choice, True / False, Multi-select, Fill in the blanks, Justify your answer, Open ended. |
-| **Timer** | No timer, or 5 seconds to 10 minutes. Type any number of seconds (5 to 3600) in **Custom s**. |
+| **Timer** | No timer, or 5 seconds to 10 minutes. For any other time choose **Custom...** in the list: a clock opens where you set minutes and seconds (5 seconds to 60 minutes). |
 | **Marks** | How many marks the question is worth. |
 | **Image** | Add an image to the question and to any answer tile (PNG, JPEG, GIF or WebP, up to 5 MB). |
 | **Answer explanation** | Shown to students after they answer (if you allow it). |
@@ -96,20 +96,21 @@ Press **Assign or host** in the editor and choose how students get it:
 | Setting | Meaning |
 | --- | --- |
 | **Who** | (Assign only) One or more of your sections, across semesters. |
-| **Start / Deadline** | When it opens and closes. Blank start means now. |
+| **Start / Deadline** | When it opens and closes. Blank start means now. With a later start students see it at once as **not started**, with the opening time, and it opens by itself. If you change the deadline later, students who are already in the middle follow the new deadline. |
+| **Instructions** | Optional note for the students: what to keep ready, rules, how marks are given. They read it before they start; it is also in the email and in a room's join preview. |
 | **Allow late submissions** | Students can still start after the deadline; their work is marked *late*. |
 | **Activity timer** | Minutes for the whole activity (overrides the activity's own timer). |
 | **Shuffle questions / answer options** | Every student gets their own order. |
 | **Show answer after each question** | Students see right/wrong and the explanation immediately; that answer then locks. |
 | **Students can review answers** | After they finish, after the deadline, or never. |
 | **Show marks** | Right after submitting, after the deadline, or only when you press **Release marks**. |
-| **Email students** | Sends an email when assigned and when you release marks (if your college has email set up). |
+| **Email students** | Sends an email when assigned (with the opening time and your instructions), when a scheduled start time comes, and when you release marks (if your college has email set up). |
 | **Require full screen** | On by default. Students see the questions only in full screen; leaving full screen counts as a warning. iPhone browsers have no full screen, so it is skipped there. |
 | **Tab switches / Back / reload allowed** | Warnings before the attempt is submitted automatically. **0** only records them. |
 
 Every student gets **one attempt** (no retakes). If an attempt was submitted automatically by mistake, use **Unblock** (see below).
 
-Questions are frozen for each student when they start, so editing the activity later does not change attempts already in progress or finished.
+Questions **lock as soon as the first student starts**: you can no longer add, edit or delete them, so every student gets the same paper and the report stays consistent. To change the questions, use **Duplicate** in the library and assign the copy.
 
 ## 5. Rooms (join with a code)
 
@@ -159,7 +160,7 @@ Live games use the **multiple choice, true / false and multi-select** questions 
 - **Tiles:** completion, average marks (with average accuracy), highest / lowest marks, how many still need marking.
 - **Overview:** each student's **marks obtained** (out of the total, with accuracy), then a grid of every student against every question: green correct, amber partly correct, red incorrect, blue to grade, grey not answered. Click a name to open the attempt.
 - **Participants:** each student's status, **marks obtained**, accuracy and flags (*to grade*, *late*, *N violations*, *auto-submitted*). **View** opens the full attempt.
-- **Questions:** accuracy per question, average marks and, for options, how many students chose each one. Low accuracy questions show what to re-teach.
+- **Questions:** accuracy per question, average marks, the correct answer (marked in green) and, for options, how many students chose each one. Low accuracy questions show what to re-teach.
 - **Grading:** every written answer waiting for marks. Enter marks (per criterion if there is a rubric) and optional feedback, then **Save**.
 
 Buttons at the top:
@@ -181,7 +182,7 @@ A student still on the results screen gets a **Continue the quiz** button within
 
 ## 7. Integrity log
 
-**Integrity log** lists every tab switch, Back press, reload or full-screen exit recorded during attempts, with the student and time. Use it with the *violations* column in the report.
+**Integrity log** lists every tab switch, Back press, reload or full-screen exit recorded during attempts at **your** activities, with the student and time. Use it with the *violations* column in the report.
 
 ## 8. Good practice
 

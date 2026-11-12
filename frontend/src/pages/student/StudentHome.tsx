@@ -1,10 +1,10 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { api } from '../../api/client';
 import type { AttemptState, MyActivity, Section } from '../../api/types';
 import { useAuth } from '../../auth/AuthProvider';
-import { Button, EmptyState, ErrorText, PageHeader, Spinner, cx } from '../../components/ui';
+import { Button, EmptyState, ErrorText, Modal, PageHeader, Spinner, cx } from '../../components/ui';
 import { KindCover } from '../../components/pieces';
 import { KIND_LABEL, fmtSeconds } from '../../components/quiz';
 import { enterFullscreen } from '../../student/fullscreen';
@@ -60,6 +60,26 @@ export default function StudentHome() {
     },
   });
   const list = acts.data?.[tab] ?? [];
+  // The instructions the student is reading; `start` = they pressed Start and must confirm.
+  const [reading, setReading] = useState<{ a: MyActivity; start: boolean } | null>(null);
+  const begin = (id: string) => {
+    enterFullscreen(); // must run inside the click (browsers refuse full screen later)
+    start.mutate(id);
+  };
+
+  // A scheduled activity opens by itself: refresh the list when the next start time comes.
+  const pending = acts.data?.pending;
+  const refetch = acts.refetch;
+  useEffect(() => {
+    const next = (pending ?? [])
+      .filter((a) => a.window === 'not_started')
+      .map((a) => new Date(a.start_at).getTime() - Date.now())
+      .filter((ms) => ms > -60_000)
+      .sort((x, y) => x - y)[0];
+    if (next === undefined) return;
+    const t = setTimeout(() => void refetch(), Math.min(Math.max(next, 0) + 1500, 2_000_000_000));
+    return () => clearTimeout(t);
+  }, [pending, refetch]);
 
   return (
     <>
@@ -97,6 +117,7 @@ export default function StudentHome() {
               <KindCover kind={a.kind} className="h-24">
                 <span className="absolute left-3 top-3 rounded-full bg-black/25 px-2 py-0.5 text-xs font-bold text-white">{KIND_LABEL[a.kind]}</span>
                 {a.in_progress_attempt_id && <span className="absolute right-3 top-3 rounded-full bg-white px-2 py-0.5 text-xs font-bold text-brand-700">in progress</span>}
+                {a.window === 'not_started' && <span className="absolute right-3 top-3 rounded-full bg-white px-2 py-0.5 text-xs font-bold text-[#1d1b2c]">not started</span>}
                 {a.missed && <span className="absolute right-3 top-3 rounded-full bg-red-600 px-2 py-0.5 text-xs font-bold text-white">missed</span>}
                 {a.window === 'late' && !a.missed && <span className="absolute right-3 top-3 rounded-full bg-amber-500 px-2 py-0.5 text-xs font-bold text-white">late</span>}
               </KindCover>
@@ -114,11 +135,25 @@ export default function StudentHome() {
               )}
               <div className="mt-auto flex gap-2 pt-3">
                 {a.can_start && (
-                  <Button loading={start.isPending && start.variables === a.assignment_id} onClick={() => {
-                    enterFullscreen();
-                    start.mutate(a.assignment_id);
-                  }}>
+                  <Button
+                    loading={start.isPending && start.variables === a.assignment_id}
+                    onClick={() => {
+                      // First start with a note from the teacher: read it, then confirm.
+                      if (a.instructions && !a.in_progress_attempt_id) setReading({ a, start: true });
+                      else begin(a.assignment_id);
+                    }}
+                  >
                     {a.in_progress_attempt_id ? 'Resume' : 'Start'}
+                  </Button>
+                )}
+                {a.window === 'not_started' && (
+                  <Button disabled title={`Opens ${new Date(a.start_at).toLocaleString()}`}>
+                    Not started yet
+                  </Button>
+                )}
+                {a.instructions && !a.best_attempt_id && (
+                  <Button variant="secondary" onClick={() => setReading({ a, start: false })}>
+                    Instructions
                   </Button>
                 )}
                 {a.best_attempt_id && (
@@ -131,6 +166,27 @@ export default function StudentHome() {
             </div>
           ))}
         </div>
+      )}
+      {reading && (
+        <Modal open onClose={() => setReading(null)} title={`Instructions: ${reading.a.title}`}>
+          <p className="max-h-[50vh] overflow-y-auto whitespace-pre-wrap break-words text-sm">{reading.a.instructions}</p>
+          {reading.a.window === 'not_started' && <p className="mt-3 text-sm font-semibold text-muted">Opens {new Date(reading.a.start_at).toLocaleString()}</p>}
+          <div className="mt-4 flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setReading(null)}>
+              {reading.start ? 'Not now' : 'Close'}
+            </Button>
+            {reading.start && (
+              <Button
+                onClick={() => {
+                  begin(reading.a.assignment_id);
+                  setReading(null);
+                }}
+              >
+                Start now
+              </Button>
+            )}
+          </div>
+        </Modal>
       )}
     </>
   );

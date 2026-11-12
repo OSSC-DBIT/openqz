@@ -34,7 +34,7 @@ flowchart TB
 | Component | Role |
 | --- | --- |
 | `frontend/` | React 19 + TypeScript SPA, installable PWA. Built into the `web` image, which also proxies `/api`. |
-| `backend/app/api/v1` | FastAPI routers: `auth`, `users` (+ `audit`), `org`, `imports`, `activities`, `results`, `play`, `media`, `integrity`, `health`. |
+| `backend/app/api/v1` | FastAPI routers: `auth`, `users` (+ `audit`), `org`, `imports`, `activities`, `results`, `play`, `live`, `media`, `integrity`, `stats` (admin statistics and export), `health`. |
 | `backend/app/services` | Business logic: auth, Google token check, import parse / commit, credential PDF, grading, attempts, email, audit. |
 | `backend/app/worker` | ARQ worker: import jobs, emails (reset, assigned, released), and a cron job that auto-submits expired attempts every minute. |
 | `migrate` | One-shot `alembic upgrade head` before the API starts. |
@@ -48,6 +48,8 @@ erDiagram
     departments ||--o{ subjects : has
     sections ||--o{ student_sections : "has students"
     users ||--o{ student_sections : "student in"
+    users ||--o{ user_departments : "belongs to (faculty: several)"
+    departments ||--o{ user_departments : "has"
     users ||--o{ faculty_assignments : "faculty teaches"
     sections ||--o{ faculty_assignments : "taught in"
     subjects ||--o{ faculty_assignments : "subject"

@@ -47,10 +47,13 @@ Re-importing the same sheet is safe: existing people are updated, nobody is dupl
 
 | Task | Where |
 | --- | --- |
-| Add one person | **Users**, then **Add user** (gives a temporary password to hand over). |
+| Add one person | **Users**, then **Add user** (gives a temporary password to hand over). Fill in the ID, role, name and email; optionally phone and designation. For a **student** choose the department and **section** (needed to receive class assignments). For **faculty** tap every **department** they work in: the first one is the main department. |
+| Edit a person | **Users**, pencil icon: name, email, phone, designation, departments, section. |
 | Reset a password | **Users**, key icon. Gives a new temporary password; they must change it at next sign-in. |
 | Unlock an account | **Users**, lock icon (accounts lock for 15 minutes after 5 wrong passwords). |
-| Change someone's sign-in email | **Users**, mail icon. Their old Google link is removed. |
+| Change someone's sign-in email | **Users**, pencil icon. Their old Google link is removed. |
+| Find people | Search by name, email, phone or ID; filter by role and by department (faculty appear under every department they belong to). |
+| Delete a person for good | **Users**, bin icon. OpenQZ first shows what goes with them (their attempts; for a teacher, the activities they made and all student work on those). Type their ID and **your own password** to confirm. This cannot be undone: to keep the work, **Disable** instead. You cannot delete yourself or the last admin. |
 | Disable / enable an account | **Users**, **Disable**. Disabled people cannot sign in; their work is kept. |
 | Departments and sections | **Sections**. Sections belong to an academic year (for example 2026-27). |
 | Subjects | **Subjects**. |
@@ -73,9 +76,17 @@ A club organiser (tech club, cultural committee, placement cell) can build activ
 
 - **Integrity log**: tab switches, Back presses, reloads during quizzes.
 - **Audit log**: sign-ins, failed sign-ins, lockouts, password resets, imports, credential downloads, score releases. Filter by action or search by person.
+- **Statistics**: how OpenQZ is used across the college. Tiles for the totals, a table **by department** (students, faculty, sections, class assignments, students assigned, submitted, completion and average marks) and a table **by teacher and organiser** (activities made, class assignments, rooms, live games, completion, average marks, answers waiting for grading). Choose a day range (by the day an activity was assigned) and a department. **Excel** downloads everything in one file (Summary, Departments, Faculty); the two **CSV** buttons download one table each.
 - **Dashboard**: counts of students, faculty, sections and teaching assignments for the current academic year.
 
-Admins can also open the faculty **Library** and **Reports** to see every activity.
+Admins can also open the faculty **Library** and **Reports** to see everything:
+
+- **Questions and answer keys**: **Library**, open any activity. The editor shows every question with its correct answer, marks and timer; **Preview** shows it as a student sees it. To change the correct answer, press **Edit** on a question and press **Correct** on the right option. A report's **Questions** tab also marks the correct answer of every question.
+- **What each student answered**: **Reports**, open an assignment, then a student's row: every answer, the marks given and any warnings.
+- **Delete an activity for good**: in the activity editor, **Delete for good (admin)** removes the activity with every assignment and all student attempts. (A teacher's own Delete only archives an activity that students have attempted.)
+- **Delete the results of one assignment**: in its report, **Delete results**. The activity and its questions stay.
+
+Both deletes ask you to type the activity's title and your own password. After 5 wrong passwords deleting is locked for 10 minutes, and every delete is recorded in the **Audit log**.
 
 ## 6. Privacy
 

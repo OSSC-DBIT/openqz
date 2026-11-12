@@ -4,10 +4,29 @@ All notable changes to OpenQZ. Format: [Keep a Changelog](https://keepachangelog
 
 ## [Unreleased]
 
+### Added
+- **Admin statistics** (`/admin/stats`, *Statistics* in the admin menu): totals for the college, a table per department (students, faculty, sections, class assignments, completion, average marks) and a table per teacher and club organiser (activities, class assignments, rooms, live games, completion, average marks, answers waiting for grading). Filter by day range and department; export as Excel (3 sheets) or CSV.
+- **More details when adding a user by hand**: phone, designation (or club and position), a student's section, and **several departments for one faculty member** (the first is the main one). The pencil icon in **Users** edits all of them; the list can be filtered by department and searched by phone.
+- **Instructions** (optional) when assigning or hosting a room: faculty and club organisers write a note that students read before they start (also in the join preview and the email).
+- **Scheduled start**: an activity with a later start time shows on the student's home page as **not started** with its opening time, and opens by itself. Students get an email when it is assigned (with the opening time) and another when it opens.
+- **Join code on the sign-in page**: type the 6-digit code or **scan the QR code** with the camera. A live game opens at once (guests need no account); a room code takes the student to the room after signing in.
+- **Admin: delete for good.** A person (**Users**, bin icon: first shows what goes with them), an activity with all its results (activity editor, *Delete for good*), or the results of one assignment (report, *Delete results*). Each needs the name typed out and the admin's own password again; 5 wrong passwords lock deleting for 10 minutes; every delete and every refused try is in the audit log. An admin cannot delete their own account or the last admin.
+- **Supported browsers**: the sign-in page opens only in Chrome, Safari and Microsoft Edge (computer, Android, iPhone). Other browsers and in-app browsers see a note asking them to switch, with the address to copy. The report's Questions tab shows the correct answer of each question (ticked option, or the accepted words of a blank), also before anyone has answered. In the question editor the correct-answer tick is now a labelled "Correct" button on each option. Android browsers that send Chrome's user agent unchanged (Eruda, Kiwi, web views) are told apart by the browser's brand list.
+- `robots.txt`, `sitemap.xml` and `/.well-known/security.txt` (RFC 9116), served by the web server with the site's own address.
+
 ### Security
+- **Password reset is rate limited**: using a reset link (`/auth/reset`) had no limit; it and "forgot password" now allow 20 requests per client address per minute, in the API and in nginx. Reset emails to one address are limited to one a minute, 3 an hour and 6 a day (before: 3 per clock hour, so 6 could go out within minutes around the hour).
+- **API reference closed on staging and production**: `/api/docs` and `/api/openapi.json` answer 404 there (still open in development).
+- A teacher sees only the integrity events from attempts at **their own** activities; before, any faculty member could list every student's events.
+- A student auto-submitted for too many warnings no longer sees marks, right / wrong or the answer key while the teacher can still unblock them (they could read the key, be let back in and fill it in).
+- Stricter cross-origin rules: API answers carry `X-Frame-Options: DENY`, `Cross-Origin-Resource-Policy: same-origin` and `Content-Security-Policy: default-src 'none'`; the app sets `object-src 'none'`, `worker-src`, `manifest-src` and `media-src`, sends HSTS over https, and never serves dot files. On staging and production the API refuses to start with `CORS_ORIGINS=*`, an `http://` origin or `ALLOWED_HOSTS=*`.
+- Camera permission is limited to the site itself (QR scan); microphone and location stay off.
 - Rate limits now apply per real client address. Before, the web proxy limited sign-ins for the whole site at once, and the per-address limit could be dodged with a fake `X-Forwarded-For` header.
 
 ### Changed
+- **Question timer**: the separate "Custom s" box is gone. The timer list has a **Custom...** choice that opens a clock (minutes : seconds, 5 seconds to 60 minutes), also in the question list and in "Timer / marks for all".
+- **Questions lock once a student has started**: adding, editing, deleting questions or "apply to all" answers 409 (`has_attempts`); duplicate the activity to change it. Before, later students got a different paper and the report mixed two versions.
+- Sign-in limit per client address raised from 60 to 300 a minute (`LOGIN_RATE_PER_MINUTE`): a whole college behind one campus address signs in together before an exam. Password guessing is still stopped by the per-account lockout. Guests of a live game (counted per address) get 15 times the per-person limit.
 - CI: GitHub Actions moved to their current major versions (Node 24), uv cache keyed on `backend/pyproject.toml`, runners pinned to `ubuntu-24.04`.
 - Dev stack ignores the `.env` SMTP login when sending to Mailpit (a login made Mailpit refuse every message).
 - Google sign-in turned on in development (`GOOGLE_CLIENT_ID` set; containers must be recreated after editing `.env`).
@@ -18,6 +37,18 @@ All notable changes to OpenQZ. Format: [Keep a Changelog](https://keepachangelog
 - Lighter queries on the student home page and answer saves.
 
 ### Fixed
+- Quiz player in dark mode: text typed into the answer box (open-ended, justify, fill in the blank) and the flashcard text were white on white. Those boxes now keep dark text, show a border when focused, and the answer box can be resized.
+- Changing the **deadline** or "allow late" now reaches attempts already in progress: an extended deadline gives those students the extra time, and a new deadline on an open-ended activity closes them.
+- At the deadline every open player asked the server 4 times a second until the auto-submit; it now asks once, then every 3 seconds, spread over the class.
+- The **question timer** did not move on by itself when time ran out; the student had to press Next.
+- An answer tapped just before **Submit** could be graded as the previous answer; requests for one attempt now run one after the other and the player waits for the save.
+- Two tabs starting the same activity at once gave one of them an error (500); the second now resumes the attempt.
+- A student in the middle of an attempt could not **Resume** after the teacher unpublished the activity, while their timer kept running.
+- Two signed-in students with the same name could not both join a live game (500).
+- One failed request on a phone during a live game showed an error screen for good; it now keeps the game on screen and retries.
+- Club organisers could not upload question images (403).
+- Live games skip questions whose options are pictures without text (they were blank tiles).
+- A refresh whose answer was lost on weak Wi-Fi (or two tabs refreshing together) signed the student out; the same refresh token is accepted again for 20 seconds after a normal rotation.
 - First start of a new database: the health check now connects over TCP, so migrations no longer start while Postgres is still initialising ("connection refused" on a fresh server).
 - Production: the media folder is mounted at `MEDIA_DIR`, so setting `MEDIA_DIR` to the host path no longer stops the API from starting.
 - `restore.sh` put restored uploads one folder too deep (`media/media`); it now restores into the folder the app reads.
@@ -39,6 +70,7 @@ All notable changes to OpenQZ. Format: [Keep a Changelog](https://keepachangelog
 - Admin Sections page and report tabs no longer scroll sideways on phones (cards with wide tables now shrink to the screen; tab bars scroll).
 
 ### Added
+- Public landing page at "/": space-themed hero with interactive feature overview, "How to Use" sequence, role cards linking to user guides, and assessment integrity highlights; signed-in users and standalone PWAs bypass it directly to their dashboard or login.
 - CI: browser tests run on pull requests and by hand only; deploys after a merge run the backend and frontend checks (the pull request already passed the browser tests).
 - Production data can live in host folders per environment (`DB_HOST_DIR`, `REDIS_HOST_DIR`, `MEDIA_HOST_DIR`); on the OSSC server everything is under `/srv/server-data/<env>/openqz/` (db, redis, media, backups). Backup and restore follow it.
 - Continuous deployment to the OSSC server, the same way as PCMS and PageCraft: push `dev` deploys staging (`openqz-staging.webuildnow.in`, port 8092), push `main` deploys production (`openqz.webuildnow.in`, port 8093) through a self-hosted runner and the Cloudflare tunnel. `deploy/server/` (deploy with backup, migrations and health check; rollback; one-command environment setup with secrets, nightly backup cron and the `openqz` helper; runner install), `.github/workflows/deploy.yml`, guide `docs/deploy-ossc-server.md`. The health check reports the release (`version`); nginx takes the visitor address from Cloudflare's `CF-Connecting-IP`.

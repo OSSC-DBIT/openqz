@@ -8,6 +8,11 @@ import { TILE_COLORS } from '../components/quiz';
 import { cx } from '../components/ui';
 import { ordinal, playerApi, useServerClock, type PlayerState } from './api';
 
+/** Removed by the host, not a player of this game, or no such game: retrying cannot help. */
+function isFatal(e: unknown): boolean {
+  return e instanceof ApiError && e.status >= 400 && e.status < 500 && e.status !== 408 && e.status !== 429;
+}
+
 /** A player's phone: only the coloured answer tiles; the question is on the big screen. */
 export default function LivePlayPage() {
   const { gameId = '' } = useParams();
@@ -15,7 +20,8 @@ export default function LivePlayPage() {
   const st = useQuery({
     queryKey: ['live-play', gameId],
     queryFn: () => playerApi<PlayerState>(gameId, `/live/play/${gameId}`),
-    refetchInterval: (q) => (q.state.data?.status === 'ended' || q.state.error ? false : 1000),
+    // Keep asking through a network blip; stop only when the game ended or we are out of it.
+    refetchInterval: (q) => (q.state.data?.status === 'ended' || isFatal(q.state.error) ? false : q.state.error ? 2000 : 1000),
     retry: false,
   });
   const s = st.data;
@@ -28,7 +34,8 @@ export default function LivePlayPage() {
   });
   const now = useServerClock(s?.server_now, s?.status === 'question');
 
-  if (st.error) {
+  // A failed poll with the game still on screen is a blip: keep the last state and retry.
+  if (st.error && (isFatal(st.error) || !s)) {
     const e = st.error as ApiError;
     return (
       <Full>

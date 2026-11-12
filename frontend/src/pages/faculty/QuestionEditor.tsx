@@ -6,12 +6,11 @@ import {
   AuthImage,
   MARK_PRESETS,
   TILE_COLORS,
-  TIMER_PRESETS,
   TYPES_FOR,
   TYPE_LABEL,
-  fmtSeconds,
   uploadImage,
 } from '../../components/quiz';
+import { TimerSelect } from '../../components/TimerSelect';
 
 export function blankQuestion(type: QuestionType, kind: ActivityKind): QuestionData {
   const options: QOption[] =
@@ -96,35 +95,11 @@ export function QuestionToolbar({ kind, value, onChange }: { kind: ActivityKind;
         ))}
       </Select>
       {kind !== 'flashcards' && (
-        <Select
-          className="!w-auto"
+        <TimerSelect
+          className="rounded-xl border border-line bg-card px-3.5 py-2.5 text-sm text-ink outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200"
           aria-label="Timer"
-          value={q.time_limit_seconds ?? ''}
-          onChange={(e) => set({ time_limit_seconds: e.target.value ? Number(e.target.value) : null })}
-        >
-          <option value="">No timer</option>
-          {[...new Set([...TIMER_PRESETS, ...(q.time_limit_seconds ? [q.time_limit_seconds] : [])])]
-            .sort((a, b) => a - b)
-            .map((s) => (
-              <option key={s} value={s}>
-                {fmtSeconds(s)}
-              </option>
-            ))}
-        </Select>
-      )}
-      {kind !== 'flashcards' && (
-        <Input
-          className="!w-28"
-          type="number"
-          min={5}
-          max={3600}
-          placeholder="Custom s"
-          aria-label="Custom timer seconds"
-          onBlur={(e) => {
-            const v = Number(e.target.value);
-            if (v >= 5 && v <= 3600) set({ time_limit_seconds: v });
-            e.target.value = '';
-          }}
+          value={q.time_limit_seconds ? String(q.time_limit_seconds) : ''}
+          onChange={(v) => set({ time_limit_seconds: v ? Number(v) : null })}
         />
       )}
       {graded && (
@@ -208,12 +183,13 @@ export function QuestionEditor({
                     <button
                       type="button"
                       onClick={() => setOption(i, { correct: !o.correct })}
-                      className={`grid h-8 w-8 place-items-center rounded-full border-2 border-white ${o.correct ? 'bg-emerald-500' : 'bg-black/15 hover:bg-black/25'}`}
+                      className={`inline-flex items-center gap-1.5 rounded-full border-2 border-white px-3 py-1.5 text-sm font-bold ${o.correct ? 'bg-emerald-700 text-white' : 'bg-white text-[#1d1b2c] hover:bg-emerald-50'}`}
                       aria-label={`Mark option ${i + 1} correct`}
                       aria-pressed={!!o.correct}
-                      title={o.correct ? 'Correct answer' : 'Mark as correct'}
+                      title={o.correct ? 'This is the correct answer' : 'Mark as the correct answer'}
                     >
-                      {o.correct ? <CheckCircle2 className="h-5 w-5" /> : <Circle className="h-4 w-4 opacity-0" />}
+                      {o.correct ? <CheckCircle2 className="h-4 w-4" aria-hidden /> : <Circle className="h-4 w-4" aria-hidden />}
+                      Correct
                     </button>
                   ) : (
                     <span className="text-xs font-semibold opacity-90">Option {i + 1}</span>
