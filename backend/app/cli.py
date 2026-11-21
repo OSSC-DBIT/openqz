@@ -58,6 +58,7 @@ async def create_admin(
                 email=email,
                 full_name=full_name,
                 role=Role.admin,
+                is_superadmin=True,  # the first admin holds every power
                 password_hash=hash_password(password),
                 must_change_password=force_change,
             )

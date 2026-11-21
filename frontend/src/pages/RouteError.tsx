@@ -46,7 +46,7 @@ export default function RouteError() {
 
   return (
     <div className="grid min-h-dvh place-items-center bg-surface px-4">
-      <div className="w-full max-w-md rounded-3xl border border-line bg-card p-8 text-center shadow-sm">
+      <div className="w-full max-w-md sticker rounded-xl bg-card p-8 text-center">
         <div className="flex justify-center">
           <Logo />
         </div>

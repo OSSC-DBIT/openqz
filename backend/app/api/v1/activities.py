@@ -21,11 +21,14 @@ from app.models import (
     Attempt,
     Department,
     FacultyAssignment,
+    LiveGame,
     Media,
     Question,
     QuestionType,
     Role,
     Section,
+    StudentSection,
+    Subject,
     User,
 )
 from app.schemas.activities import (
@@ -72,6 +75,15 @@ async def has_attempts(session: AsyncSession, activity_id: uuid.UUID) -> bool:
         .where(ActivityAssignment.activity_id == activity_id)
     )
     return bool(n)
+
+
+async def has_live_games(session: AsyncSession, activity_id: uuid.UUID) -> bool:
+    """Live games hang on the activity (cascade): deleting it would delete their results."""
+    return bool(
+        await session.scalar(
+            select(func.count()).select_from(LiveGame).where(LiveGame.activity_id == activity_id)
+        )
+    )
 
 
 async def class_labels(session: AsyncSession, act: Activity) -> tuple[list[str], list[int]]:
@@ -283,9 +295,15 @@ async def library(
     return [await summary(session, a, counts.get(a.id, 0)) for a in acts]
 
 
+async def _check_subject(session: AsyncSession, subject_id: int | None) -> None:
+    if subject_id is not None and await session.get(Subject, subject_id) is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Unknown subject")
+
+
 @router.post("/activities", response_model=ActivityOut, status_code=201)
 async def create(body: ActivityIn, session: SessionDep, user: CreatorUser) -> ActivityOut:
     dept_id, sec_ids = await resolve_classes(session, user, body.section_ids)
+    await _check_subject(session, body.subject_id)
     act = Activity(
         owner_id=user.id,
         **body.model_dump(exclude={"section_ids"}),
@@ -316,6 +334,9 @@ async def update(
         act.department_id = dept_id
         act.sections = [ActivitySection(section_id=x) for x in sec_ids]
     data.pop("section_ids", None)
+    if "title" in data and data["title"] is None:
+        data.pop("title")  # the title cannot be cleared
+    await _check_subject(session, data.get("subject_id"))
     for k, v in data.items():
         setattr(act, k, v)
     act.updated_at = datetime.now(UTC)
@@ -327,8 +348,8 @@ async def update(
 @router.delete("/activities/{activity_id}", status_code=204)
 async def delete(activity_id: uuid.UUID, session: SessionDep, user: CreatorUser) -> Response:
     act = await get_owned(session, activity_id, user)
-    if await has_attempts(session, act.id):
-        # Keep student work: archive instead of deleting.
+    if await has_attempts(session, act.id) or await has_live_games(session, act.id):
+        # Keep student work (attempts and live game results): archive instead of deleting.
         act.status = ActivityStatus.archived
     else:
         await session.delete(act)
@@ -604,7 +625,8 @@ async def assign(
             status.HTTP_400_BAD_REQUEST,
             "Club organisers share activities as rooms with a join code",
         )
-    if body.section_ids and user.role == Role.faculty:
+    if body.section_ids:
+        # Faculty: only their own sections. Admins: any section, but it must exist.
         await resolve_classes(session, user, body.section_ids)
     if act.status == ActivityStatus.draft:
         act.status = ActivityStatus.published  # assigning publishes, like Wayground
@@ -619,6 +641,28 @@ async def assign(
         )
         if found != set(body.student_ids):
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "Some selected students do not exist")
+        if user.role == Role.faculty:
+            # A teacher hands work only to students of the sections mapped to them.
+            mine = set(
+                (
+                    await session.scalars(
+                        select(StudentSection.student_id)
+                        .join(
+                            FacultyAssignment,
+                            FacultyAssignment.section_id == StudentSection.section_id,
+                        )
+                        .where(
+                            FacultyAssignment.faculty_id == user.id,
+                            StudentSection.student_id.in_(body.student_ids),
+                        )
+                    )
+                ).all()
+            )
+            if mine != set(body.student_ids):
+                raise HTTPException(
+                    status.HTTP_403_FORBIDDEN,
+                    "You can assign only to students of the classes you teach",
+                )
     now = datetime.now(UTC)
     a = ActivityAssignment(
         activity_id=act.id,

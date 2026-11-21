@@ -40,6 +40,7 @@ class MeOut(BaseModel):
     department_code: str | None = None
     must_change_password: bool
     google_linked: bool = False
+    is_superadmin: bool = False
 
 
 class TokenOut(BaseModel):

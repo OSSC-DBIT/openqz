@@ -173,7 +173,7 @@ describe('routing and auth', () => {
   it('renders landing page at / with headline and login link', async () => {
     mockApi(() => undefined);
     renderApp('/');
-    expect(await screen.findByRole('heading', { name: /Discover a New Dimension of Learning\./i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /Quizzes that play like a game/i })).toBeInTheDocument();
     const loginLinks = screen.getAllByRole('link', { name: /^Login/i });
     expect(loginLinks.some((l) => l.getAttribute('href') === '/login')).toBe(true);
   });

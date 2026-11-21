@@ -55,6 +55,11 @@ class Settings(BaseSettings):
     db_max_overflow: int = 5
     redis_url: str = "redis://redis:6379/0"
 
+    # Contributors on the landing page come from this GitHub repository (blank = none).
+    # A token is optional: it only raises GitHub's hourly limit.
+    github_repo: str = "OSSC-DBIT/openqz"
+    github_token: str = ""
+
     media_dir: Path = Path("/data/media")
     max_upload_mb: int = 10
 

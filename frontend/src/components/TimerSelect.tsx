@@ -65,7 +65,7 @@ export function TimerClock({ initial, onSet, onClose }: { initial: number | null
           if (valid) onSet(total);
         }}
       >
-        <div className="rounded-2xl bg-[#15122b] p-5">
+        <div className="rounded-2xl bg-[#2b0e1e] p-5">
           <div className="flex items-center justify-center gap-2">
             <Wheel label="Minutes" value={min} max={60} onChange={setMin} />
             <span className="pb-6 font-mono text-5xl font-bold text-emerald-300" aria-hidden>

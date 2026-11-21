@@ -1,7 +1,7 @@
 // OpenQZ service worker: makes the app installable and keeps the app shell available
 // on flaky campus Wi-Fi. API responses are never cached (always fresh from the server).
-const CACHE = 'openqz-shell-v2';
-const SHELL = ['/', '/login', '/favicon.svg', '/manifest.webmanifest'];
+const CACHE = 'openqz-shell-v3';
+const SHELL = ['/', '/login', '/favicon.svg', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));

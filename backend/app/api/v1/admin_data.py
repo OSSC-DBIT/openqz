@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import AdminUser, SessionDep
+from app.core.deps import SessionDep, SuperAdminUser
 from app.core.redis import get_redis
 from app.core.security import verify_password
 from app.models import (
@@ -136,14 +136,14 @@ async def _user(session: AsyncSession, user_id: uuid.UUID) -> User:
 
 
 @router.get("/users/{user_id}/impact", response_model=Impact)
-async def user_impact(user_id: uuid.UUID, session: SessionDep, admin: AdminUser) -> Impact:
+async def user_impact(user_id: uuid.UUID, session: SessionDep, admin: SuperAdminUser) -> Impact:
     """What deleting this person would remove. Shown before the admin confirms."""
     return await _impact(session, admin, await _user(session, user_id))
 
 
 @router.post("/users/{user_id}/delete", status_code=204)
 async def delete_user(
-    user_id: uuid.UUID, body: ConfirmIn, session: SessionDep, admin: AdminUser
+    user_id: uuid.UUID, body: ConfirmIn, session: SessionDep, admin: SuperAdminUser
 ) -> Response:
     """Delete a person and everything that belongs to them: their attempts, and (for a teacher
     or organiser) the activities they made with all student work on them. To keep the work,
@@ -174,7 +174,7 @@ async def delete_user(
 
 @router.post("/activities/{activity_id}/delete", status_code=204)
 async def delete_activity(
-    activity_id: uuid.UUID, body: ConfirmIn, session: SessionDep, admin: AdminUser
+    activity_id: uuid.UUID, body: ConfirmIn, session: SessionDep, admin: SuperAdminUser
 ) -> Response:
     """Delete an activity for good, with every assignment, attempt and live game of it.
     (A teacher's own Delete only archives an activity that students have attempted.)"""
@@ -207,7 +207,7 @@ async def delete_activity(
 
 @router.post("/assignments/{assignment_id}/delete", status_code=204)
 async def delete_assignment(
-    assignment_id: uuid.UUID, body: ConfirmIn, session: SessionDep, admin: AdminUser
+    assignment_id: uuid.UUID, body: ConfirmIn, session: SessionDep, admin: SuperAdminUser
 ) -> Response:
     """Delete one assignment (or room) with all its attempts and marks. The activity stays."""
     a = await session.get(ActivityAssignment, assignment_id)

@@ -63,7 +63,7 @@ test.describe('fits every screen size', () => {
   test.beforeEach(({}, info) => test.skip(info.project.name !== 'desktop', 'runs once, on the desktop project'));
 
   test('landing page', async ({ page }) => {
-    await fits(page, '/', heading(/Discover a/i));
+    await fits(page, '/', heading(/Quizzes that play like a game/i));
   });
 
   test('sign-in pages', async ({ page }) => {

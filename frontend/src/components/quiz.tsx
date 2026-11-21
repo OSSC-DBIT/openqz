@@ -89,3 +89,17 @@ export function toLocalInput(iso: string | null | undefined): string {
 export function fromLocalInput(v: string): string | null {
   return v ? new Date(v).toISOString() : null;
 }
+
+/** A date and time people read at a glance: "23 Nov, 10:58 am" (the year only when it is not this one). */
+export function fmtWhen(iso: string | null | undefined): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const sameYear = d.getFullYear() === new Date().getFullYear();
+  return d.toLocaleString(undefined, { day: 'numeric', month: 'short', year: sameYear ? undefined : 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
+/** The name to greet someone by: the first word that is not a title ("Dr. Meera Rao" is Meera). */
+export function firstName(full: string | null | undefined): string {
+  const words = (full ?? '').trim().split(/\s+/).filter(Boolean);
+  return words.find((w) => !/^(dr|mr|mrs|ms|prof|shri|smt|sri)\.?$/i.test(w)) ?? words[0] ?? '';
+}

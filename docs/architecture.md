@@ -197,6 +197,7 @@ sequenceDiagram
 - `GET /join/{code}` returns a preview (title, host, question count, timer, deadline, open or not). `POST /join` adds the student as an `assignment_targets` row, after which everything (start, timers, violations, review, reports) is the normal assignment path.
 - The host can stop new joins (`accepting_joins = false`) or rotate the code (`POST /activity-assignments/{id}/new-code`); students already joined keep access.
 - Joining is rate-limited to 20 tries per minute per user, so codes cannot be guessed by brute force (10^6 codes).
+- The host can take a student out (`POST /activity-assignments/{id}/room/players/{student}/remove`): their `assignment_targets` row goes, a `room_removals` row stops the code letting them back in (`room_removed`), and an attempt in progress is submitted with `submit_reason = removed`. `.../readmit` deletes the removal and adds the target again; a submitted attempt stays (one attempt per student). `GET .../room/players` lists joined and removed students.
 - Club organisers can only host rooms; they never see class lists.
 
 ## Live games (Kahoot-style)
@@ -258,6 +259,21 @@ flowchart LR
 - The DB pool per process is configurable; keep total connections below Postgres `max_connections`.
 - nginx re-resolves container names every 10 s, so a redeployed API is picked up without 502s.
 - The web nginx gzips app files (main bundle about 430 kB to 136 kB) but **not** `/api` responses, which carry tokens (BREACH). Hashed `/assets/` are cached for a year; the service worker keeps them for repeat visits.
+
+## Importing questions
+
+`POST /question-import/google-form`, `/question-import/file` and `/question-import/text` read a source and return a preview: questions in the shape the editor saves, plus what was left out and why. Nothing is stored. The teacher reviews the preview in the browser (marks correct answers, unticks questions) and `POST /activities/{id}/questions/bulk` then appends the kept ones in one transaction: one invalid question refuses the lot.
+
+```mermaid
+flowchart LR
+  T[Teacher] -->|link, sheet or text| P[Preview endpoint]
+  P -->|Google Form only| G[(docs.google.com/forms)]
+  P --> R[Review screen: tap correct tiles]
+  R -->|kept questions| B[questions/bulk]
+  B --> A[(Activity questions)]
+```
+
+The Google Form reader loads the form's public page and takes the questions from the data embedded in it (`FB_PUBLIC_LOAD_DATA_`). That page never holds the answer key, which is why review is a required step for quizzes. The fetch is pinned to `docs.google.com/forms` and `forms.gle` over https (redirects only between the two), capped at 3 MB and 12 a minute per person, and runs in a worker thread. All three readers are plain parsers (`services/question_import.py`); there is no AI in the path.
 
 ## Environments
 

@@ -114,7 +114,7 @@ test('teacher builds and assigns, student plays, teacher grades', async ({ brows
   await t.getByRole('button', { name: 'Save' }).click();
   await t.getByRole('button', { name: 'Participants' }).click();
   await expect(t.getByRole('cell', { name: '3.5 / 5' })).toBeVisible();
-  await expect(t.getByText('1 violations')).toBeVisible();
+  await expect(t.getByText('1 warning')).toBeVisible();
   await shot(t, 'report');
   const [download] = await Promise.all([t.waitForEvent('download'), t.getByRole('button', { name: 'Excel' }).click()]);
   expect(download.suggestedFilename()).toMatch(/\.xlsx$/);

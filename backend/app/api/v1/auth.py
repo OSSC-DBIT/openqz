@@ -40,6 +40,7 @@ def me_out(user: User) -> MeOut:
         department_code=user.department.code if user.department else None,
         must_change_password=user.must_change_password,
         google_linked=bool(user.google_sub),
+        is_superadmin=user.role.value == "admin" and user.is_superadmin,
     )
 
 

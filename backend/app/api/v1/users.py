@@ -9,7 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.deps import AdminUser, SessionDep
+from app.core.deps import AdminUser, SessionDep, SuperAdminUser
 from app.core.security import generate_temp_password, hash_password
 from app.models import AuditLog, Role, Section, StudentSection, User, UserDepartment
 from app.schemas.users import (
@@ -42,12 +42,26 @@ def user_out(u: User, section: Section | None = None) -> UserOut:
         section_id=section.id if section else None,
         section_label=user_org.section_label(section) if section else None,
         is_active=u.is_active,
+        is_superadmin=u.is_superadmin,
         must_change_password=u.must_change_password,
         google_linked=u.google_linked,
         locked_until=u.locked_until,
         last_login_at=u.last_login_at,
         created_at=u.created_at,
     )
+
+
+def _may_manage(admin: User, target_role: Role) -> None:
+    """Admin accounts are managed by super admins only (a plain admin cannot make themselves
+    or a friend more powerful, or lock the real admins out)."""
+    if target_role == Role.admin and not admin.is_superadmin:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            detail={
+                "code": "superadmin_only",
+                "message": "Only a super admin manages admin accounts",
+            },
+        )
 
 
 async def _out(session: AsyncSession, user_id: uuid.UUID) -> UserOut:
@@ -123,6 +137,9 @@ async def list_users(
 
 @router.post("", response_model=UserCreatedOut, status_code=201)
 async def create_user(body: UserCreate, session: SessionDep, admin: AdminUser) -> UserCreatedOut:
+    _may_manage(admin, body.role)
+    if body.is_superadmin and body.role != Role.admin:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Only an admin can be a super admin")
     temp = generate_temp_password()
     user = User(
         username=body.username.strip(),
@@ -131,6 +148,7 @@ async def create_user(body: UserCreate, session: SessionDep, admin: AdminUser) -
         role=body.role,
         phone=body.phone,
         designation=body.designation,
+        is_superadmin=bool(body.is_superadmin) and body.role == Role.admin,
         password_hash=hash_password(temp),
         must_change_password=True,
     )
@@ -173,6 +191,19 @@ async def update_user(
 ) -> UserOut:
     user = await _get(session, user_id)
     data = body.model_dump(exclude_unset=True)
+    if user.id != admin.id:
+        _may_manage(admin, user.role)
+    if "is_superadmin" in data:
+        if data["is_superadmin"] is None:
+            data.pop("is_superadmin")
+        elif not admin.is_superadmin:
+            _may_manage(admin, Role.admin)
+        elif user.role != Role.admin:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Only an admin can be a super admin")
+        elif user.id == admin.id and data["is_superadmin"] is False:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST, "You cannot remove your own super admin rights"
+            )
     if user.id == admin.id and data.get("is_active") is False:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "You cannot deactivate yourself")
     if "email" in data:
@@ -186,6 +217,8 @@ async def update_user(
         k: data.pop(k) for k in ("department_id", "department_ids", "section_id") if k in data
     }
     for key, value in data.items():
+        if value is None and key in ("full_name", "is_active"):
+            continue  # cannot be cleared
         setattr(user, key, value)
     if data.get("is_active") is False:
         await revoke_all_for_user(session, user.id)
@@ -216,6 +249,8 @@ async def reset_password(
     user_id: uuid.UUID, session: SessionDep, admin: AdminUser
 ) -> PasswordResetOut:
     user = await _get(session, user_id)
+    if user.id != admin.id:
+        _may_manage(admin, user.role)
     temp = generate_temp_password()
     user.password_hash = hash_password(temp)
     user.must_change_password = True
@@ -255,7 +290,7 @@ class AuditOut(BaseModel):
 @audit_router.get("", response_model=Page[AuditOut])
 async def audit_log(
     session: SessionDep,
-    _: AdminUser,
+    _: SuperAdminUser,
     action: Annotated[str | None, Query(max_length=64)] = None,
     q: Annotated[str | None, Query(max_length=100)] = None,
     page: Annotated[int, Query(ge=1)] = 1,
@@ -292,6 +327,6 @@ async def audit_log(
 
 
 @audit_router.get("/actions", response_model=list[str])
-async def audit_actions(session: SessionDep, _: AdminUser) -> list[str]:
+async def audit_actions(session: SessionDep, _: SuperAdminUser) -> list[str]:
     rows = await session.scalars(select(AuditLog.action).distinct().order_by(AuditLog.action))
     return list(rows.all())

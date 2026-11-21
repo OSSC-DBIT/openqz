@@ -59,6 +59,16 @@ def require_roles(*roles: Role) -> Callable[..., Coroutine[Any, Any, User]]:
 
 
 AdminUser = Annotated[User, Depends(require_roles(Role.admin))]
+
+
+async def _superadmin(user: CurrentUser) -> User:
+    if user.role != Role.admin or not user.is_superadmin:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Only a super admin can do this")
+    return user
+
+
+# The full admin: other admins, the audit log and permanent deletes.
+SuperAdminUser = Annotated[User, Depends(_superadmin)]
 StaffUser = Annotated[User, Depends(require_roles(Role.admin, Role.faculty))]
 # Anyone who builds activities and hosts rooms: admins, faculty, club organisers.
 CreatorUser = Annotated[User, Depends(require_roles(Role.admin, Role.faculty, Role.club))]

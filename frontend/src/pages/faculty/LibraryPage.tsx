@@ -5,7 +5,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router';
 import { api } from '../../api/client';
 import type { Activity, ActivityKind, ActivitySummary, MyClasses } from '../../api/types';
 import { ClassPicker, KindCover, Pill } from '../../components/pieces';
-import { Badge, Button, EmptyState, ErrorText, Field, Input, Modal, PageHeader, Select, Spinner, cx } from '../../components/ui';
+import { Badge, Button, cx, EmptyState, ErrorText, Field, Input, Loading, Modal, PageHeader, Select } from '../../components/ui';
 import { KIND_LABEL, fmtSeconds } from '../../components/quiz';
 
 const KIND_HELP: Record<ActivityKind, string> = {
@@ -168,7 +168,7 @@ export default function LibraryPage() {
 
         <div className="min-w-0">
           {/* toolbar */}
-          <div className="mb-4 flex flex-col gap-2 rounded-2xl border border-line bg-card p-2 shadow-sm md:flex-row md:items-center">
+          <div className="mb-4 flex flex-col gap-2 sticker rounded-xl bg-card p-2 md:flex-row md:items-center">
             <div className="relative flex-1">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" aria-hidden />
               <Input className="!border-transparent pl-9" placeholder="Search your library" aria-label="Search your library" value={q} onChange={(e) => setQ(e.target.value)} />
@@ -240,13 +240,13 @@ export default function LibraryPage() {
 
           <ErrorText error={list.error || duplicate.error} />
           {list.isLoading ? (
-            <Spinner />
+            <Loading />
           ) : shown.length ? (
             <ul className="space-y-2.5" aria-label="Activities">
               {shown.map((a) => {
                 const graded = a.kind === 'quiz' || a.kind === 'assignment';
                 return (
-                  <li key={a.id} className="group flex flex-col gap-3 rounded-2xl border border-line bg-card p-3 shadow-sm transition hover:border-brand-200 hover:shadow-md sm:flex-row sm:items-center">
+                  <li key={a.id} className="group flex flex-col gap-3 sticker rounded-xl bg-card p-3 transition hover:border-brand-200 hover:-translate-y-0.5 hover:shadow-pop-lg sm:flex-row sm:items-center">
                     <Link to={`/faculty/activities/${a.id}`} className="flex min-w-0 flex-1 items-center gap-4">
                       <KindCover kind={a.kind} className="h-16 w-24 shrink-0 rounded-xl" />
                       <div className="min-w-0">

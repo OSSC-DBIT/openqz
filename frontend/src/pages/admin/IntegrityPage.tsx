@@ -1,7 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import type { IntegrityEvent } from '../../api/types';
-import { EmptyState, ErrorText, PageHeader, Spinner, Table, Td } from '../../components/ui';
+import { EmptyState, ErrorText, Loading, PageHeader, Table, Td } from '../../components/ui';
+
+const KIND: Record<string, string> = {
+  visibility_hidden: 'Left the quiz (tab, app or screen lock)',
+  focus_lost: 'Window lost focus',
+  back_navigation: 'Pressed Back',
+  page_reloaded: 'Reloaded or reopened the page',
+  fullscreen_exit: 'Left full screen',
+  second_device: 'Open in a second tab or device',
+};
 
 export default function IntegrityPage() {
   const events = useQuery({
@@ -14,7 +23,7 @@ export default function IntegrityPage() {
       <PageHeader title="Exam integrity log" subtitle="Tab switches, back navigation, reloads and other events reported during quizzes" />
       <ErrorText error={events.error} />
       {events.isLoading ? (
-        <Spinner />
+        <Loading />
       ) : events.data?.length ? (
         <Table head={['When', 'Student', 'Event', 'Details']} cols={['hidden sm:table-cell', undefined, undefined, 'hidden md:table-cell']} compact>
           {events.data.map((e) => (
@@ -25,7 +34,7 @@ export default function IntegrityPage() {
                 <div className="font-mono text-xs text-muted">{e.username}</div>
                 <div className="text-xs text-muted sm:hidden">{new Date(e.client_at).toLocaleString()}</div>
               </Td>
-              <Td className="font-mono text-sm">{e.kind}</Td>
+              <Td className="text-sm">{KIND[e.kind] ?? <span className="font-mono">{e.kind}</span>}</Td>
               <Td className="hidden font-mono text-xs text-muted md:table-cell">{e.meta ? JSON.stringify(e.meta) : ''}</Td>
             </tr>
           ))}

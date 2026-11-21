@@ -37,7 +37,7 @@ export default function LiveJoinPage() {
   const needSignIn = p && !user && !p.allow_guests;
 
   return (
-    <div className="flex min-h-dvh flex-col bg-gradient-to-br from-[#2a1a6e] via-[#46239e] to-[#7b3fe4] px-4 py-5 text-white">
+    <div className="flex min-h-dvh flex-col stage px-4 py-5 text-white">
       <div className="flex items-center justify-between">
         <Link to={user ? '/' : '/login'} className="flex items-center gap-1 text-sm font-semibold text-white/85 hover:text-white">
           <ArrowLeft className="h-4 w-4" /> {user ? 'Home' : 'Sign in'}

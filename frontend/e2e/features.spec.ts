@@ -23,7 +23,7 @@ test('a scheduled activity shows as not started; instructions are read before st
   await assignQuiz(request, c, now, { instructions: 'Keep a calculator ready.' });
 
   await login(page, c.stuEmail);
-  const scheduled = page.locator('div.rounded-2xl', { has: page.getByRole('heading', { name: later }) });
+  const scheduled = page.locator('article', { has: page.getByRole('heading', { name: later }) });
   await expect(scheduled.getByText('not started', { exact: true })).toBeVisible();
   await expect(scheduled.getByRole('button', { name: 'Not started yet' })).toBeDisabled();
   await expect(scheduled.getByRole('button', { name: 'Start', exact: true })).toHaveCount(0);
@@ -32,7 +32,7 @@ test('a scheduled activity shows as not started; instructions are read before st
   await page.getByRole('dialog').getByRole('button', { name: 'Close' }).click();
 
   // the open one: Start shows the teacher's note first, then the quiz
-  const open = page.locator('div.rounded-2xl', { has: page.getByRole('heading', { name: now }) });
+  const open = page.locator('article', { has: page.getByRole('heading', { name: now }) });
   await open.getByRole('button', { name: 'Start', exact: true }).click();
   await expect(page.getByRole('dialog').getByText('Keep a calculator ready.')).toBeVisible();
   await page.getByRole('dialog').getByRole('button', { name: 'Start now' }).click();
@@ -109,7 +109,7 @@ test('a question timer moves on by itself when time runs out', async ({ page, re
   await ok(await request.post(`/api/v1/activities/${act.id}/assign`, { headers: H, data: { section_ids: [c.sectionId], require_fullscreen: false, instant_feedback: false } }));
 
   await login(page, c.stuEmail);
-  await page.locator('div.rounded-2xl', { has: page.getByRole('heading', { name: title }) }).getByRole('button', { name: 'Start', exact: true }).click();
+  await page.locator('article', { has: page.getByRole('heading', { name: title }) }).getByRole('button', { name: 'Start', exact: true }).click();
   await expect(page.getByText('First timed question?')).toBeVisible();
   // touch nothing: after 5 seconds the player must show the next question on its own
   await expect(page.getByText('Second timed question?')).toBeVisible({ timeout: 15_000 });
@@ -159,14 +159,15 @@ test('a custom question time is set on the clock; the answer box stays readable 
   await page.context().clearCookies();
   await page.emulateMedia({ colorScheme: 'dark' });
   await login(page, c.stuEmail);
-  await page.locator('div.rounded-2xl', { has: page.getByRole('heading', { name: title }) }).getByRole('button', { name: 'Start', exact: true }).click();
+  await page.locator('article', { has: page.getByRole('heading', { name: title }) }).getByRole('button', { name: 'Start', exact: true }).click();
   const box = page.getByLabel('Your answer');
   await box.fill('A function that calls itself');
   const seen = await box.evaluate((el) => {
     const s = getComputedStyle(el);
     return { color: s.color, background: s.backgroundColor };
   });
-  expect(seen).toEqual({ color: 'rgb(29, 27, 44)', background: 'rgb(255, 255, 255)' });
+  // fixed plum text on white, whatever the theme
+  expect(seen).toEqual({ color: 'rgb(59, 20, 42)', background: 'rgb(255, 255, 255)' });
   if (process.env.E2E_SHOTS_DIR) await page.screenshot({ path: `${process.env.E2E_SHOTS_DIR}/answer-box-${test.info().project.name}.png` });
 });
 

@@ -48,7 +48,7 @@ def create_app(*, with_worker_pool: bool = True) -> FastAPI:
         allow_origins=settings.cors_origins,
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
-        allow_headers=["Authorization", "Content-Type", "X-Live-Player"],
+        allow_headers=["Authorization", "Content-Type", "X-Live-Player", "X-Player-Session"],
         max_age=600,
     )
 

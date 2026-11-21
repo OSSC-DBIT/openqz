@@ -1,43 +1,206 @@
 @import 'tailwindcss';
+/* The font is served from this site (the CSP allows no font host). */
+@import '@fontsource-variable/dm-sans/wght.css';
 
+/*
+  OpenQZ design system, themed after Wayground: deep plum, cream and hot pink, the DM Sans
+  typeface, flat surfaces with small corners. Components come from shadcn/ui (src/components/shadcn)
+  and read the variables below, so pages use `bg-card`, `text-muted`, `border-line`,
+  `bg-primary` and friends, and never a raw colour.
+*/
 @theme {
-  --color-brand-50: #f3f0ff;
-  --color-brand-100: #e7e0ff;
-  --color-brand-200: #cfc2ff;
-  --color-brand-500: #6d4fe0;
-  --color-brand-600: #5b3fd6;
-  --color-brand-700: #4a30b8;
-  /* brand-coloured text and icons: purple on light, a lighter purple on dark backgrounds (AA contrast) */
-  --color-brand-ink: #5b3fd6;
-  --color-surface: #f6f5fb;
-  --color-card: #ffffff;
-  --color-ink: #1d1b2c;
-  --color-muted: #6b6880;
-  --color-line: #e6e4ef;
-  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  /* Wayground's palette: deep plum, cream and hot pink. `brand-600` is a slightly deeper pink
+     than their button so white text on it passes AA. */
+  --color-brand-50: #f9e6ef;
+  --color-brand-100: #f6d3e5;
+  --color-brand-200: #efaed1;
+  --color-brand-500: #ff3ea5;
+  --color-brand-600: #d6177f;
+  --color-brand-700: #b10f68;
+  /* brand-coloured text and icons: deep pink on cream, light pink on plum (AA contrast) */
+  --color-brand-ink: #b10f68;
+  --color-plum: #3b142a;
+  --color-plum-soft: #592643;
+  --color-cream: #f3efda;
+  --color-surface: #f3efda;
+  --color-card: #faf8ec;
+  --color-ink: #3b142a;
+  --color-muted: #6b4459;
+  --color-line: #e4dfc8;
+  /* outline of cards and controls */
+  --color-edge: #dad3b9;
+  /* accents for small highlights (always with dark text on top) */
+  --color-sun: #ffd666;
+  --color-mint: #7ee8d0;
+  --color-coral: #ff9d8a;
+  --color-sky: #93ccff;
+  --color-lilac: #efaed1;
+
+  /* shadcn/ui names, mapped onto the same palette */
+  --color-background: var(--color-surface);
+  --color-foreground: var(--color-ink);
+  --color-primary: var(--color-brand-600);
+  --color-primary-foreground: #ffffff;
+  --color-secondary: var(--color-brand-50);
+  --color-secondary-foreground: var(--color-ink);
+  --color-muted-foreground: var(--color-muted);
+  --color-accent: var(--color-brand-50);
+  --color-accent-foreground: var(--color-ink);
+  --color-destructive: #dc2626;
+  --color-border: var(--color-edge);
+  --color-input: var(--color-edge);
+  --color-ring: var(--color-brand-500);
+  --color-popover: var(--color-card);
+  --color-popover-foreground: var(--color-ink);
+  --color-card-foreground: var(--color-ink);
+
+  /* small, crisp corners everywhere */
+  --radius-md: 0.25rem;
+  --radius-lg: 0.375rem;
+  --radius-xl: 0.5rem;
+  --radius-2xl: 0.5rem;
+  --radius-3xl: 0.625rem;
+
+  --font-sans: 'DM Sans Variable', Arial, system-ui, sans-serif;
+  --font-display: 'DM Sans Variable', Arial, system-ui, sans-serif;
+
+  /* flat surfaces: a hairline, and a little lift only on hover */
+  --shadow-pop-sm: 0 0 0 0 transparent;
+  --shadow-pop: 0 1px 2px 0 var(--shade-1);
+  --shadow-pop-lg: 0 10px 30px -10px var(--shade-3);
+  --shadow-glow: 0 6px 20px -8px rgb(214 23 127 / 0.55);
+
+  --animate-rise: rise 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-shimmer: shimmer 1.6s linear infinite;
+}
+
+:root {
+  --shade-1: rgb(59 20 42 / 0.08);
+  --shade-2: rgb(59 20 42 / 0.08);
+  --shade-3: rgb(59 20 42 / 0.22);
+  --paper-dot: transparent;
+  --skeleton-a: #e6e0c8;
+  --skeleton-b: #f3efda;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-surface: #12111a;
-    --color-card: #1c1a27;
-    --color-ink: #ecebf5;
-    --color-muted: #a29fb8;
-    --color-line: #2c2a3a;
-    --color-brand-50: #241d45;
-    --color-brand-100: #2d2457;
-    --color-brand-ink: #b9a8ff;
+    --color-surface: #2b0e1e;
+    --color-card: #3b142a;
+    --color-ink: #f3efda;
+    --color-muted: #d2c3c5;
+    --color-line: #55273f;
+    --color-edge: #653049;
+    --color-brand-50: #4a1a35;
+    --color-brand-100: #5c2243;
+    --color-brand-ink: #ff8cc8;
+    --shade-1: rgb(0 0 0 / 0.4);
+    --shade-2: rgb(0 0 0 / 0.35);
+    --shade-3: rgb(0 0 0 / 0.6);
+    --skeleton-a: #4a1a35;
+    --skeleton-b: #5c2243;
   }
 }
 
 html, body, #root { min-height: 100dvh; }
-body { background: var(--color-surface); color: var(--color-ink); }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+body {
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  /* Never a sideways scroll on tiny screens: long words break instead. */
+  overflow-wrap: break-word;
+}
+
+h1, h2, h3, .font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.025em;
+}
+
+/* App background: plain cream (plum in dark mode). */
+.paper {
+  background-color: var(--color-surface);
+}
+
+/* A raised surface: hairline border and a soft shadow. */
+@utility sticker {
+  border: 1px solid var(--color-edge);
+  box-shadow: var(--shadow-pop);
+}
+@utility sticker-sm {
+  border: 1px solid var(--color-edge);
+  box-shadow: var(--shadow-pop-sm);
+}
+/* Pressable: lifts a little on hover, settles when pressed. */
+@utility press {
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+  &:active:not(:disabled) {
+    transform: translateY(0) scale(0.985);
+  }
+}
+/* Frosted bar (top bars, tab bar). */
+@utility glass {
+  background-color: color-mix(in oklab, var(--color-card) 82%, transparent);
+  backdrop-filter: saturate(160%) blur(14px);
+}
+
+/* Keyboard focus is always visible, on every surface. */
+:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+}
+
+::selection { background: var(--color-brand-500); color: #ffffff; }
+
+/* Loading placeholder: a block that shimmers until the real content arrives. */
+.skeleton {
+  border-radius: 0.625rem;
+  background: linear-gradient(90deg, var(--skeleton-a) 25%, var(--skeleton-b) 50%, var(--skeleton-a) 75%);
+  background-size: 200% 100%;
+  animation: var(--animate-shimmer);
+}
+
+/* Loud panel inside a page (join code, room code, welcome): plum fading to magenta. */
+.banner {
+  background-color: #3b142a;
+  background-image: linear-gradient(170deg, #3b142a 35%, #8f2a63 130%);
+  border-color: #592643;
+  color: #f3efda;
+}
+
+/* Full-screen game surfaces (join, live host, live play) and the landing hero: always plum. */
+.stage {
+  background-color: #3b142a;
+  background-image: linear-gradient(180deg, #3b142a 55%, #a3336f 135%);
+}
+
+/* Scroll reveal (landing page): content is always there; when it scrolls into view it rises
+   in once. Nothing is ever hidden waiting for a script. */
+.reveal.is-seen { animation: rise 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; animation-delay: var(--reveal-delay, 0ms); }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  html { scroll-behavior: auto; }
 }
 
 @keyframes pop {
   from { transform: scale(0.6); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
+}
+@keyframes rise {
+  from { transform: translateY(8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+/* Very small screens (old phones, split view, a watch browser): tighter type, nothing clipped. */
+@media (max-width: 300px) {
+  html { font-size: 14px; }
 }

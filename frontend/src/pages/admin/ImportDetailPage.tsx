@@ -5,7 +5,7 @@ import { Link, useParams } from 'react-router';
 import { api, downloadFile } from '../../api/client';
 import type { ImportFields, ImportJob } from '../../api/types';
 import { ConfirmDelete } from '../../components/ConfirmDelete';
-import { Button, Card, ErrorText, PageHeader, Select, Spinner, Table, Td } from '../../components/ui';
+import { Button, Card, ErrorText, Loading, PageHeader, Select, Spinner, Table, Td } from '../../components/ui';
 import { KIND_LABEL, StatusBadge } from './ImportsPage';
 
 const BUSY: ImportJob['status'][] = ['uploaded', 'parsing', 'committing'];
@@ -52,7 +52,7 @@ export default function ImportDetailPage() {
   });
 
   const j = job.data;
-  if (job.isLoading || !j) return job.error ? <ErrorText error={job.error} /> : <Spinner />;
+  if (job.isLoading || !j) return job.error ? <ErrorText error={job.error} /> : <Loading kind="page" />;
   const spec = fields.data?.find((f) => f.kind === j.kind);
   const busy = BUSY.includes(j.status);
   const previewCols = j.preview_rows?.[0] ? Object.keys(j.preview_rows[0]).filter((k) => !['row', 'exists'].includes(k)) : [];

@@ -1,12 +1,14 @@
 import enum
 import uuid
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Index, Integer, String, func
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.db import Base
-from app.models.base import Timestamped, UUIDPk
+from app.models.base import Timestamped, UUIDPk, utcnow
 
 
 class Role(enum.StrEnum):
@@ -40,6 +42,10 @@ class User(UUIDPk, Timestamped, Base):
     failed_logins: Mapped[int] = mapped_column(Integer, default=0)
     locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Admins only. A super admin has every power; a plain admin runs the day-to-day (people,
+    # classes, imports, statistics) but cannot touch other admins, read the audit log or
+    # delete anything for good.
+    is_superadmin: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     department = relationship("Department", lazy="joined")
@@ -106,3 +112,13 @@ class PasswordResetToken(UUIDPk, Timestamped, Base):
     token_hash: Mapped[str] = mapped_column(String(64), unique=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class SiteCache(Base):
+    """Small things fetched from outside and kept (the contributor list for the landing page)."""
+
+    __tablename__ = "site_cache"
+
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    value: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

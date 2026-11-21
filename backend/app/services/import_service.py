@@ -45,9 +45,15 @@ async def _db_checks(
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Cross-check rows against the database. Returns (still_valid, new_errors)."""
     usernames = {r["username"] for r in valid}
+    # Usernames are unique whatever their case, and rows arrive upper-cased: match the same way,
+    # so "1db21cs001" made by hand is the same person as "1DB21CS001" in the sheet.
     existing = {
-        u.username: u
-        for u in (await session.scalars(select(User).where(User.username.in_(usernames)))).unique()
+        u.username.upper(): u
+        for u in (
+            await session.scalars(
+                select(User).where(func.upper(User.username).in_({x.upper() for x in usernames}))
+            )
+        ).unique()
     }
     emails = {r["email"] for r in valid if r.get("email")}
     email_owner = {
@@ -58,10 +64,10 @@ async def _db_checks(
     }
     ok, errs = [], []
     for r in valid:
-        u = existing.get(r["username"])
+        u = existing.get(r["username"].upper())
         problem = None
         owner = email_owner.get(r.get("email", ""))
-        if owner and owner != r["username"]:
+        if owner and owner.upper() != r["username"].upper():
             problem = f"email {r['email']} already belongs to {owner}"
         elif kind == ImportKind.students and u and u.role != Role.student:
             problem = f"{r['username']} already exists as {u.role.value}"
@@ -250,7 +256,9 @@ async def _apply(
     role = Role.student if job.kind == ImportKind.students else Role.faculty
     for r in valid:
         dept = await cache.dept(r["department"])
-        user = await session.scalar(select(User).where(User.username == r["username"]))
+        user = await session.scalar(
+            select(User).where(func.upper(User.username) == r["username"].upper())
+        )
         if user is None:
             temp = generate_temp_password()
             user = User(

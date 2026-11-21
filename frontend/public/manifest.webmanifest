@@ -1,16 +1,30 @@
 {
+  "id": "/",
   "name": "OpenQZ",
   "short_name": "OpenQZ",
-  "description": "Quizzes and assignments for DBIT",
+  "description": "Quizzes, assignments, polls and live games for Don Bosco Institute of Technology. Built by OSSC DBIT.",
+  "lang": "en",
+  "dir": "ltr",
   "start_url": "/login",
   "scope": "/",
   "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#f6f5fb",
-  "theme_color": "#5b3fd6",
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#3b142a",
+  "theme_color": "#3b142a",
+  "categories": ["education", "productivity"],
   "icons": [
     { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "shortcuts": [
+    { "name": "Join with a code", "short_name": "Join", "url": "/login", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Join a live game", "short_name": "Live game", "url": "/live", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] }
+  ],
+  "screenshots": [
+    { "src": "/screenshots/wide.png", "sizes": "1280x720", "type": "image/png", "form_factor": "wide", "label": "The OpenQZ home page" },
+    { "src": "/screenshots/narrow.png", "sizes": "412x915", "type": "image/png", "form_factor": "narrow", "label": "Sign in or join with a code" }
   ]
 }

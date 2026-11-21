@@ -9,6 +9,8 @@ export interface Me {
   department_code: string | null;
   must_change_password: boolean;
   google_linked: boolean;
+  /** Admins only: the full admin (other admins, audit log, permanent deletes). */
+  is_superadmin?: boolean;
 }
 
 export interface AuthConfig {
@@ -47,6 +49,7 @@ export interface User {
   section_id: number | null;
   section_label: string | null;
   is_active: boolean;
+  is_superadmin?: boolean;
   must_change_password: boolean;
   google_linked: boolean;
   locked_until: string | null;

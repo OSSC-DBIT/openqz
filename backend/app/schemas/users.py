@@ -34,6 +34,7 @@ class UserOut(BaseModel):
     section_id: int | None = None
     section_label: str | None = None
     is_active: bool
+    is_superadmin: bool = False
     must_change_password: bool
     google_linked: bool
     locked_until: datetime | None
@@ -57,6 +58,8 @@ class UserCreate(BaseModel):
     department_ids: list[int] | None = Field(default=None, max_length=20)
     # Students: the section they study in.
     section_id: int | None = None
+    # Admins: every power (other admins, audit log, permanent deletes). Super admins set it.
+    is_superadmin: bool = False
 
     _clean = field_validator("phone", "designation")(_blank_to_none)
 
@@ -77,6 +80,7 @@ class UserUpdate(BaseModel):
     department_ids: list[int] | None = Field(default=None, max_length=20)
     section_id: int | None = None
     is_active: bool | None = None
+    is_superadmin: bool | None = None
 
     _clean = field_validator("phone", "designation")(_blank_to_none)
 

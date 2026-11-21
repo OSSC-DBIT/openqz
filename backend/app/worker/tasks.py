@@ -8,7 +8,7 @@ from sqlalchemy import select
 from app.core.config import get_settings
 from app.core.db import SessionLocal, engine
 from app.models import Activity, ActivityAssignment, ActivityStatus, Attempt, User
-from app.services import attempt_service, email, import_service
+from app.services import attempt_service, contributors, email, import_service
 
 
 async def parse_import(ctx: dict[str, Any], job_id: str) -> str:
@@ -155,6 +155,13 @@ async def notify_released(ctx: dict[str, Any], assignment_id: str) -> int:
         return sent
 
 
+async def refresh_contributors(ctx: dict[str, Any]) -> int:
+    """Twice a day (and when the worker starts with nothing stored): the contributor list for
+    the landing page. GitHub being down just means the stored list stays."""
+    async with SessionLocal() as session:
+        return await contributors.refresh(session)
+
+
 async def shutdown(ctx: dict[str, Any]) -> None:
     await engine.dispose()
 
@@ -166,10 +173,12 @@ class WorkerSettings:
         send_password_reset,
         notify_assigned,
         notify_released,
+        refresh_contributors,
     ]
     cron_jobs = [
         cron(sweep_attempts, second=0, run_at_startup=True),
         cron(notify_started, second=20),
+        cron(refresh_contributors, hour={3, 15}, minute=7, second=40, run_at_startup=True),
     ]
     on_shutdown = shutdown
     redis_settings = RedisSettings.from_dsn(get_settings().redis_url)

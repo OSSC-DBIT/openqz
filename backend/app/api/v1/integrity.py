@@ -7,7 +7,7 @@ from typing import Annotated
 from fastapi import APIRouter, HTTPException, Query, Request, Response, status
 from sqlalchemy import select
 
-from app.core.deps import CurrentUser, SessionDep, StaffUser
+from app.core.deps import CreatorUser, CurrentUser, SessionDep
 from app.core.redis import get_redis
 from app.models import Activity, ActivityAssignment, Attempt, IntegrityEvent, Role, User
 from app.schemas.integrity import IntegrityBatchIn, IntegrityEventOut
@@ -28,6 +28,19 @@ async def ingest(
     if count > EVENTS_PER_10_MIN:
         raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "Too many events")
 
+    # Events may name only the sender's own attempts (anything else is stored without one).
+    named = {e.attempt_id for e in body.events if e.attempt_id}
+    own = (
+        set(
+            (
+                await session.scalars(
+                    select(Attempt.id).where(Attempt.id.in_(named), Attempt.student_id == user.id)
+                )
+            ).all()
+        )
+        if named
+        else set()
+    )
     now = datetime.now(UTC)
     ua = (request.headers.get("user-agent") or "")[:400]
     for e in body.events:
@@ -38,7 +51,7 @@ async def ingest(
         session.add(
             IntegrityEvent(
                 user_id=user.id,
-                attempt_id=e.attempt_id,
+                attempt_id=e.attempt_id if e.attempt_id in own else None,
                 session_id=body.session_id,
                 kind=e.kind,
                 client_at=client_at,
@@ -53,13 +66,14 @@ async def ingest(
 @router.get("/events", response_model=list[IntegrityEventOut])
 async def list_events(
     session: SessionDep,
-    staff: StaffUser,
+    staff: CreatorUser,
     user_id: uuid.UUID | None = None,
     attempt_id: uuid.UUID | None = None,
     kind: str | None = None,
     limit: Annotated[int, Query(ge=1, le=500)] = 200,
 ) -> list[IntegrityEventOut]:
-    """Admins see every event; a teacher only the events from attempts at their own activities."""
+    """Admins see every event; a teacher or club organiser only the events from attempts at
+    their own activities."""
     stmt = select(IntegrityEvent, User).join(User, User.id == IntegrityEvent.user_id)
     if staff.role != Role.admin:
         stmt = stmt.where(

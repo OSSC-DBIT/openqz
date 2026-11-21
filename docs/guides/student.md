@@ -45,8 +45,13 @@ After 5 wrong passwords your account locks for 15 minutes.
 
 ## 2. Install it like an app (optional)
 
-- **Android (Chrome):** menu, then **Install app** or **Add to Home screen**.
-- **iPhone (Safari):** Share, then **Add to Home Screen**.
+A few seconds after you open OpenQZ, an **Install OpenQZ** card may appear at the bottom of the screen (never during a quiz or a live game).
+
+- **Android, or Chrome and Edge on a computer:** tap **Install** on the card. No card? Browser menu, then **Install app** or **Add to Home screen**.
+- **iPhone and iPad (Safari):** the card shows the two steps: tap **Share**, then **Add to Home Screen**.
+- **Not now** hides the card on that device for two weeks.
+
+The installed app opens on the sign-in page, full screen, with the OpenQZ icon. Press and hold the icon for shortcuts to **Join with a code** and **Join a live game**.
 
 ## 3. Your activities
 
@@ -108,7 +113,8 @@ While a quiz is open, OpenQZ notices if you:
 - switch to another tab or app, or lock your screen,
 - press **Back**,
 - reload or close the page,
-- leave full screen.
+- leave full screen,
+- open the same quiz in a second tab or on a second device.
 
 Each time, you get a **warning** (for example "Warning 1 of 3"). After the number of warnings your teacher allows, **your quiz is submitted automatically** with the answers you have so far. Your teacher sees every warning.
 

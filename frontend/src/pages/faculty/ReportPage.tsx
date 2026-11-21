@@ -6,8 +6,8 @@ import { api, downloadFile } from '../../api/client';
 import { useAuth } from '../../auth/AuthProvider';
 import { DeleteForever } from '../../components/DeleteForever';
 import type { GradingItem, Report, ReportStudent, RubricItem } from '../../api/types';
-import { Badge, Button, Card, EmptyState, ErrorText, Input, Modal, PageHeader, Spinner, Table, Td, cx } from '../../components/ui';
-import { KIND_LABEL, TYPE_LABEL, fromLocalInput, toLocalInput } from '../../components/quiz';
+import { Badge, Button, Card, cx, EmptyState, ErrorText, Input, Loading, Modal, PageHeader, Spinner, Table, Td } from '../../components/ui';
+import { KIND_LABEL, TYPE_LABEL, fmtWhen, fromLocalInput, toLocalInput } from '../../components/quiz';
 import { ResponseView } from '../../components/ResponseView';
 import { RoomBanner } from './RoomBanner';
 
@@ -44,7 +44,7 @@ export default function ReportPage() {
   const xlsx = useMutation({ mutationFn: () => downloadFile(`/activity-assignments/${id}/results.xlsx`, `openqz-results-${id?.slice(0, 8)}.xlsx`) });
 
   const r = rep.data;
-  if (rep.isLoading || !r) return rep.error ? <ErrorText error={rep.error} /> : <Spinner />;
+  if (rep.isLoading || !r) return rep.error ? <ErrorText error={rep.error} /> : <Loading kind="page" />;
   const s = r.summary;
   const asg = r.assignment;
 
@@ -71,7 +71,7 @@ export default function ReportPage() {
       </Link>
       <PageHeader
         title={asg.activity_title}
-        subtitle={`${KIND_LABEL[asg.activity_kind]} | ${asg.target_labels.join(', ')} | ${asg.due_at ? `due ${new Date(asg.due_at).toLocaleString()}` : 'no deadline'}`}
+        subtitle={`${KIND_LABEL[asg.activity_kind]} | ${asg.target_labels.join(', ')} | ${asg.due_at ? `due ${fmtWhen(asg.due_at)}` : 'no deadline'}`}
         actions={
           <>
             <Button variant="secondary" onClick={() => setEditDue(true)}>
@@ -88,7 +88,7 @@ export default function ReportPage() {
                 <Send className="h-4 w-4" /> {asg.released_at ? 'Marks released' : 'Release marks'}
               </Button>
             )}
-            {user?.role === 'admin' && (
+            {user?.role === 'admin' && user.is_superadmin && (
               <Button variant="danger" onClick={() => setForever(true)}>
                 <Trash2 className="h-4 w-4" /> Delete results
               </Button>
@@ -143,7 +143,7 @@ export default function ReportPage() {
                 <div className="flex flex-wrap gap-1">
                   {st.needs_manual && <Badge tone="brand">to grade</Badge>}
                   {st.late && <Badge tone="amber">late</Badge>}
-                  {st.violations > 0 && <Badge tone="red">{st.violations} violations</Badge>}
+                  {st.violations > 0 && <Badge tone="red">{st.violations} {st.violations === 1 ? 'warning' : 'warnings'}</Badge>}
                   {st.blocked_attempt_id ? (
                     <Badge tone="red">blocked</Badge>
                   ) : (
@@ -294,7 +294,7 @@ function GradeForm({
         </div>
       ) : (
         <div className="flex items-center gap-2">
-          <Input className="!w-24" type="number" min={0} max={Number(marks)} step={0.5} placeholder="Marks" value={score} onChange={(e) => setScore(e.target.value)} aria-label="Score" />
+          <Input className="!w-24" type="number" min={0} max={Number(marks)} step={0.5} placeholder="Marks" value={score} onChange={(e) => setScore(e.target.value)} aria-label="Marks" />
           <span className="text-sm text-muted">/ {Number(marks)}</span>
         </div>
       )}
@@ -361,12 +361,14 @@ function AttemptModal({ attemptId, onClose, onGraded }: { attemptId: string; onC
   };
   return (
     <Modal open onClose={onClose} title={d.data ? `${d.data.student.name} (${d.data.student.usn})` : 'Attempt'}>
-      {!d.data ? (
+      {d.error ? (
+        <ErrorText error={d.error} />
+      ) : !d.data ? (
         <Spinner />
       ) : (
         <div className="max-h-[70vh] space-y-3 overflow-y-auto">
           <p className="text-sm text-muted">
-            Marks obtained {d.data.score === null ? '-' : Number(d.data.score)} / {Number(d.data.max_score)} | {d.data.violations} violations
+            Marks obtained {d.data.score === null ? '-' : Number(d.data.score)} / {Number(d.data.max_score)} | {d.data.violations} {d.data.violations === 1 ? 'warning' : 'warnings'}
             {d.data.submit_reason ? ` | submitted: ${d.data.submit_reason}` : ''}
             {d.data.unblocked_count > 0 ? ` | unblocked ${d.data.unblocked_count}x` : ''}
           </p>
@@ -577,7 +579,7 @@ function DueDialog({ id, current, allowLate, onClose, onDone }: { id: string; cu
   return (
     <Modal open onClose={onClose} title="Deadline">
       <div className="space-y-3">
-        <Input type="datetime-local" value={due} onChange={(e) => setDue(e.target.value)} />
+        <Input type="datetime-local" value={due} onChange={(e) => setDue(e.target.value)} aria-label="Deadline" />
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={late} onChange={(e) => setLate(e.target.checked)} /> Allow late submissions
         </label>

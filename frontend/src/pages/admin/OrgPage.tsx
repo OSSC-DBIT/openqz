@@ -4,7 +4,7 @@ import { useState, type FormEvent } from 'react';
 import { api } from '../../api/client';
 import type { Department, Section, Subject } from '../../api/types';
 import { ConfirmDelete } from '../../components/ConfirmDelete';
-import { Button, Card, EmptyState, ErrorText, Field, Input, PageHeader, Select, Spinner, Table, Td } from '../../components/ui';
+import { Button, Card, EmptyState, ErrorText, Field, Input, Loading, PageHeader, Select, Table, Td } from '../../components/ui';
 
 export function currentAcademicYear(d = new Date()): string {
   const start = d.getMonth() >= 6 ? d.getFullYear() : d.getFullYear() - 1;
@@ -33,8 +33,8 @@ function DepartmentsCard() {
           add.mutate();
         }}
       >
-        <Input className="sm:w-28" placeholder="Code" required value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} />
-        <Input placeholder="Name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+        <Input className="sm:w-28" placeholder="Code" aria-label="Department code" required value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} />
+        <Input placeholder="Name" aria-label="Department name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
         <Button type="submit" loading={add.isPending}>
           Add
         </Button>
@@ -134,7 +134,7 @@ export function SectionsPage() {
           </form>
           <ErrorText error={add.error} />
           {sections.isLoading ? (
-            <Spinner />
+            <Loading />
           ) : sections.data?.length ? (
             <Table head={['Dept', 'Section', 'Students', '']} cols={[undefined, undefined, 'hidden sm:table-cell', 'w-px']} compact>
               {sections.data.map((s) => (
@@ -240,7 +240,7 @@ export function SubjectsPage() {
         </div>
       </Card>
       {subjects.isLoading ? (
-        <Spinner />
+        <Loading />
       ) : subjects.data?.length ? (
         <Table head={['Code', 'Name', 'Dept', 'Sem', '']} cols={[undefined, undefined, 'hidden sm:table-cell', 'hidden sm:table-cell', 'w-px']} compact>
           {subjects.data.map((s) => (

@@ -28,7 +28,7 @@ function useIsFullscreen() {
 function FullscreenGate() {
   const [err, setErr] = useState<string | null>(null);
   return (
-    <div role="dialog" aria-modal="true" aria-labelledby="fs-title" className="fixed inset-0 z-40 grid place-items-center bg-[#15122b] p-6 text-center text-white">
+    <div role="dialog" aria-modal="true" aria-labelledby="fs-title" className="fixed inset-0 z-40 grid place-items-center bg-[#2b0e1e] p-6 text-center text-white">
       <div className="max-w-md">
         <Maximize className="mx-auto h-12 w-12 text-brand-200" aria-hidden />
         <h2 id="fs-title" className="mt-4 text-2xl font-extrabold">
@@ -37,7 +37,7 @@ function FullscreenGate() {
         <p className="mt-2 text-white/80">Your teacher requires full screen for this activity. The questions appear as soon as you are in full screen. Leaving full screen counts as a warning.</p>
         <button
           autoFocus
-          className="mt-6 rounded-xl bg-white px-6 py-3 text-lg font-extrabold text-[#15122b] shadow-[inset_0_-4px_0_rgba(0,0,0,0.15)] hover:bg-white/90"
+          className="mt-6 rounded-xl bg-white px-6 py-3 text-lg font-extrabold text-[#2b0e1e] shadow-[inset_0_-4px_0_rgba(0,0,0,0.15)] hover:bg-white/90"
           onClick={() =>
             void document.documentElement.requestFullscreen().catch(() => setErr('Your browser did not allow full screen. Try again, or use another browser.'))
           }
@@ -307,7 +307,7 @@ export default function PlayerPage() {
   const answeredPct = (state.answered.length / Math.max(1, total)) * 100;
   const qRunning = !!qLimit && qLeft !== null && !q.locked && !feedback;
   return (
-    <div className="flex min-h-dvh select-none flex-col bg-[#15122b] text-white [-webkit-touch-callout:none]" onContextMenu={(e) => e.preventDefault()}>
+    <div className="flex min-h-dvh select-none flex-col bg-[#2b0e1e] text-white [-webkit-touch-callout:none]" onContextMenu={(e) => e.preventDefault()}>
       {/* top strip: question timer while it runs (green, amber, red), otherwise overall progress */}
       {qRunning ? (
         <div className="h-2 w-full bg-white/10" role="progressbar" aria-label="Time left for this question" aria-valuemin={0} aria-valuemax={qLimit ?? 0} aria-valuenow={Math.max(0, Math.ceil((qLeft ?? 0) / 1000))}>
@@ -322,12 +322,12 @@ export default function PlayerPage() {
         </div>
       )}
 
-      <header className="flex items-center gap-2 px-3 py-3 sm:px-5">
+      <header className="flex flex-wrap items-center gap-2 px-3 py-3 sm:px-5">
         <span className="rounded-lg bg-white/10 px-3 py-1.5 text-sm font-bold tabular-nums">
           {index + 1}/{total}
         </span>
         <span className="hidden truncate text-sm font-semibold text-white/70 sm:block">{state.activity_title}</span>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
           {streak >= 2 && (
             <span className="flex items-center gap-1 rounded-lg bg-orange-500/20 px-2.5 py-1.5 text-sm font-bold text-orange-200" aria-label={`Streak: ${streak} correct in a row`}>
               <Flame className="h-4 w-4" aria-hidden /> {streak}
@@ -353,7 +353,7 @@ export default function PlayerPage() {
               <Maximize className="h-4 w-4" />
             </button>
           )}
-          <button className="rounded-lg bg-white px-3.5 py-1.5 text-sm font-bold text-[#15122b] shadow-[inset_0_-3px_0_rgba(0,0,0,0.15)] hover:bg-white/90" onClick={() => setConfirmSubmit(true)}>
+          <button className="rounded-lg bg-white px-3.5 py-1.5 text-sm font-bold text-[#2b0e1e] shadow-[inset_0_-3px_0_rgba(0,0,0,0.15)] hover:bg-white/90" onClick={() => setConfirmSubmit(true)}>
             Submit
           </button>
         </div>
@@ -386,7 +386,7 @@ export default function PlayerPage() {
                 onClick={() => void goto(i)}
                 aria-label={`Question ${i + 1}${state.answered.includes(i) ? ', answered' : ''}`}
                 aria-current={i === index ? 'step' : undefined}
-                className={cx('h-8 w-8 rounded-lg text-sm font-bold', i === index ? 'bg-white text-[#15122b]' : state.answered.includes(i) ? 'bg-brand-500 text-white' : 'bg-white/10 text-white/80')}
+                className={cx('h-8 w-8 rounded-lg text-sm font-bold', i === index ? 'bg-white text-[#2b0e1e]' : state.answered.includes(i) ? 'bg-brand-500 text-white' : 'bg-white/10 text-white/80')}
               >
                 {i + 1}
               </button>
@@ -407,7 +407,7 @@ export default function PlayerPage() {
               : feedback.score && Number(feedback.score) > 0
                 ? 'bg-amber-700'
                 : 'bg-red-700'
-            : 'border-t border-white/10 bg-[#15122b]/95 backdrop-blur',
+            : 'border-t border-white/10 bg-[#2b0e1e]/95 backdrop-blur',
         )}
       >
         <div className="mx-auto flex max-w-6xl items-center gap-3">
@@ -437,13 +437,13 @@ export default function PlayerPage() {
             </button>
           )}
           {awaitingInstant && ['multi_select', 'fill_blank'].includes(t.type) && (
-            <button className="rounded-xl bg-white px-5 py-2.5 font-extrabold text-[#15122b] shadow-[inset_0_-4px_0_rgba(0,0,0,0.15)] disabled:opacity-50" onClick={() => resp && void save(resp, true)} disabled={!resp}>
+            <button className="rounded-xl bg-white px-5 py-2.5 font-extrabold text-[#2b0e1e] shadow-[inset_0_-4px_0_rgba(0,0,0,0.15)] disabled:opacity-50" onClick={() => resp && void save(resp, true)} disabled={!resp}>
               Submit answer
             </button>
           )}
           {/* With instant feedback, MCQ/True-False submit on tap; Next appears after the feedback. */}
           {!awaitingInstant && (
-            <button className="flex items-center gap-1 rounded-xl bg-white px-5 py-2.5 font-extrabold text-[#15122b] shadow-[inset_0_-4px_0_rgba(0,0,0,0.15)] hover:bg-white/90" onClick={() => void (isLast ? setConfirmSubmit(true) : goto(index + 1))}>
+            <button className="flex items-center gap-1 rounded-xl bg-white px-5 py-2.5 font-extrabold text-[#2b0e1e] shadow-[inset_0_-4px_0_rgba(0,0,0,0.15)] hover:bg-white/90" onClick={() => void (isLast ? setConfirmSubmit(true) : goto(index + 1))}>
               {isLast ? 'Finish' : 'Next'} <ChevronRight className="h-4 w-4" />
             </button>
           )}
@@ -510,7 +510,7 @@ function Answers({
         {Array.from({ length: n }, (_, i) => (
           <div key={i}>
             <input
-              className="w-full select-text rounded-2xl border-2 border-transparent bg-white px-4 py-3 text-lg text-[#1d1b2c] placeholder:text-[#1d1b2c]/45 outline-none focus:border-brand-500 disabled:opacity-80"
+              className="w-full select-text rounded-2xl border-2 border-transparent bg-white px-4 py-3 text-lg text-[#3b142a] placeholder:text-[#3b142a]/45 outline-none focus:border-brand-500 disabled:opacity-80"
               placeholder={`Blank ${i + 1}`}
               aria-label={`Blank ${i + 1}`}
               value={vals[i] ?? ''}
@@ -586,7 +586,7 @@ function Answers({
   const textArea = (t.type === 'open_ended' || t.type === 'justify') && (
     <textarea
       rows={t.type === 'justify' ? 3 : 6}
-      className="mt-3 block min-h-32 w-full select-text resize-y rounded-2xl border-2 border-transparent bg-white p-4 text-base leading-relaxed text-[#1d1b2c] placeholder:text-[#1d1b2c]/45 shadow-lg outline-none focus:border-brand-500 disabled:opacity-80"
+      className="mt-3 block min-h-32 w-full select-text resize-y rounded-2xl border-2 border-transparent bg-white p-4 text-base leading-relaxed text-[#3b142a] placeholder:text-[#3b142a]/45 shadow-lg outline-none focus:border-brand-500 disabled:opacity-80"
       placeholder={t.type === 'justify' ? 'Explain why you chose this answer' : 'Type your answer'}
       aria-label={t.type === 'justify' ? 'Your justification' : 'Your answer'}
       value={String(resp?.text ?? '')}
@@ -613,7 +613,7 @@ function Flashcards({ q, total, onGoto, onFinish, busy }: { q: PlayQuestion; tot
       </div>
       <button
         onClick={() => setFlipped((f) => !f)}
-        className="flex min-h-[45vh] w-full max-w-xl flex-col items-center justify-center rounded-3xl bg-white p-8 text-center text-2xl font-semibold text-[#1d1b2c] shadow-2xl"
+        className="flex min-h-[45vh] w-full max-w-xl flex-col items-center justify-center rounded-3xl bg-white p-8 text-center text-2xl font-semibold text-[#3b142a] shadow-2xl"
       >
         {!flipped && q.question.stem_image_id && <AuthImage id={q.question.stem_image_id} className="mb-3 max-h-48 rounded-xl" />}
         <span className="whitespace-pre-wrap">{flipped ? q.question.back : q.question.stem}</span>

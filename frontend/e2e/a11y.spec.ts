@@ -23,7 +23,7 @@ async function signIn(page: Page, email: string, pw: string) {
 
 test('landing page', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: /Discover a/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Quizzes that play like a game/i })).toBeVisible();
   await audit(page);
 });
 
@@ -79,7 +79,7 @@ test.describe('dark mode', () => {
 
   test('landing page', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: /Discover a/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Quizzes that play like a game/i })).toBeVisible();
     await audit(page);
   });
 

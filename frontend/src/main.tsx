@@ -1,8 +1,11 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BarChart3, BookOpen, ClipboardList, History, KeyRound, LayoutDashboard, Layers, Library, PieChart, ShieldAlert, Upload, Users } from 'lucide-react';
+// first: catches the browser's install event even if it fires before React mounts
+import './pwa';
+import { MutationCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { BarChart3, BookOpen, ClipboardList, Contact, History, KeyRound, LayoutDashboard, Layers, Library, PieChart, ShieldAlert, Upload, Users } from 'lucide-react';
 import { lazy, StrictMode, Suspense, type ComponentType } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createBrowserRouter, Navigate, Outlet, RouterProvider } from 'react-router';
+import { InstallPrompt } from './components/InstallPrompt';
 import { ApiError } from './api/client';
 import { AuthProvider, homeFor, useAuth } from './auth/AuthProvider';
 import { RequireRole } from './auth/RequireRole';
@@ -38,6 +41,7 @@ const adminNav: NavItem[] = [
   { to: '/admin/imports', label: 'Imports', icon: Upload },
   { to: '/faculty/library', label: 'Library', icon: Library },
   { to: '/faculty/reports', label: 'Reports', icon: BarChart3 },
+  { to: '/faculty/participants', label: 'Participants', icon: Contact },
   { to: '/admin/integrity', label: 'Integrity log', icon: ShieldAlert },
   { to: '/admin/audit', label: 'Audit log', icon: History },
   { to: '/account/password', label: 'Password', icon: KeyRound },
@@ -46,6 +50,7 @@ const facultyNav: NavItem[] = [
   { to: '/faculty', label: 'Home', icon: LayoutDashboard, end: true },
   { to: '/faculty/library', label: 'Library', icon: Library },
   { to: '/faculty/reports', label: 'Reports', icon: BarChart3 },
+  { to: '/faculty/participants', label: 'Participants', icon: Contact },
   { to: '/faculty/integrity', label: 'Integrity log', icon: ShieldAlert },
   { to: '/account/password', label: 'Password', icon: KeyRound },
 ];
@@ -53,13 +58,23 @@ const clubNav: NavItem[] = [
   { to: '/faculty', label: 'Home', icon: LayoutDashboard, end: true },
   { to: '/faculty/library', label: 'Library', icon: Library },
   { to: '/faculty/reports', label: 'Rooms & reports', icon: BarChart3 },
+  { to: '/faculty/participants', label: 'Participants', icon: Contact },
+  { to: '/faculty/integrity', label: 'Integrity log', icon: ShieldAlert },
   { to: '/account/password', label: 'Password', icon: KeyRound },
 ];
+
+/** The audit log is for super admins; a day-to-day admin does not see the link. */
+const adminNavFor = (superadmin?: boolean) => (superadmin ? adminNav : adminNav.filter((n) => n.to !== '/admin/audit'));
+
+function AdminShell() {
+  const { user } = useAuth();
+  return <AppShell nav={adminNavFor(user?.is_superadmin)} />;
+}
 
 /** Admins reach the faculty tools with their own navigation. */
 function FacultyShell() {
   const { user } = useAuth();
-  const nav = user?.role === 'admin' ? adminNav : user?.role === 'club' ? clubNav : facultyNav;
+  const nav = user?.role === 'admin' ? adminNavFor(user.is_superadmin) : user?.role === 'club' ? clubNav : facultyNav;
   return <AppShell nav={nav} action={{ to: '/faculty/library?create=1', label: 'Create' }} />;
 }
 
@@ -69,7 +84,7 @@ function RootRoute() {
   const { user, ready } = useAuth();
   if (!ready) {
     return (
-      <div className="grid min-h-dvh place-items-center bg-[#07030f]">
+      <div className="paper grid min-h-dvh place-items-center">
         <Spinner />
       </div>
     );
@@ -83,7 +98,7 @@ function RootRoute() {
   return (
     <Suspense
       fallback={
-        <div className="grid min-h-dvh place-items-center bg-[#07030f]">
+        <div className="paper grid min-h-dvh place-items-center">
           <Spinner />
         </div>
       }
@@ -97,6 +112,12 @@ const router = createBrowserRouter([
   {
     // Every page shares one friendly error screen (and a one-time reload after an update).
     errorElement: <RouteError />,
+    element: (
+      <>
+        <Outlet />
+        <InstallPrompt />
+      </>
+    ),
     children: [
     { path: '/', element: <RootRoute /> },
     { path: '/login', element: <LoginPage /> },
@@ -108,7 +129,7 @@ const router = createBrowserRouter([
       path: '/admin',
       element: (
         <RequireRole roles={['admin']}>
-          <AppShell nav={adminNav} />
+          <AdminShell />
         </RequireRole>
       ),
       children: [
@@ -136,6 +157,7 @@ const router = createBrowserRouter([
         { path: 'library', lazy: page(() => import('./pages/faculty/LibraryPage')) },
         { path: 'reports', lazy: page(() => import('./pages/faculty/ReportsListPage')) },
         { path: 'reports/:id', lazy: page(() => import('./pages/faculty/ReportPage')) },
+        { path: 'participants', lazy: page(() => import('./pages/faculty/ParticipantsPage')) },
         { path: 'integrity', lazy: page(() => import('./pages/admin/IntegrityPage')) },
         { path: 'live/:gameId', lazy: page(() => import('./live/LiveResultsPage')) },
       ],
@@ -205,7 +227,11 @@ const router = createBrowserRouter([
   },
 ]);
 
-const queryClient = new QueryClient({
+const queryClient: QueryClient = new QueryClient({
+  // After anything is saved, every list on screen is asked again. Simpler and safer than
+  // remembering which lists each save touches (an assigned activity must show up on the home
+  // page, a started one must leave "pending", and so on).
+  mutationCache: new MutationCache({ onSuccess: () => void queryClient.invalidateQueries() }),
   defaultOptions: {
     queries: {
       staleTime: 30_000,

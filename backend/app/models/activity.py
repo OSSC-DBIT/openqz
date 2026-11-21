@@ -232,6 +232,25 @@ class AssignmentTarget(Base):
     )
 
 
+class RoomRemoval(Base):
+    """A student the host took out of a room: the code no longer lets them back in."""
+
+    __tablename__ = "room_removals"
+    __table_args__ = (
+        UniqueConstraint("assignment_id", "student_id", name="uq_room_removals_assignment_student"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    assignment_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("activity_assignments.id", ondelete="CASCADE"), index=True
+    )
+    student_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    removed_by: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
 class AttemptStatus(enum.StrEnum):
     in_progress = "in_progress"
     submitted = "submitted"
@@ -242,6 +261,7 @@ class SubmitReason(enum.StrEnum):
     timer = "timer"
     deadline = "deadline"
     violations = "violations"
+    removed = "removed"  # the host took the student out of a room
 
 
 class Attempt(UUIDPk, Base):

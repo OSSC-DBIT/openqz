@@ -60,7 +60,7 @@ function GuestJoin({ onRoom }: { onRoom: (code: string) => void }) {
   }
 
   return (
-    <section aria-labelledby="guest-title" className="mt-4 space-y-3 rounded-2xl border border-line bg-card p-6 shadow-sm">
+    <section aria-labelledby="guest-title" className="mt-4 space-y-3 sticker rounded-xl bg-card p-6">
       <div>
         <h2 id="guest-title" className="text-lg font-bold">
           Have a join code?
@@ -121,12 +121,12 @@ function UnsupportedBrowser({ from }: { from?: string }) {
     }
   };
   return (
-    <div className="grid min-h-dvh place-items-center bg-gradient-to-br from-brand-50 via-surface to-surface px-4 py-8">
+    <div className="grid min-h-dvh place-items-center paper px-4 py-8">
       <div className="w-full max-w-sm">
         <div className="mb-8 flex justify-center">
           <Logo />
         </div>
-        <div role="alert" className="space-y-3 rounded-2xl border border-line bg-card p-6 shadow-sm">
+        <div role="alert" className="space-y-3 sticker rounded-xl bg-card p-6">
           <h1 className="text-xl font-bold">Open OpenQZ in Chrome, Safari or Edge</h1>
           <p className="text-sm text-muted">
             This browser is not supported, so quizzes may not work properly here (timers, full screen, saving answers). Please open OpenQZ in <b>Google Chrome</b>, <b>Safari</b> or <b>Microsoft Edge</b>.
@@ -207,12 +207,12 @@ export default function LoginPage() {
   const clientId = config.data?.google_client_id;
 
   return (
-    <div className="grid min-h-dvh place-items-center bg-gradient-to-br from-brand-50 via-surface to-surface px-4 py-8">
+    <div className="grid min-h-dvh place-items-center paper px-4 py-8">
       <div className="w-full max-w-sm">
         <div className="mb-8 flex justify-center">
           <Logo />
         </div>
-        <div className="space-y-4 rounded-2xl border border-line bg-card p-6 shadow-sm">
+        <div className="space-y-4 sticker rounded-xl bg-card p-6">
           <div>
             <h1 className="text-xl font-bold">Sign in</h1>
             <p className="text-sm text-muted">Use the email your college registered for you.</p>

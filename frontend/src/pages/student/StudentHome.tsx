@@ -4,16 +4,16 @@ import { Link, useNavigate } from 'react-router';
 import { api } from '../../api/client';
 import type { AttemptState, MyActivity, Section } from '../../api/types';
 import { useAuth } from '../../auth/AuthProvider';
-import { Button, EmptyState, ErrorText, Modal, PageHeader, Spinner, cx } from '../../components/ui';
+import { Button, cx, EmptyState, ErrorText, Loading, Modal, PageHeader } from '../../components/ui';
 import { KindCover } from '../../components/pieces';
-import { KIND_LABEL, fmtSeconds } from '../../components/quiz';
+import { KIND_LABEL, firstName, fmtSeconds, fmtWhen } from '../../components/quiz';
 import { enterFullscreen } from '../../student/fullscreen';
 
 function due(a: MyActivity): string {
-  if (a.window === 'not_started') return `Opens ${new Date(a.start_at).toLocaleString()}`;
+  if (a.window === 'not_started') return `Opens ${fmtWhen(a.start_at)}`;
   if (!a.due_at) return 'No deadline';
   const late = a.window === 'late';
-  return `${late ? 'Was due' : 'Due'} ${new Date(a.due_at).toLocaleString()}`;
+  return `${late ? 'Was due' : 'Due'} ${fmtWhen(a.due_at)}`;
 }
 
 function JoinBar() {
@@ -26,7 +26,7 @@ function JoinBar() {
         e.preventDefault();
         if (d.length === 6) nav(`/join/${d}`);
       }}
-      className="mb-8 rounded-3xl bg-gradient-to-br from-[#2a1a6e] via-[#46239e] to-[#7b3fe4] px-5 py-8 text-center text-white shadow-lg sm:py-10"
+      className="mb-8 rounded-3xl banner sticker shadow-glow px-5 py-8 text-center text-white sm:py-10"
     >
       <h2 className="text-xl font-extrabold sm:text-2xl">Got a join code?</h2>
       <p className="mt-1 text-sm text-white/85">Enter the 6-digit code from your teacher or club.</p>
@@ -37,7 +37,7 @@ function JoinBar() {
           placeholder="123 456"
           value={d.length > 3 ? `${d.slice(0, 3)} ${d.slice(3)}` : d}
           onChange={(e) => setCode(e.target.value)}
-          className="min-w-0 flex-1 bg-transparent px-3 py-2 text-center text-2xl font-extrabold tracking-widest text-[#1d1b2c] outline-none placeholder:font-semibold placeholder:text-[#1d1b2c]/25"
+          className="min-w-0 flex-1 bg-transparent px-3 py-2 text-center text-2xl font-extrabold tracking-widest text-[#3b142a] outline-none placeholder:font-semibold placeholder:text-[#3b142a]/25"
         />
         <button type="submit" disabled={d.length !== 6} className="rounded-xl bg-brand-600 px-5 py-3 font-extrabold text-white shadow-[inset_0_-4px_0_rgba(0,0,0,0.2)] disabled:opacity-50">
           Join
@@ -83,7 +83,7 @@ export default function StudentHome() {
 
   return (
     <>
-      <PageHeader title={`Hi, ${user?.full_name.split(' ')[0] ?? ''}`} subtitle={user?.username} />
+      <PageHeader title={`Hi, ${firstName(user?.full_name)}`} subtitle={user?.username} />
       <JoinBar />
       <div className="mb-4 flex flex-wrap gap-2">
         {sections.data?.map((s) => (
@@ -105,7 +105,7 @@ export default function StudentHome() {
       </div>
       <ErrorText error={acts.error || start.error} />
       {acts.isLoading ? (
-        <Spinner />
+        <Loading kind="cards" count={3} />
       ) : list.length === 0 ? (
         <EmptyState title={tab === 'pending' ? 'Nothing due' : 'Nothing completed yet'}>
           {tab === 'pending' ? 'Quizzes and assignments from your faculty will appear here.' : undefined}
@@ -113,11 +113,11 @@ export default function StudentHome() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {list.map((a) => (
-            <div key={a.assignment_id} className="flex flex-col overflow-hidden rounded-2xl border border-line bg-card shadow-sm transition hover:shadow-md">
+            <article key={a.assignment_id} aria-label={a.title} className="flex flex-col overflow-hidden sticker rounded-xl bg-card transition hover:-translate-y-0.5 hover:shadow-pop-lg">
               <KindCover kind={a.kind} className="h-24">
                 <span className="absolute left-3 top-3 rounded-full bg-black/25 px-2 py-0.5 text-xs font-bold text-white">{KIND_LABEL[a.kind]}</span>
                 {a.in_progress_attempt_id && <span className="absolute right-3 top-3 rounded-full bg-white px-2 py-0.5 text-xs font-bold text-brand-700">in progress</span>}
-                {a.window === 'not_started' && <span className="absolute right-3 top-3 rounded-full bg-white px-2 py-0.5 text-xs font-bold text-[#1d1b2c]">not started</span>}
+                {a.window === 'not_started' && <span className="absolute right-3 top-3 rounded-full bg-white px-2 py-0.5 text-xs font-bold text-[#3b142a]">not started</span>}
                 {a.missed && <span className="absolute right-3 top-3 rounded-full bg-red-600 px-2 py-0.5 text-xs font-bold text-white">missed</span>}
                 {a.window === 'late' && !a.missed && <span className="absolute right-3 top-3 rounded-full bg-amber-500 px-2 py-0.5 text-xs font-bold text-white">late</span>}
               </KindCover>
@@ -147,7 +147,7 @@ export default function StudentHome() {
                   </Button>
                 )}
                 {a.window === 'not_started' && (
-                  <Button disabled title={`Opens ${new Date(a.start_at).toLocaleString()}`}>
+                  <Button disabled title={`Opens ${fmtWhen(a.start_at)}`}>
                     Not started yet
                   </Button>
                 )}
@@ -163,14 +163,14 @@ export default function StudentHome() {
                 )}
               </div>
               </div>
-            </div>
+            </article>
           ))}
         </div>
       )}
       {reading && (
         <Modal open onClose={() => setReading(null)} title={`Instructions: ${reading.a.title}`}>
           <p className="max-h-[50vh] overflow-y-auto whitespace-pre-wrap break-words text-sm">{reading.a.instructions}</p>
-          {reading.a.window === 'not_started' && <p className="mt-3 text-sm font-semibold text-muted">Opens {new Date(reading.a.start_at).toLocaleString()}</p>}
+          {reading.a.window === 'not_started' && <p className="mt-3 text-sm font-semibold text-muted">Opens {fmtWhen(reading.a.start_at)}</p>}
           <div className="mt-4 flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setReading(null)}>
               {reading.start ? 'Not now' : 'Close'}

@@ -3,7 +3,7 @@ import { Search } from 'lucide-react';
 import { useState } from 'react';
 import { api } from '../../api/client';
 import type { AuditEntry, Page } from '../../api/types';
-import { Button, EmptyState, ErrorText, Input, PageHeader, Select, Spinner, Table, Td } from '../../components/ui';
+import { Button, EmptyState, ErrorText, Input, Loading, PageHeader, Select, Table, Td } from '../../components/ui';
 
 export default function AuditPage() {
   const [action, setAction] = useState('');
@@ -52,7 +52,7 @@ export default function AuditPage() {
       </div>
       <ErrorText error={log.error} />
       {log.isLoading ? (
-        <Spinner />
+        <Loading />
       ) : log.data?.items.length ? (
         <Table head={['When', 'Action', 'Who', 'Target', 'Details']} cols={['hidden sm:table-cell', undefined, 'hidden sm:table-cell', 'hidden xl:table-cell', 'hidden 2xl:table-cell']} compact>
           {log.data.items.map((e) => (

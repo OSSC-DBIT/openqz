@@ -1,4 +1,5 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { api, onSessionChange, refreshSession, setAccessToken } from '../api/client';
 import type { Me, TokenResponse } from '../api/types';
 
@@ -16,21 +17,35 @@ const AuthCtx = createContext<AuthState | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<Me | null>(null);
   const [ready, setReady] = useState(false);
+  const qc = useQueryClient();
+  const lastId = useRef<string | null>(null);
+
+  // Cached answers belong to one person. On a shared lab computer the next person to sign in
+  // must never see the previous one's activities or marks, so the cache is emptied whenever
+  // the signed-in user changes or signs out.
+  const apply = useCallback(
+    (me: Me | null) => {
+      if (lastId.current !== null && lastId.current !== (me?.id ?? null)) qc.clear();
+      lastId.current = me?.id ?? null;
+      setUser(me);
+    },
+    [qc],
+  );
 
   useEffect(() => {
-    const off = onSessionChange(setUser);
+    const off = onSessionChange(apply);
     // Restore the session from the refresh cookie on page load.
     refreshSession().finally(() => setReady(true));
     return () => {
       off();
     };
-  }, []);
+  }, [apply]);
 
   const accept = useCallback((t: TokenResponse) => {
     setAccessToken(t.access_token);
-    setUser(t.user);
+    apply(t.user);
     return t.user;
-  }, []);
+  }, [apply]);
 
   const login = useCallback(
     async (email: string, password: string) =>
@@ -49,9 +64,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await api('/auth/logout', { method: 'POST' });
     } finally {
       setAccessToken(null);
-      setUser(null);
+      apply(null);
     }
-  }, []);
+  }, [apply]);
 
   const changePassword = useCallback(
     async (current: string, next: string) =>

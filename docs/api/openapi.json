@@ -799,6 +799,20 @@
         "title": "AuthConfigOut",
         "type": "object"
       },
+      "Body_from_file_api_v1_question_import_file_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_from_file_api_v1_question_import_file_post",
+        "type": "object"
+      },
       "Body_upload_api_v1_imports_post": {
         "properties": {
           "academic_year": {
@@ -882,6 +896,24 @@
           }
         },
         "title": "BulkApplyIn",
+        "type": "object"
+      },
+      "BulkIn": {
+        "properties": {
+          "questions": {
+            "items": {
+              "$ref": "#/components/schemas/QuestionIn"
+            },
+            "maxItems": 200,
+            "minItems": 1,
+            "title": "Questions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "questions"
+        ],
+        "title": "BulkIn",
         "type": "object"
       },
       "ChangePasswordIn": {
@@ -1230,6 +1262,21 @@
           "email"
         ],
         "title": "ForgotIn",
+        "type": "object"
+      },
+      "FormIn": {
+        "properties": {
+          "url": {
+            "maxLength": 500,
+            "minLength": 10,
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "FormIn",
         "type": "object"
       },
       "GameIn": {
@@ -1813,6 +1860,11 @@
             "title": "Id",
             "type": "string"
           },
+          "is_superadmin": {
+            "default": false,
+            "title": "Is Superadmin",
+            "type": "boolean"
+          },
           "must_change_password": {
             "title": "Must Change Password",
             "type": "boolean"
@@ -2278,6 +2330,59 @@
         "title": "Role",
         "type": "string"
       },
+      "RoomPlayer": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "student_id": {
+            "format": "uuid",
+            "title": "Student Id",
+            "type": "string"
+          },
+          "usn": {
+            "title": "Usn",
+            "type": "string"
+          }
+        },
+        "required": [
+          "student_id",
+          "name",
+          "usn",
+          "status"
+        ],
+        "title": "RoomPlayer",
+        "type": "object"
+      },
+      "RoomPlayers": {
+        "properties": {
+          "joined": {
+            "items": {
+              "$ref": "#/components/schemas/RoomPlayer"
+            },
+            "title": "Joined",
+            "type": "array"
+          },
+          "removed": {
+            "items": {
+              "$ref": "#/components/schemas/RoomPlayer"
+            },
+            "title": "Removed",
+            "type": "array"
+          }
+        },
+        "required": [
+          "joined",
+          "removed"
+        ],
+        "title": "RoomPlayers",
+        "type": "object"
+      },
       "RubricItem-Input": {
         "properties": {
           "criterion": {
@@ -2678,6 +2783,21 @@
         "title": "SubjectOut",
         "type": "object"
       },
+      "TextIn": {
+        "properties": {
+          "text": {
+            "maxLength": 200000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "TextIn",
+        "type": "object"
+      },
       "TokenOut": {
         "properties": {
           "access_token": {
@@ -2861,6 +2981,11 @@
             "title": "Full Name",
             "type": "string"
           },
+          "is_superadmin": {
+            "default": false,
+            "title": "Is Superadmin",
+            "type": "boolean"
+          },
           "phone": {
             "anyOf": [
               {
@@ -2984,6 +3109,11 @@
           },
           "is_active": {
             "title": "Is Active",
+            "type": "boolean"
+          },
+          "is_superadmin": {
+            "default": false,
+            "title": "Is Superadmin",
             "type": "boolean"
           },
           "last_login_at": {
@@ -3147,6 +3277,17 @@
               }
             ],
             "title": "Is Active"
+          },
+          "is_superadmin": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Superadmin"
           },
           "phone": {
             "anyOf": [
@@ -4277,6 +4418,65 @@
         ]
       }
     },
+    "/api/v1/activities/{activity_id}/questions/bulk": {
+      "post": {
+        "description": "Append several questions at once. One bad question refuses the lot, and the message\nsays which one, so a half-imported set never has to be cleaned up by hand.",
+        "operationId": "add_questions_api_v1_activities__activity_id__questions_bulk_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "activity_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Activity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivityOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Add Questions",
+        "tags": [
+          "question import"
+        ]
+      }
+    },
     "/api/v1/activities/{activity_id}/questions/{question_id}": {
       "delete": {
         "operationId": "delete_question_api_v1_activities__activity_id__questions__question_id__delete",
@@ -5089,6 +5289,159 @@
         ]
       }
     },
+    "/api/v1/activity-assignments/{assignment_id}/room/players": {
+      "get": {
+        "description": "Everyone who joined the room with the code, and the ones the host took out.",
+        "operationId": "room_players_api_v1_activity_assignments__assignment_id__room_players_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assignment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoomPlayers"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Room Players",
+        "tags": [
+          "results"
+        ]
+      }
+    },
+    "/api/v1/activity-assignments/{assignment_id}/room/players/{student_id}/readmit": {
+      "post": {
+        "description": "Let a removed student back in. One attempt still means one attempt: a submitted one stays.",
+        "operationId": "readmit_room_player_api_v1_activity_assignments__assignment_id__room_players__student_id__readmit_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assignment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "student_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Student Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Readmit Room Player",
+        "tags": [
+          "results"
+        ]
+      }
+    },
+    "/api/v1/activity-assignments/{assignment_id}/room/players/{student_id}/remove": {
+      "post": {
+        "description": "Take a student out of a room: it leaves their list, the code no longer lets them back in,\nand an attempt they are in the middle of is submitted with what they answered.",
+        "operationId": "remove_room_player_api_v1_activity_assignments__assignment_id__room_players__student_id__remove_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assignment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "student_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Student Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Remove Room Player",
+        "tags": [
+          "results"
+        ]
+      }
+    },
     "/api/v1/admin/data/activities/{activity_id}/delete": {
       "post": {
         "description": "Delete an activity for good, with every assignment, attempt and live game of it.\n(A teacher's own Delete only archives an activity that students have attempted.)",
@@ -5796,6 +6149,23 @@
               "title": "Question Id",
               "type": "string"
             }
+          },
+          {
+            "in": "header",
+            "name": "X-Player-Session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Player-Session"
+            }
           }
         ],
         "requestBody": {
@@ -5864,6 +6234,23 @@
             "schema": {
               "title": "Index",
               "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Player-Session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Player-Session"
             }
           }
         ],
@@ -7071,7 +7458,7 @@
     },
     "/api/v1/integrity/events": {
       "get": {
-        "description": "Admins see every event; a teacher only the events from attempts at their own activities.",
+        "description": "Admins see every event; a teacher or club organiser only the events from attempts at\ntheir own activities.",
         "operationId": "list_events_api_v1_integrity_events_get",
         "parameters": [
           {
@@ -8171,6 +8558,275 @@
         ]
       }
     },
+    "/api/v1/participants": {
+      "get": {
+        "description": "One row per student who started any of my activities, most recent first.",
+        "operationId": "participants_api_v1_participants_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 80,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Participants Api V1 Participants Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Participants",
+        "tags": [
+          "participants"
+        ]
+      }
+    },
+    "/api/v1/participants/{student_id}": {
+      "get": {
+        "description": "Every attempt this student made on my activities, newest first.",
+        "operationId": "participant_api_v1_participants__student_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "student_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Student Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Participant Api V1 Participants  Student Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Participant",
+        "tags": [
+          "participants"
+        ]
+      }
+    },
+    "/api/v1/question-import/file": {
+      "post": {
+        "operationId": "from_file_api_v1_question_import_file_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_from_file_api_v1_question_import_file_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response From File Api V1 Question Import File Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "From File",
+        "tags": [
+          "question import"
+        ]
+      }
+    },
+    "/api/v1/question-import/google-form": {
+      "post": {
+        "description": "Read a form anyone with the link can open. The page has no answer key, so choice\nquestions come back with `needs_key` and the teacher marks the right answers.",
+        "operationId": "from_google_form_api_v1_question_import_google_form_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FormIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response From Google Form Api V1 Question Import Google Form Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "From Google Form",
+        "tags": [
+          "question import"
+        ]
+      }
+    },
+    "/api/v1/question-import/text": {
+      "post": {
+        "operationId": "from_text_api_v1_question_import_text_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TextIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response From Text Api V1 Question Import Text Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "From Text",
+        "tags": [
+          "question import"
+        ]
+      }
+    },
     "/api/v1/sections": {
       "get": {
         "operationId": "list_sections_api_v1_sections_get",
@@ -8523,6 +9179,30 @@
         "summary": "Remove Student",
         "tags": [
           "organisation"
+        ]
+      }
+    },
+    "/api/v1/site/contributors": {
+      "get": {
+        "description": "The people who built OpenQZ, from the copy kept in the database.\n\nGitHub is asked twice a day by the worker. If the stored copy is missing or older than\nthat (a new server, a restored database, a worker that was down), this request asks the\nworker to fetch it now, at most once every ten minutes; it never waits for GitHub.",
+        "operationId": "site_contributors_api_v1_site_contributors_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Site Contributors Api V1 Site Contributors Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Site Contributors",
+        "tags": [
+          "site"
         ]
       }
     },
