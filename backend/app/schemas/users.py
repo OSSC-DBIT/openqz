@@ -39,6 +39,9 @@ class UserOut(BaseModel):
     google_linked: bool
     locked_until: datetime | None
     last_login_at: datetime | None
+    # when they agreed to the privacy policy at sign-in, and which version
+    privacy_accepted_at: datetime | None = None
+    privacy_version: str | None = None
     created_at: datetime
 
 

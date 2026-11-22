@@ -74,6 +74,7 @@ async def login(body: LoginIn, request: Request, session: SessionDep) -> JSONRes
     try:
         await auth_service.check_rate_limit(get_redis(), ip)
         user = await auth_service.authenticate(session, body.email, body.password, ip)
+        auth_service.record_privacy(session, user, body.privacy_accepted, ip)
         tokens = await auth_service.issue_tokens(session, user)
     except AuthError as exc:
         raise _http(exc) from exc
@@ -142,6 +143,7 @@ async def google(body: GoogleLoginIn, request: Request, session: SessionDep) -> 
         except GoogleTokenError as exc:
             raise AuthError("google_invalid", "Google sign-in failed, please try again") from exc
         user = await auth_service.google_login(session, claims, ip)
+        auth_service.record_privacy(session, user, body.privacy_accepted, ip)
         tokens = await auth_service.issue_tokens(session, user)
     except AuthError as exc:
         raise _http(exc) from exc

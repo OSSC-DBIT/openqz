@@ -37,6 +37,7 @@ from app.core.config import get_settings  # noqa: E402
 get_settings.cache_clear()
 
 from app.core.db import Base, SessionLocal, engine  # noqa: E402
+from app.core.privacy import PRIVACY_VERSION  # noqa: E402
 from app.core.redis import get_redis  # noqa: E402
 from app.core.security import hash_password  # noqa: E402
 from app.main import create_app  # noqa: E402
@@ -92,6 +93,7 @@ async def make_user(
             full_name=full_name,
             role=role,
             password_hash=hash_password(PASSWORD),
+            privacy_version=PRIVACY_VERSION,
             must_change_password=must_change,
             # an admin in tests holds every power unless the test says otherwise
             is_superadmin=(role == Role.admin) if superadmin is None else superadmin,
@@ -104,7 +106,9 @@ async def make_user(
 
 async def login(client: AsyncClient, username: str, password: str = PASSWORD) -> dict[str, str]:
     r = await client.post(
-        "/api/v1/auth/login", json={"email": email_for(username), "password": password}
+        "/api/v1/auth/login",
+        # like the sign-in page, where the privacy tick is required
+        json={"email": email_for(username), "password": password, "privacy_accepted": True},
     )
     assert r.status_code == 200, r.text
     return {"Authorization": f"Bearer {r.json()['access_token']}"}

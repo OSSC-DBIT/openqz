@@ -42,7 +42,7 @@ def burst(label: str, path: str, n: int, headers: dict[str, str] | None = None) 
 
 
 def main() -> int:
-    body = json.dumps({"email": EMAIL, "password": PASSWORD}).encode()
+    body = json.dumps({"email": EMAIL, "password": PASSWORD, "privacy_accepted": True}).encode()
     req = urllib.request.Request(
         BASE + "/api/v1/auth/login", data=body, headers={"content-type": "application/json"}
     )

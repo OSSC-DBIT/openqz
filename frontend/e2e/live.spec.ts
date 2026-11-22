@@ -4,6 +4,8 @@ import { login, ok, PW, seedClass } from './helpers';
 
 /** Live (Kahoot-style) game: host screen shows the question, phones show only the answers. */
 async function axe(page: Page) {
+  // settled page only (see a11y.spec.ts)
+  await page.evaluate(() => Promise.all(document.getAnimations().filter((x) => x.effect?.getComputedTiming().iterations !== Infinity).map((x) => x.finished.catch(() => undefined))));
   const r = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
   const serious = r.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
   expect(serious.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
@@ -13,7 +15,7 @@ test('host runs a live game; a student and a guest play on phones', async ({ bro
   test.skip(info.project.name !== 'desktop', 'one run: it drives three browsers itself');
   test.setTimeout(180_000);
   const c = await seedClass(request);
-  const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { email: c.facEmail, password: PW } }));
+  const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { privacy_accepted: true, email: c.facEmail, password: PW } }));
   const H = { Authorization: `Bearer ${t.access_token}` };
   const act = await ok<{ id: string }>(await request.post('/api/v1/activities', { headers: H, data: { title: 'Live fest round', kind: 'quiz', section_ids: [c.sectionId] } }));
   for (const [stem, right, wrong] of [

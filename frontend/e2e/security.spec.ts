@@ -7,7 +7,7 @@ import { ADMIN, ADMIN_PW, login, ok, PW, seedClass } from './helpers';
  * (docs/security.md), so a parallel test run never trips them. */
 
 async function token(request: APIRequestContext, email: string, password = PW) {
-  const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { email, password } }));
+  const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { privacy_accepted: true, email, password } }));
   return { Authorization: `Bearer ${t.access_token}` };
 }
 
@@ -116,10 +116,10 @@ test('the session cookie cannot be read by scripts and is not sent to other site
 test('guessing a password locks the account', async ({ request }) => {
   const c = await seedClass(request);
   let last = 0;
-  for (let i = 0; i < 6; i++) last = (await request.post('/api/v1/auth/login', { data: { email: c.stuEmail, password: `wrong-${i}-guess` } })).status();
+  for (let i = 0; i < 6; i++) last = (await request.post('/api/v1/auth/login', { data: { privacy_accepted: true, email: c.stuEmail, password: `wrong-${i}-guess` } })).status();
   expect(last).toBe(423);
   // even the right password waits until the lock ends
-  expect((await request.post('/api/v1/auth/login', { data: { email: c.stuEmail, password: PW } })).status()).toBe(423);
+  expect((await request.post('/api/v1/auth/login', { data: { privacy_accepted: true, email: c.stuEmail, password: PW } })).status()).toBe(423);
 });
 
 test('security headers are sent (production build)', async ({ request }) => {
@@ -132,4 +132,95 @@ test('security headers are sent (production build)', async ({ request }) => {
   expect(h['x-content-type-options']).toBe('nosniff');
   expect(h['referrer-policy']).toBeTruthy();
   expect(h.server ?? '').not.toMatch(/\d/); // no version number
+});
+
+test('signing in needs the privacy policy tick, and the agreement is saved', async ({ page, request }) => {
+  const c = await seedClass(request);
+  // an admin creates a person who has never agreed (seedClass people agreed when they were set up)
+  const H = await token(request, ADMIN, ADMIN_PW);
+  const email = `privacy.${c.tag}@openqz.dev`;
+  const made = await ok<{ user: { id: string }; temporary_password: string }>(
+    await request.post('/api/v1/users', { headers: H, data: { username: `PV${c.tag}`.toUpperCase(), full_name: 'Privacy Check', email, role: 'student' } }),
+  );
+  // the API refuses a sign-in without agreement, after checking the password
+  const no = await request.post('/api/v1/auth/login', { data: { email, password: made.temporary_password } });
+  expect(no.status()).toBe(403);
+  expect((await no.json()).detail.code).toBe('privacy_required');
+
+  // the sign-in page: the button waits for the tick; the link opens the policy
+  await page.goto('/login');
+  await page.getByLabel('Email').fill(email);
+  await page.getByRole('textbox', { name: 'Password', exact: true }).fill(made.temporary_password);
+  await expect(page.getByRole('button', { name: 'Sign in' })).toBeDisabled();
+  await expect(page.getByRole('link', { name: 'Privacy Policy' }).first()).toHaveAttribute('href', '/privacy');
+  await page.getByRole('checkbox', { name: /agree to the privacy policy/i }).check();
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await expect(page).toHaveURL(/change-password/);
+
+  // saved on the account: an admin sees when and which version
+  const u = await ok<{ privacy_accepted_at: string | null; privacy_version: string | null }>(await request.get(`/api/v1/users/${made.user.id}`, { headers: H }));
+  expect(u.privacy_accepted_at).toBeTruthy();
+  expect(u.privacy_version).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+});
+
+test('no page breaks the content security policy (no inline styles or scripts) (production build)', async ({ browser, request }) => {
+  test.setTimeout(180_000);
+  const probe = await request.get('/login');
+  test.skip(!probe.headers()['content-security-policy'], 'the development server sends no CSP; run against a production build');
+  expect(probe.headers()['content-security-policy']).not.toContain('unsafe-inline');
+  expect(probe.headers()['content-security-policy']).not.toContain('unsafe-eval');
+
+  const c = await seedClass(request);
+  const H = await token(request, c.facEmail);
+  const act = await ok<{ id: string }>(await request.post('/api/v1/activities', { headers: H, data: { title: `CSP ${c.tag}`, kind: 'quiz' } }));
+  await ok(await request.post(`/api/v1/activities/${act.id}/questions`, { headers: H, data: { type: 'mcq', stem: 'Pick one', marks: 1, options: [{ text: 'a' }, { text: 'b', correct: true }] } }));
+  const asg = await ok<{ id: string }>(await request.post(`/api/v1/activities/${act.id}/assign`, { headers: H, data: { section_ids: [c.sectionId], require_fullscreen: false } }));
+
+  const violations: string[] = [];
+  const watch = async (viewport?: { width: number; height: number }) => {
+    const ctx = await browser.newContext(viewport ? { viewport } : {});
+    await ctx.addInitScript(() =>
+      document.addEventListener('securitypolicyviolation', (e) => console.log(`CSP-VIOLATION ${e.violatedDirective} ${e.blockedURI} ${e.sourceFile}:${e.lineNumber}`)),
+    );
+    const page = await ctx.newPage();
+    page.on('console', (m) => m.text().startsWith('CSP-VIOLATION') && violations.push(`${page.url()} ${m.text()}`));
+    return page;
+  };
+  const visit = async (page: Awaited<ReturnType<typeof watch>>, path: string) => {
+    await page.goto(path);
+    await page.waitForLoadState('networkidle', { timeout: 4000 }).catch(() => undefined); // the landing video never goes quiet
+    await page.waitForTimeout(400);
+  };
+
+  // public pages
+  const anon = await watch();
+  for (const path of ['/', '/login', '/privacy', '/live', '/guides/student.html', '/guides/faculty.html', '/guides/admin.html']) await visit(anon, path);
+
+  // a teacher: home, library, the editor, the report
+  const t = await watch();
+  await login(t, c.facEmail);
+  for (const path of ['/faculty', '/faculty/library', `/faculty/activities/${act.id}`, `/faculty/reports/${asg.id}`, '/faculty/participants']) await visit(t, path);
+
+  // a student on a phone: home, then the quiz player
+  const s = await watch({ width: 390, height: 844 });
+  await login(s, c.stuEmail);
+  await s.locator('article', { has: s.getByRole('heading', { name: `CSP ${c.tag}` }) }).getByRole('button', { name: 'Start', exact: true }).click();
+  await expect(s.getByText('Pick one')).toBeVisible();
+  await s.getByRole('button', { name: /Option 2: b/ }).click();
+  await s.waitForTimeout(500);
+
+  // the admin screens, with a dialog open
+  const a = await watch();
+  await login(a, ADMIN, ADMIN_PW);
+  for (const path of ['/admin', '/admin/users', '/admin/sections', '/admin/stats', '/admin/imports']) await visit(a, path);
+  await a.goto('/admin/users');
+  await a.getByRole('button', { name: 'Add user' }).click();
+  await expect(a.getByRole('dialog')).toBeVisible();
+  await a.waitForTimeout(400);
+
+  // a live game host screen (the big screen)
+  const game = await ok<{ id: string }>(await request.post('/api/v1/live/games', { headers: H, data: { activity_id: act.id } }));
+  await visit(t, `/live/host/${game.id}`);
+
+  expect(violations).toEqual([]);
 });

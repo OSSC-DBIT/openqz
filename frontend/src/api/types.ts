@@ -54,6 +54,9 @@ export interface User {
   google_linked: boolean;
   locked_until: string | null;
   last_login_at: string | null;
+  /** When they ticked "I agree to the privacy policy" at sign-in, and which version. */
+  privacy_accepted_at?: string | null;
+  privacy_version?: string | null;
   created_at: string;
 }
 

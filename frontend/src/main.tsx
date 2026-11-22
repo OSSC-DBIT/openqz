@@ -121,6 +121,7 @@ const router = createBrowserRouter([
     children: [
     { path: '/', element: <RootRoute /> },
     { path: '/login', element: <LoginPage /> },
+    { path: '/privacy', lazy: page(() => import('./pages/PrivacyPage')) },
     { path: '/change-password', element: <ChangePasswordPage /> },
     { path: '/forgot-password', element: <ForgotPasswordPage /> },
     { path: '/reset-password', element: <ResetPasswordPage /> },

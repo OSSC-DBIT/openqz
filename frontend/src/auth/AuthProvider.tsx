@@ -6,8 +6,9 @@ import type { Me, TokenResponse } from '../api/types';
 interface AuthState {
   user: Me | null;
   ready: boolean;
-  login: (email: string, password: string) => Promise<Me>;
-  loginWithGoogle: (credential: string) => Promise<Me>;
+  /** `privacyAccepted`: the "I agree to the privacy policy" tick on the sign-in page. */
+  login: (email: string, password: string, privacyAccepted?: boolean) => Promise<Me>;
+  loginWithGoogle: (credential: string, privacyAccepted?: boolean) => Promise<Me>;
   logout: () => Promise<void>;
   changePassword: (current: string, next: string) => Promise<Me>;
 }
@@ -48,14 +49,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [apply]);
 
   const login = useCallback(
-    async (email: string, password: string) =>
-      accept(await api<TokenResponse>('/auth/login', { method: 'POST', json: { email, password } })),
+    async (email: string, password: string, privacyAccepted = false) =>
+      accept(await api<TokenResponse>('/auth/login', { method: 'POST', json: { email, password, privacy_accepted: privacyAccepted } })),
     [accept],
   );
 
   const loginWithGoogle = useCallback(
-    async (credential: string) =>
-      accept(await api<TokenResponse>('/auth/google', { method: 'POST', json: { credential } })),
+    async (credential: string, privacyAccepted = false) =>
+      accept(await api<TokenResponse>('/auth/google', { method: 'POST', json: { credential, privacy_accepted: privacyAccepted } })),
     [accept],
   );
 

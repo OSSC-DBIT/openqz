@@ -22,7 +22,7 @@ Answer: false`;
 
 test('teacher imports questions, marks the missing answer and adds them', async ({ page, request }) => {
   const people = await seedClass(request);
-  const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { email: people.facEmail, password: PW } }));
+  const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { privacy_accepted: true, email: people.facEmail, password: PW } }));
   const act = await ok<{ id: string }>(
     await request.post('/api/v1/activities', { headers: { Authorization: `Bearer ${t.access_token}` }, data: { title: `Import ${people.tag}`, kind: 'quiz', section_ids: [people.sectionId] } }),
   );

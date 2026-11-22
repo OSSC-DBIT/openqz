@@ -8,7 +8,7 @@ const shot = async (p: Page, name: string) => {
 
 /** Build a one-question quiz through the API as the given user. */
 async function quickQuiz(request: APIRequestContext, email: string, title: string) {
-  const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { email, password: PW } }));
+  const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { privacy_accepted: true, email, password: PW } }));
   const H = { Authorization: `Bearer ${t.access_token}` };
   const act = await ok<{ id: string }>(await request.post('/api/v1/activities', { headers: H, data: { title, kind: 'quiz' } }));
   await ok(

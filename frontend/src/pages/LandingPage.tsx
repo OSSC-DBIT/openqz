@@ -565,6 +565,12 @@ export default function LandingPage() {
               <a href="https://github.com/OSSC-DBIT/openqz" target="_blank" rel="noreferrer" className="hover:text-[#ff5cb0]">
                 GitHub
               </a>
+              <Link to="/privacy" className="hover:text-[#ff5cb0]">
+                Privacy Policy
+              </Link>
+              <a href="mailto:osscdbit@gmail.com" className="hover:text-[#ff5cb0]">
+                osscdbit@gmail.com
+              </a>
               <Link to="/login" className="text-[#ff8cc8] hover:text-white">
                 Login
               </Link>

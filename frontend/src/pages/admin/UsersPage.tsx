@@ -244,6 +244,11 @@ function EditUser({ user, onClose, depts, sections }: { user: User; onClose: () 
           {user.google_linked ? ' | changing the email unlinks their Google account' : ''}
         </p>
         <UserFields form={form} set={setForm} depts={depts} sections={sections} creating={false} />
+        <p className="text-xs text-muted">
+          {user.privacy_accepted_at
+            ? `Agreed to the privacy policy (version ${user.privacy_version ?? '?'}) on ${new Date(user.privacy_accepted_at).toLocaleString()}.`
+            : 'Has not agreed to the privacy policy yet: asked at the next sign-in.'}
+        </p>
         <ErrorText error={save.error} />
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>

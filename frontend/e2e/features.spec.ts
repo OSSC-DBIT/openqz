@@ -3,7 +3,7 @@ import { ADMIN, ADMIN_PW, adminHeaders, login, ok, PW, seedClass } from './helpe
 
 /** A one-question quiz assigned to the class through the API, with the given settings. */
 async function assignQuiz(request: Parameters<typeof seedClass>[0], c: Awaited<ReturnType<typeof seedClass>>, title: string, settings: Record<string, unknown>) {
-  const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { email: c.facEmail, password: PW } }));
+  const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { privacy_accepted: true, email: c.facEmail, password: PW } }));
   const H = { Authorization: `Bearer ${t.access_token}` };
   const act = await ok<{ id: string }>(await request.post('/api/v1/activities', { headers: H, data: { title, kind: 'quiz' } }));
   await ok(
@@ -50,6 +50,7 @@ test('the sign-in page takes a join code: unknown live code leads a student to t
 
   await page.getByLabel('Email').fill(c.stuEmail);
   await page.getByRole('textbox', { name: 'Password', exact: true }).fill(PW);
+  await page.getByRole('checkbox', { name: /agree to the privacy policy/i }).check();
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page).toHaveURL(/\/join\/000001$/);
 });
@@ -94,7 +95,7 @@ test('admin adds a teacher in two departments and sees the statistics', async ({
 
 test('a question timer moves on by itself when time runs out', async ({ page, request }) => {
   const c = await seedClass(request);
-  const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { email: c.facEmail, password: PW } }));
+  const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { privacy_accepted: true, email: c.facEmail, password: PW } }));
   const H = { Authorization: `Bearer ${t.access_token}` };
   const title = `Timed ${c.tag}`;
   const act = await ok<{ id: string }>(await request.post('/api/v1/activities', { headers: H, data: { title, kind: 'quiz' } }));
@@ -134,7 +135,7 @@ test('the sign-in page asks other browsers to switch to Chrome, Safari or Edge',
 
 test('a custom question time is set on the clock; the answer box stays readable in dark mode', async ({ page, request }) => {
   const c = await seedClass(request);
-  const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { email: c.facEmail, password: PW } }));
+  const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { privacy_accepted: true, email: c.facEmail, password: PW } }));
   const H = { Authorization: `Bearer ${t.access_token}` };
   const title = `Clock ${c.tag}`;
   const act = await ok<{ id: string }>(await request.post('/api/v1/activities', { headers: H, data: { title, kind: 'quiz' } }));
@@ -193,13 +194,13 @@ test('admin deletes a person for good: sees what goes, types the ID and their ow
   await go.click();
   await expect(dlg).toHaveCount(0);
   await expect(page.getByText('No users found')).toBeVisible();
-  const gone = await request.post('/api/v1/auth/login', { data: { email: c.stuEmail, password: PW } });
+  const gone = await request.post('/api/v1/auth/login', { data: { privacy_accepted: true, email: c.stuEmail, password: PW } });
   expect(gone.status()).toBe(401);
 });
 
 test('admin changes the correct answer with the Correct button; the report shows the correct answer', async ({ page, request }) => {
   const c = await seedClass(request);
-  const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { email: c.facEmail, password: PW } }));
+  const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { privacy_accepted: true, email: c.facEmail, password: PW } }));
   const H = { Authorization: `Bearer ${t.access_token}` };
   const act = await ok<{ id: string }>(await request.post('/api/v1/activities', { headers: H, data: { title: `Key ${c.tag}`, kind: 'quiz' } }));
   await ok(

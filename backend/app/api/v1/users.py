@@ -49,6 +49,8 @@ def user_out(u: User, section: Section | None = None) -> UserOut:
         google_linked=u.google_linked,
         locked_until=u.locked_until,
         last_login_at=u.last_login_at,
+        privacy_accepted_at=u.privacy_accepted_at,
+        privacy_version=u.privacy_version,
         created_at=u.created_at,
     )
 

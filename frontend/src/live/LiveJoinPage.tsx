@@ -112,7 +112,13 @@ export default function LiveJoinPage() {
                     placeholder="e.g. Quiz Ninja"
                     className="mt-1 w-full rounded-xl border-2 border-line bg-surface px-3 py-3 text-lg font-bold outline-none focus:border-brand-500"
                   />
-                  <span className="mt-1 block text-xs text-muted">Shown on the big screen. Keep it friendly.</span>
+                  <span className="mt-1 block text-xs text-muted">
+                    Shown on the big screen. Keep it friendly. By joining you agree to the{' '}
+                    <Link to="/privacy" target="_blank" className="underline">
+                      Privacy Policy
+                    </Link>
+                    .
+                  </span>
                 </label>
               )}
               {err && (

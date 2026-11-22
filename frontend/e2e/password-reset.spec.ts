@@ -17,7 +17,7 @@ test('forgot password sends a working one-time link', async ({ page, request }) 
   test.skip(!cfg.password_reset_email, 'email not configured');
 
   // a throwaway student created by the admin
-  const admin = await (await request.post('/api/v1/auth/login', { data: { email: ADMIN, password: ADMIN_PW } })).json();
+  const admin = await (await request.post('/api/v1/auth/login', { data: { privacy_accepted: true, email: ADMIN, password: ADMIN_PW } })).json();
   const tag = `${Date.now().toString(36)}${test.info().project.name.slice(0, 1)}`;
   const email = `reset.${tag}@openqz.dev`;
   const created = await request.post('/api/v1/users', {

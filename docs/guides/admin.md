@@ -48,7 +48,7 @@ Re-importing the same sheet is safe: existing people are updated, nobody is dupl
 | Task | Where |
 | --- | --- |
 | Add one person | **Users**, then **Add user** (gives a temporary password to hand over). Fill in the ID, role, name and email; optionally phone and designation. For a **student** choose the department and **section** (needed to receive class assignments). For **faculty** tap every **department** they work in: the first one is the main department. |
-| Edit a person | **Users**, pencil icon: name, email, phone, designation, departments, section. |
+| Edit a person | **Users**, pencil icon: name, email, phone, designation, departments, section. The dialog also shows when the person agreed to the privacy policy (and which version), or that they have not yet. |
 | Reset a password | **Users**, key icon. Gives a new temporary password; they must change it at next sign-in. |
 | Unlock an account | **Users**, lock icon (accounts lock for 15 minutes after 5 wrong passwords). |
 | Change someone's sign-in email | **Users**, pencil icon. Their old Google link is removed. |
@@ -95,6 +95,9 @@ Both deletes ask you to type the activity's title and your own password. After 5
 
 ## 6. Privacy
 
+- The **Privacy Policy** is at `/privacy` (linked from the sign-in page and the landing page footer). Everyone ticks **I agree** before signing in; OpenQZ saves the date and the policy version on the account and in the audit log (`privacy_accepted`). Live-game guests are told by the join screen. Questions and data requests go to **osscdbit@gmail.com**.
+- When the policy changes in a way people should agree to again, a developer updates the page and `PRIVACY_VERSION` (`backend/app/core/privacy.py`): everyone is asked once more at their next sign-in.
+- Emails and phone numbers are stored encrypted. Search finds them only by the whole address or number.
 - Credential slips contain passwords: print, hand out, then delete the PDF from the server.
 - Passwords are stored as one-way hashes; nobody, including the admin, can see them.
 - Export only what you need, and keep downloaded files on college devices.

@@ -56,7 +56,7 @@ async function api(p, token, body, method) {
   if (!r.ok) throw new Error(`${p} ${r.status} ${await r.text()}`);
   return r.status === 204 ? null : r.json();
 }
-const login = async (email, password) => (await api('/auth/login', null, { email, password })).access_token;
+const login = async (email, password) => (await api('/auth/login', null, { email, password, privacy_accepted: true })).access_token;
 const A = await login(ADMIN.email, ADMIN.password);
 const cse = (await api('/departments', A)).find((d) => d.code === 'CSE');
 if ((await api('/sections', A)).some((s) => s.department_code === 'CSE' && String(s.semester) === SEM && s.name === SEC))
@@ -212,6 +212,7 @@ async function signIn(page, email, password) {
   await sleep(500);
   await type(page, page.getByLabel('Email'), email, 30);
   await type(page, page.getByRole('textbox', { name: 'Password', exact: true }), password, 45);
+  await click(page, page.getByRole('checkbox', { name: /agree to the privacy policy/i }));
   await click(page, page.getByRole('button', { name: 'Sign in' }));
   await page.waitForURL((u) => !u.pathname.endsWith('/login'), { timeout: 30_000 });
 }
@@ -570,6 +571,7 @@ await scene('live2', 'desktop+2phones', ['club', 'priya', 'guest'], 'live', asyn
   await priya.getByLabel('Email').waitFor();
   await type(priya, priya.getByLabel('Email'), P.priya.email, 26);
   await type(priya, priya.getByRole('textbox', { name: 'Password', exact: true }), PW, 40);
+  await click(priya, priya.getByRole('checkbox', { name: /agree to the privacy policy/i }));
   await click(priya, priya.getByRole('button', { name: 'Sign in' }));
   await priya.waitForURL((u) => !u.pathname.endsWith('/login'), { timeout: 30_000 });
   await priya.goto(`${BASE}/join`);

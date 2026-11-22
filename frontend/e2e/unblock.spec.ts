@@ -4,7 +4,7 @@ import { login, ok, PW, seedClass } from './helpers';
 test('a student blocked for leaving the quiz is let back in by the teacher', async ({ browser, request }) => {
   test.setTimeout(120_000);
   const c = await seedClass(request);
-  const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { email: c.facEmail, password: PW } }));
+  const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { privacy_accepted: true, email: c.facEmail, password: PW } }));
   const H = { Authorization: `Bearer ${t.access_token}` };
   const act = await ok<{ id: string }>(await request.post('/api/v1/activities', { headers: H, data: { title: 'Strict quiz', kind: 'quiz', section_ids: [c.sectionId] } }));
   for (const stem of ['First question?', 'Second question?']) {

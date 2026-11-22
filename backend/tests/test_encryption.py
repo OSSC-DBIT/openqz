@@ -87,7 +87,8 @@ async def test_emails_and_phones_are_stored_encrypted_and_still_work(
 
     # sign-in by email, in any case
     ok = await client.post(
-        f"{A}/auth/login", json={"email": "ASHA.K@example.COM", "password": temp}
+        f"{A}/auth/login",
+        json={"email": "ASHA.K@example.COM", "password": temp, "privacy_accepted": True},
     )
     assert ok.status_code == 200
 

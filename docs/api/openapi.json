@@ -1309,6 +1309,11 @@
             "minLength": 20,
             "title": "Credential",
             "type": "string"
+          },
+          "privacy_accepted": {
+            "default": false,
+            "title": "Privacy Accepted",
+            "type": "boolean"
           }
         },
         "required": [
@@ -1813,6 +1818,11 @@
             "minLength": 1,
             "title": "Password",
             "type": "string"
+          },
+          "privacy_accepted": {
+            "default": false,
+            "title": "Privacy Accepted",
+            "type": "boolean"
           }
         },
         "required": [
@@ -3154,6 +3164,29 @@
               }
             ],
             "title": "Phone"
+          },
+          "privacy_accepted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Privacy Accepted At"
+          },
+          "privacy_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Privacy Version"
           },
           "role": {
             "$ref": "#/components/schemas/Role"

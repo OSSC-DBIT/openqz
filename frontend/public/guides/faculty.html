@@ -4,46 +4,16 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>OpenQZ faculty guide | OpenQZ</title>
-<style>
-  :root { --brand:#d6177f; --ink:#3b142a; --muted:#6b6880; --bg:#f6f5fb; --card:#fff; --line:#e6e4ef; }
-  @media (prefers-color-scheme: dark) { :root { --ink:#ecebf5; --muted:#a29fb8; --bg:#12111a; --card:#1c1a27; --line:#2c2a3a; } }
-  * { box-sizing: border-box; }
-  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.65 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
-  main { max-width:760px; margin:0 auto; padding:24px 16px 64px; }
-  header { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
-  header a { color:var(--brand); font-weight:700; text-decoration:none; }
-  h1 { font-size:1.9rem; line-height:1.2; } h2 { margin-top:2rem; border-bottom:1px solid var(--line); padding-bottom:.3rem; }
-  a { color:var(--brand); } code { background:var(--card); border:1px solid var(--line); border-radius:6px; padding:1px 5px; }
-  table { border-collapse:collapse; width:100%; display:block; overflow-x:auto; }
-  th, td { border:1px solid var(--line); padding:6px 10px; text-align:left; vertical-align:top; }
-  th { background:var(--card); }
-  blockquote { margin:1rem 0; padding:.6rem 1rem; border-left:4px solid var(--brand); background:var(--card); border-radius:8px; }
-  figure.diagram { margin:1.25rem 0; padding:12px; background:var(--card); border:1px solid var(--line); border-radius:12px; overflow-x:auto; }
-  pre.mermaid { margin:0; text-align:center; background:none; }
-</style>
+<link rel="stylesheet" href="/guides/guides.css" />
 </head>
 <body><main>
 <header><a href="/login">&larr; OpenQZ</a></header>
 <h1>OpenQZ faculty guide</h1>
 <p>Create quizzes, assignments, polls and flashcards for your classes, assign them, and see results and marks in one place.</p>
 <h2>At a glance</h2>
-<figure class="diagram"><pre class="mermaid">flowchart LR
-    A([Create]) --&gt; B[Pick the type&lt;br/&gt;quiz, assignment, poll, flashcards]
-    B --&gt; C[Pick classes&lt;br/&gt;branch, then semesters and sections]
-    C --&gt; D[Editor: add questions&lt;br/&gt;timer and marks per question]
-    D --&gt; E{Share how?}
-    E -- "Assign to classes" --&gt; F[Set window, rules,&lt;br/&gt;full screen, review]
-    E -- "Host a room" --&gt; G[Show the join code&lt;br/&gt;and QR in the lobby]
-    F --&gt; H[Students take it]
-    G --&gt; H
-    H --&gt; I[Report: marks obtained&lt;br/&gt;per student and question]
-    I --&gt; J[Mark written answers]
-    J --&gt; K[Release marks]
-    I --&gt; L[Unblock a student&lt;br/&gt;auto-submitted for leaving]
-    L --&gt; H
-    I --&gt; M[Export Excel or CSV]</pre></figure>
+<figure class="diagram"><picture><source srcset="/guides/diagrams/c84ee7fc53b9-dark.svg" media="(prefers-color-scheme: dark)" /><img src="/guides/diagrams/c84ee7fc53b9-light.svg" width="2475" height="295" loading="lazy" alt="Flow diagram: Create; Pick the type, quiz, assignment, poll, flashcards; Pick classes, branch, then semesters and sections; Editor: add questions, timer and marks per question; Share how?; Set window, rules,, full screen, review; Assign to classes; Show the join code, and QR in the lobby; Host a room; Students take it; Report: marks obtained, per student and question; Mark written answers; Release marks; Unblock a student, auto-submitted for leaving; Export Excel or CSV" /></picture></figure>
 <h2>1. Sign in</h2>
-<p>Sign in with your <strong>email</strong> and the temporary password from your slip, or with <strong>Continue with Google</strong> if your Google account uses the same email. Choose your own password on first sign-in. Use the eye button next to a password field to show or hide what you typed; the field starts hidden.</p>
+<p>Sign in with your <strong>email</strong> and the temporary password from your slip, or with <strong>Continue with Google</strong> if your Google account uses the same email. Before <strong>Sign in</strong> or <strong>Continue with Google</strong>, tick <strong>I have read and agree to the Privacy Policy</strong> (the link opens it); signing in needs it, and the date you agreed is saved with your account. Choose your own password on first sign-in. Use the eye button next to a password field to show or hide what you typed; the field starts hidden.</p>
 <p>Your <strong>Home</strong> page has:</p>
 <ul>
 <li>one-tap <strong>create</strong> tiles (Quiz, Assignment, Poll, Flashcards) that open straight at the title step;</li>
@@ -240,14 +210,7 @@
 <p>The participant list updates every few seconds while you have the page open. All the other settings (deadline, attempts, timers, warnings, scores) work exactly as for a class assignment.</p>
 <h2>5b. Live games (Kahoot-style)</h2>
 <p>A live game is played together, at the pace you set. <strong>Your screen (the projector) shows the question; students&#39; phones show only the coloured answers.</strong> Good for revision in class, labs, tech fests and club events.</p>
-<figure class="diagram"><pre class="mermaid">flowchart LR
-    A["Assign or host&lt;br/&gt;Live game"] --&gt; B["Lobby: code + QR&lt;br/&gt;players appear"]
-    B -- Start --&gt; C["Question on the big screen&lt;br/&gt;answers on phones"]
-    C -- "time up or all answered" --&gt; D["Answer revealed&lt;br/&gt;counts per option"]
-    D --&gt; E["Leaderboard"]
-    E -- Next --&gt; C
-    D -- Next --&gt; C
-    E -- "last question" --&gt; F["Podium&lt;br/&gt;results and CSV"]</pre></figure>
+<figure class="diagram"><picture><source srcset="/guides/diagrams/90c5cb66bdbf-dark.svg" media="(prefers-color-scheme: dark)" /><img src="/guides/diagrams/90c5cb66bdbf-light.svg" width="1656" height="143" loading="lazy" alt="Flow diagram: Assign or host, Live game; Lobby: code + QR, players appear; Question on the big screen, answers on phones; Start; Answer revealed, counts per option; time up or all answered; Leaderboard; Next; Podium, results and CSV; last question" /></picture></figure>
 <ol>
 <li>Open a quiz or poll, press <strong>Assign or host</strong>, choose <strong>Live game</strong>.</li>
 <li>Pick the <strong>Scoring</strong>:<ul>
@@ -298,8 +261,7 @@
 <li>For a room, put the QR code on the projector and press <strong>Stop new joins</strong> once everyone is in.</li>
 </ul>
 
+<footer><a href="/privacy">Privacy Policy</a> | <a href="mailto:osscdbit@gmail.com">osscdbit@gmail.com</a></footer>
 </main>
-<script src="/guides/vendor/mermaid.min.js"></script>
-<script src="/guides/diagrams.js"></script>
 </body>
 </html>

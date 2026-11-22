@@ -4,9 +4,9 @@ OpenQZ is tested at five layers. CI runs all of them on every pull request; a re
 
 | Layer | Tool | Where | Count (2026-11-08) |
 | --- | --- | --- | --- |
-| Backend unit + API | pytest, httpx | `backend/tests/` | 179 tests, 91% line coverage (CI gate: 85%), about 5 minutes |
-| Frontend unit | Vitest, Testing Library, happy-dom | `frontend/src/test/` | 35 tests |
-| Browser journeys | Playwright (desktop Chrome + Pixel 7) | `frontend/e2e/` | Run locally before every pull request; GitHub Actions runs them only by hand (Actions, CI, Run workflow). 46 tests in 13 spec files (20 journeys and feature checks, 8 security checks, 11 axe checks including dark mode, 3 guide tests, 4 screen-size tests) x 2 devices: 92 runs, 7 skipped by design (the screen-size tests and one live-game test run on the desktop project only; the security-headers check runs only against a production build). The password-reset journey also skips locally without Mailpit or email, but fails in CI. |
+| Backend unit + API | pytest, httpx | `backend/tests/` | 180 tests, 91% line coverage (CI gate: 85%), about 5 minutes |
+| Frontend unit | Vitest, Testing Library, happy-dom | `frontend/src/test/` | 36 tests |
+| Browser journeys | Playwright (desktop Chrome + Pixel 7) | `frontend/e2e/` | Run locally before every pull request; GitHub Actions runs them only by hand (Actions, CI, Run workflow). 49 tests in 13 spec files (20 journeys and feature checks, 10 security checks, 12 axe checks including dark mode, 3 guide tests, 4 screen-size tests) x 2 devices: 98 runs, 9 skipped by design (the screen-size tests and one live-game test run on the desktop project only; the security-headers and CSP checks run only against a production build). The password-reset journey also skips locally without Mailpit or email, but fails in CI. |
 | Accessibility | axe-core in Playwright (WCAG 2.1 AA) | `frontend/e2e/a11y.spec.ts` | landing page, login, student home, join page, create dialog with class picker, faculty library, faculty home (and its quick-create tile); in **dark mode** again: landing page, login, student home, join, faculty home, library, reports, an assignment report, the editor, and the admin dashboard, users, sections, imports and audit log |
 | Load | k6 | `tests/load/student-exam.js` | see [performance.md](performance.md) |
 | Security | OWASP ZAP baseline, pip-audit, pnpm audit | CI + `docs/reports/` | see [security.md](security.md) |
@@ -44,6 +44,7 @@ Browser journeys read `E2E_BASE_URL` (default `http://localhost:8088`), `E2E_ADM
 | `test_integrity.py` | integrity event ingest and listing |
 | `test_unblock.py` | unblock reopens only submit-closed answers, gives blocked time back, resets warnings, audit entry, report flags; refused for manual submits, newer attempts, students and other teachers |
 | `test_idor.py` | every route that takes an id, tried as the wrong person: another teacher, another student, students and clubs on staff routes, faculty on admin routes, a plain admin on super-admin powers, a live-game token on another game, missing and malformed ids; nothing changes |
+| `test_privacy.py` | sign-in needs the privacy tick (after the password check), saves when and which version with an audit row, no tick needed again, a new policy version asks again, admins see it |
 | `test_encryption.py` | emails and phones stored as ciphertext with keyed hashes, sign-in and search still work, uniqueness ignores case, tampering and a wrong key are detected, production needs `DATA_KEY`, masked failed sign-ins, import rows encrypted |
 | `test_images.py` | a phone photo becomes a small upright WebP without EXIF, small graphics and animations kept, giant or broken images refused, uploads store the small file, nginx hand-off header with `MEDIA_ACCEL`, `optimize-media` shrinks older images |
 | `test_room_removal.py` | the host takes a student out of a room (running attempt submitted, report keeps it, code refuses them), lets them back in (one attempt still one), only the host may, class assignments are not rooms |

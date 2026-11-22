@@ -24,7 +24,7 @@ flowchart LR
 
 ## 1. Sign in
 
-Sign in with your **email** and the temporary password from your slip, or with **Continue with Google** if your Google account uses the same email. Choose your own password on first sign-in. Use the eye button next to a password field to show or hide what you typed; the field starts hidden.
+Sign in with your **email** and the temporary password from your slip, or with **Continue with Google** if your Google account uses the same email. Before **Sign in** or **Continue with Google**, tick **I have read and agree to the Privacy Policy** (the link opens it); signing in needs it, and the date you agreed is saved with your account. Choose your own password on first sign-in. Use the eye button next to a password field to show or hide what you typed; the field starts hidden.
 
 Your **Home** page has:
 

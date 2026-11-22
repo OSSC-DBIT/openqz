@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.crypto import email_index, mask_email
+from app.core.privacy import PRIVACY_VERSION
 from app.core.security import (
     create_access_token,
     hash_password,
@@ -61,6 +62,24 @@ async def find_by_email(session: AsyncSession, email: str) -> User | None:
     """Emails are stored encrypted: look up by their keyed hash."""
     key = email_index(email)
     return await session.scalar(select(User).where(User.email_hash == key)) if key else None
+
+
+def record_privacy(session: AsyncSession, user: User, accepted: bool, ip: str) -> None:
+    """Sign-in needs agreement to the current privacy policy: given before, or ticked now.
+
+    Checked after the password (or Google identity) is verified, so it reveals nothing about
+    which emails have accounts."""
+    if user.privacy_version == PRIVACY_VERSION:
+        return
+    if not accepted:
+        raise AuthError(
+            "privacy_required", "Please read and agree to the privacy policy to sign in", 403
+        )
+    user.privacy_accepted_at = datetime.now(UTC)
+    user.privacy_version = PRIVACY_VERSION
+    audit.record(
+        session, "privacy_accepted", actor_id=user.id, meta={"version": PRIVACY_VERSION, "ip": ip}
+    )
 
 
 async def authenticate(session: AsyncSession, email: str, password: str, ip: str) -> User:

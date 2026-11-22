@@ -51,6 +51,12 @@ class User(UUIDPk, Timestamped, Base):
     # delete anything for good.
     is_superadmin: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Agreement to the privacy policy, ticked at sign-in (app/core/privacy.py): when, and which
+    # version. A newer policy version asks everyone again.
+    privacy_accepted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    privacy_version: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
     @validates("email")
     def _set_email(self, _key: str, value: str | None) -> str | None:
