@@ -89,6 +89,8 @@ test('host runs a live game; a student and a guest play on phones', async ({ bro
   const roster = host.getByRole('dialog', { name: 'Players' });
   await expect(roster.getByRole('button', { name: 'Remove Guest Ninja' })).toBeVisible();
   await expect(roster.getByRole('button', { name: 'Remove E2E student' })).toBeVisible();
+  // measure colours after the dialog has finished fading in
+  await roster.evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished)));
   await axe(host);
   await roster.getByRole('button', { name: 'Done' }).click();
 

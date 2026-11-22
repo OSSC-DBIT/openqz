@@ -8,6 +8,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
+from app.core.crypto import email_index
 from app.core.security import generate_temp_password, hash_password
 from app.models import (
     Department,
@@ -56,11 +57,10 @@ async def _db_checks(
         ).unique()
     }
     emails = {r["email"] for r in valid if r.get("email")}
+    hashes = {h for e in emails if (h := email_index(e))}
     email_owner = {
         (u.email or "").lower(): u.username
-        for u in (
-            await session.scalars(select(User).where(func.lower(User.email).in_(emails)))
-        ).unique()
+        for u in (await session.scalars(select(User).where(User.email_hash.in_(hashes)))).unique()
     }
     ok, errs = [], []
     for r in valid:

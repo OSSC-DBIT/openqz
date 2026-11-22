@@ -5,8 +5,9 @@ from typing import Any
 
 from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Index, Integer, String, func
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
+from app.core.crypto import Encrypted, email_index, phone_index
 from app.core.db import Base
 from app.models.base import Timestamped, UUIDPk, utcnow
 
@@ -25,9 +26,11 @@ class User(UUIDPk, Timestamped, Base):
 
     username: Mapped[str] = mapped_column(String(64), unique=True, index=True)
     full_name: Mapped[str] = mapped_column(String(200))
-    # Login identifier. Stored lower-case, unique. Nullable only for legacy rows: every
-    # write path (API, importer, CLI) requires it.
-    email: Mapped[str | None] = mapped_column(String(254), nullable=True)
+    # Login identifier, stored encrypted (app/core/crypto.py). Lower-case; unique through
+    # email_hash, which is what every lookup uses. Nullable only for legacy rows: every write path
+    # (API, importer, CLI) requires it.
+    email: Mapped[str | None] = mapped_column(Encrypted, nullable=True)
+    email_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     # Google account subject id, linked on first Google sign-in.
     google_sub: Mapped[str | None] = mapped_column(String(64), nullable=True, unique=True)
     role: Mapped[Role] = mapped_column(Enum(Role, name="user_role"), index=True)
@@ -35,7 +38,8 @@ class User(UUIDPk, Timestamped, Base):
         ForeignKey("departments.id", ondelete="SET NULL"), nullable=True, index=True
     )
     # Optional contact and role details, filled in by the admin.
-    phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    phone: Mapped[str | None] = mapped_column(Encrypted, nullable=True)  # encrypted
+    phone_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     designation: Mapped[str | None] = mapped_column(String(120), nullable=True)
     password_hash: Mapped[str] = mapped_column(String(255))
     must_change_password: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -47,6 +51,18 @@ class User(UUIDPk, Timestamped, Base):
     # delete anything for good.
     is_superadmin: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    @validates("email")
+    def _set_email(self, _key: str, value: str | None) -> str | None:
+        value = value.strip().lower() if value else None
+        self.email_hash = email_index(value)
+        return value
+
+    @validates("phone")
+    def _set_phone(self, _key: str, value: str | None) -> str | None:
+        value = value.strip() if value else None
+        self.phone_hash = phone_index(value)
+        return value
 
     department = relationship("Department", lazy="joined")
     # Every department the user belongs to. Faculty may have several (a maths teacher in CSE
@@ -85,8 +101,8 @@ class UserDepartment(Base):
 
 # Usernames are unique regardless of case (login is case-insensitive).
 Index("uq_users_username_upper", func.upper(User.username), unique=True)
-# Emails are the login id: unique regardless of case.
-Index("uq_users_email_lower", func.lower(User.email), unique=True)
+# Emails are the login id: unique regardless of case (the hash is of the lower-case address).
+Index("uq_users_email_hash", User.email_hash, unique=True)
 
 
 class RefreshToken(UUIDPk, Timestamped, Base):

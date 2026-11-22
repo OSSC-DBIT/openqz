@@ -61,6 +61,14 @@ class Settings(BaseSettings):
     github_token: str = ""
 
     media_dir: Path = Path("/data/media")
+    # Hand image files to nginx (X-Accel-Redirect to its internal /_media/ location) instead of
+    # streaming them from Python. Needs the media folder mounted in the web container.
+    media_accel: bool = False
+    # 32 random bytes, base64: encrypts emails, phone numbers and import sheets in the database
+    # (app/core/crypto.py). Required on staging and production; never change it once data exists.
+    data_key: str = ""
+    # Swagger at /api/docs and /api/openapi.json, development only and off unless asked for.
+    api_docs: bool = False
     max_upload_mb: int = 10
 
     @field_validator("cors_origins", "allowed_hosts", "google_allowed_domains", mode="before")
@@ -89,6 +97,11 @@ class Settings(BaseSettings):
                     )
             if "*" in self.allowed_hosts:
                 raise ValueError("ALLOWED_HOSTS must list the real hostnames, not *")
+            if not self.data_key:
+                raise ValueError(
+                    "DATA_KEY is required on staging and production (it encrypts personal "
+                    "details): openssl rand -base64 32"
+                )
         return self
 
     @property

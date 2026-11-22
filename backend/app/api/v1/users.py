@@ -8,7 +8,9 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from sqlalchemy.sql.elements import ColumnElement
 
+from app.core.crypto import email_index, normalize_phone, phone_index
 from app.core.deps import AdminUser, SessionDep, SuperAdminUser
 from app.core.security import generate_temp_password, hash_password
 from app.models import AuditLog, Role, Section, StudentSection, User, UserDepartment
@@ -110,15 +112,14 @@ async def list_users(
             StudentSection.section_id == section_id
         )
     if q:
+        # Emails and phones are encrypted: they match whole (keyed hash), names and IDs in part.
         like = f"%{q.strip()}%"
-        stmt = stmt.where(
-            or_(
-                User.username.ilike(like),
-                User.full_name.ilike(like),
-                User.email.ilike(like),
-                User.phone.ilike(like),
-            )
-        )
+        found: list[ColumnElement[bool]] = [User.username.ilike(like), User.full_name.ilike(like)]
+        if "@" in q and (eh := email_index(q)):
+            found.append(User.email_hash == eh)
+        if len(normalize_phone(q)) >= 10 and (ph := phone_index(q)):
+            found.append(User.phone_hash == ph)
+        stmt = stmt.where(or_(*found))
     total = await session.scalar(select(func.count()).select_from(stmt.subquery())) or 0
     users = list(
         (
@@ -302,9 +303,10 @@ async def audit_log(
         stmt = stmt.where(AuditLog.action == action)
     if q:
         like = f"%{q.strip()}%"
-        stmt = stmt.where(
-            or_(User.username.ilike(like), User.email.ilike(like), AuditLog.target.ilike(like))
-        )
+        found: list[ColumnElement[bool]] = [User.username.ilike(like), AuditLog.target.ilike(like)]
+        if "@" in q and (eh := email_index(q)):
+            found.append(User.email_hash == eh)
+        stmt = stmt.where(or_(*found))
     total = await session.scalar(select(func.count()).select_from(stmt.subquery())) or 0
     rows = (
         await session.execute(

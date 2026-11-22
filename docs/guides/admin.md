@@ -52,7 +52,7 @@ Re-importing the same sheet is safe: existing people are updated, nobody is dupl
 | Reset a password | **Users**, key icon. Gives a new temporary password; they must change it at next sign-in. |
 | Unlock an account | **Users**, lock icon (accounts lock for 15 minutes after 5 wrong passwords). |
 | Change someone's sign-in email | **Users**, pencil icon. Their old Google link is removed. |
-| Find people | Search by name, email, phone or ID; filter by role and by department (faculty appear under every department they belong to). |
+| Find people | Search by name or ID (any part), or by the **whole** email address or phone number (they are stored encrypted, so part of one does not match); filter by role and by department (faculty appear under every department they belong to). |
 | Delete a person for good | **Users**, bin icon. OpenQZ first shows what goes with them (their attempts; for a teacher, the activities they made and all student work on those). Type their ID and **your own password** to confirm. This cannot be undone: to keep the work, **Disable** instead. You cannot delete yourself or the last admin. |
 | Disable / enable an account | **Users**, **Disable**. Disabled people cannot sign in; their work is kept. |
 | Departments and sections | **Sections**. Sections belong to an academic year (for example 2026-27). |

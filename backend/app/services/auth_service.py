@@ -3,10 +3,11 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 from redis.asyncio import Redis
-from sqlalchemy import func, select, update
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
+from app.core.crypto import email_index, mask_email
 from app.core.security import (
     create_access_token,
     hash_password,
@@ -57,9 +58,9 @@ def normalize_email(email: str) -> str:
 
 
 async def find_by_email(session: AsyncSession, email: str) -> User | None:
-    return await session.scalar(
-        select(User).where(func.lower(User.email) == normalize_email(email))
-    )
+    """Emails are stored encrypted: look up by their keyed hash."""
+    key = email_index(email)
+    return await session.scalar(select(User).where(User.email_hash == key)) if key else None
 
 
 async def authenticate(session: AsyncSession, email: str, password: str, ip: str) -> User:
@@ -69,7 +70,8 @@ async def authenticate(session: AsyncSession, email: str, password: str, ip: str
 
     if user is None:
         verify_password(password, _DUMMY_HASH)
-        audit.record(session, "login_failed", target=normalize_email(email)[:64], meta={"ip": ip})
+        # masked: the log shows whose address was tried, not the whole address
+        audit.record(session, "login_failed", target=mask_email(email)[:64], meta={"ip": ip})
         await session.commit()
         raise AuthError("invalid_credentials", "Incorrect email or password")
 
@@ -114,7 +116,9 @@ async def google_login(session: AsyncSession, claims: dict[str, object], ip: str
 
     user = await find_by_email(session, email)
     if user is None:
-        audit.record(session, "google_login_unknown", target=email[:64], meta={"ip": ip})
+        audit.record(
+            session, "google_login_unknown", target=mask_email(email)[:64], meta={"ip": ip}
+        )
         await session.commit()
         raise AuthError(
             "google_no_account",
@@ -310,7 +314,7 @@ async def request_password_reset(
     user = await find_by_email(session, email)
     if user is None or not user.is_active:
         audit.record(
-            session, "password_reset_unknown", target=normalize_email(email)[:64], meta={"ip": ip}
+            session, "password_reset_unknown", target=mask_email(email)[:64], meta={"ip": ip}
         )
         await session.commit()
         return None

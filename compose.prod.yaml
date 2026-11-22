@@ -61,5 +61,8 @@ services:
   nginx:
     <<: *prod
     image: ${WEB_IMAGE:-ghcr.io/ossc-dbit/openqz-web:latest}
+    # the same media folder as the API, read-only: nginx sends image files (MEDIA_ACCEL)
+    volumes:
+      - ${MEDIA_HOST_DIR:-media}:/data/media:ro
     ports: !override
       - "127.0.0.1:${HTTP_PORT:-8081}:80"

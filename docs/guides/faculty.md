@@ -88,7 +88,7 @@ For each question:
 | **Type** | Multiple choice, True / False, Multi-select, Fill in the blanks, Justify your answer, Open ended. |
 | **Timer** | No timer, or 5 seconds to 10 minutes. For any other time choose **Custom...** in the list: a clock opens where you set minutes and seconds (5 seconds to 60 minutes). |
 | **Marks** | How many marks the question is worth. |
-| **Image** | Add an image to the question and to any answer tile (PNG, JPEG, GIF or WebP, up to 5 MB). |
+| **Image** | Add an image to the question and to any answer tile (PNG, JPEG, GIF or WebP, up to 10 MB). OpenQZ makes it small before saving it (a phone photo of a few MB becomes a few hundred KB), turns it the right way up and removes hidden photo data such as the location, so it loads fast on every student's phone. |
 | **Answer explanation** | Shown to students after they answer (if you allow it). |
 | **Tags** | Your own labels, for example `unit2, recursion`. |
 

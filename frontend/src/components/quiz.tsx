@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { api } from '../api/client';
 import type { ActivityKind, QuestionType } from '../api/types';
@@ -50,26 +51,26 @@ export function fmtClock(ms: number): string {
 export const TILE_COLORS = ['#2d6cdf', '#0d9488', '#d97706', '#e0336b', '#7c3aed', '#0891b2', '#c2410c', '#4d7c0f'];
 
 /** <img> for protected media: fetched with the auth header, shown as a blob URL. */
+/** Query key of an image: kept in the query cache (cleared when the signed-in user changes) and
+ * never refetched, because an image never changes (a new upload gets a new id). */
+export const mediaKey = (id: string) => ['media', id] as const;
+
 export function AuthImage({ id, className, alt = '' }: { id: string; className?: string; alt?: string }) {
+  const img = useQuery({
+    queryKey: mediaKey(id),
+    queryFn: async () => (await api<Response>(`/media/${id}`, { raw: true })).blob(),
+    staleTime: Infinity,
+    gcTime: 30 * 60_000,
+  });
   const [url, setUrl] = useState<string | null>(null);
   useEffect(() => {
-    let revoke: string | null = null;
-    let alive = true;
-    api<Response>(`/media/${id}`, { raw: true })
-      .then((r) => r.blob())
-      .then((b) => {
-        if (!alive) return;
-        revoke = URL.createObjectURL(b);
-        setUrl(revoke);
-      })
-      .catch(() => setUrl(null));
-    return () => {
-      alive = false;
-      if (revoke) URL.revokeObjectURL(revoke);
-    };
-  }, [id]);
+    if (!img.data) return;
+    const u = URL.createObjectURL(img.data);
+    setUrl(u);
+    return () => URL.revokeObjectURL(u);
+  }, [img.data]);
   if (!url) return <div className={`animate-pulse bg-line ${className ?? ''}`} style={{ minHeight: 80 }} />;
-  return <img src={url} alt={alt} className={className} draggable={false} />;
+  return <img src={url} alt={alt} className={className} draggable={false} decoding="async" />;
 }
 
 export async function uploadImage(file: File): Promise<string> {

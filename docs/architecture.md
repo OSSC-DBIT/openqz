@@ -27,6 +27,7 @@ flowchart TB
     worker --> db
     worker --> redis
     worker --> media
+    web -. "images (X-Accel-Redirect), read-only" .-> media
     worker --> smtp
     migrate --> db
 ```
@@ -78,7 +79,7 @@ erDiagram
 | `attempts` | student, frozen question snapshot, `deadline_at`, linear mode, late, violations, score, `needs_manual`, `unblocked_count` |
 | `attempt_answers` | response, timers, locked, `submit_locked`, auto and manual score, rubric scores, feedback |
 | `integrity_events` | user, attempt, session, kind, client time, meta |
-| `media` | uploaded images |
+| `media` | uploaded images: shrunk on upload to WebP, at most 1600 px, no EXIF (`services/images.py`); `GET /media/{id}` checks the user, then hands the file to the web nginx (`MEDIA_ACCEL`, internal `/_media/`), cached by browsers for a year (`immutable`) |
 
 - `users.email` is the login id: lower-case, unique (functional index on `lower(email)`). `users.username` is the USN or employee ID, unique case-insensitively, shown in lists and reports. `users.google_sub` pins the linked Google account.
 - Sections belong to an academic year (`2026-27`); a student has one section per year.
@@ -197,6 +198,7 @@ sequenceDiagram
 - `GET /join/{code}` returns a preview (title, host, question count, timer, deadline, open or not). `POST /join` adds the student as an `assignment_targets` row, after which everything (start, timers, violations, review, reports) is the normal assignment path.
 - The host can stop new joins (`accepting_joins = false`) or rotate the code (`POST /activity-assignments/{id}/new-code`); students already joined keep access.
 - Joining is rate-limited to 20 tries per minute per user, so codes cannot be guessed by brute force (10^6 codes).
+- **Personal details are encrypted at rest** (`app/core/crypto.py`): `users.email`, `users.phone` and `import_jobs.preview_rows` / `error_rows` use AES-256-GCM column types (`Encrypted`, `EncryptedJSON`, stored as `v1:<base64>`); `users.email_hash` (unique) and `users.phone_hash` are HMAC-SHA256 blind indexes kept up to date by model validators. Every lookup by email (sign-in, Google, reset, imports, CLI) goes through `email_hash`; SQL never compares `users.email`. Migration `0015` encrypted existing rows.
 - The host can take a student out (`POST /activity-assignments/{id}/room/players/{student}/remove`): their `assignment_targets` row goes, a `room_removals` row stops the code letting them back in (`room_removed`), and an attempt in progress is submitted with `submit_reason = removed`. `.../readmit` deletes the removal and adds the target again; a submitted attempt stays (one attempt per student). `GET .../room/players` lists joined and removed students.
 - Club organisers can only host rooms; they never see class lists.
 

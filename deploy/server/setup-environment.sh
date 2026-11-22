@@ -119,6 +119,9 @@ ENV_FILE=$ENV_FILE
 HTTP_PORT=$HTTP_PORT
 
 JWT_SECRET=$(random 96 64)
+# Encrypts emails and phone numbers in the database. Back it up apart from the database:
+# losing it loses every email and phone number. Never change it once data exists.
+DATA_KEY=$(openssl rand -base64 32)
 COOKIE_SECURE=true
 CORS_ORIGINS=https://$DOMAIN
 # 127.0.0.1 and localhost: the deploy health check on this machine.
@@ -178,6 +181,10 @@ else
   put_if_empty CORS_ORIGINS "https://$DOMAIN"
   put_if_empty ALLOWED_HOSTS "$DOMAIN,127.0.0.1,localhost,api,nginx"
   put_if_empty JWT_SECRET "$(random 96 64)"
+  if [ -z "$(get DATA_KEY)" ]; then
+    put DATA_KEY "$(openssl rand -base64 32)"
+    note "added DATA_KEY (encrypts emails and phones): back up $ENV_FILE apart from the database"
+  fi
   put_if_empty SMTP_HOST "$SMTP_HOST_DEFAULT"
   put_if_empty SMTP_PORT 587
   put_if_empty MEDIA_HOST_DIR "$MEDIA_DIR"

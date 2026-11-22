@@ -231,7 +231,9 @@ const queryClient: QueryClient = new QueryClient({
   // After anything is saved, every list on screen is asked again. Simpler and safer than
   // remembering which lists each save touches (an assigned activity must show up on the home
   // page, a started one must leave "pending", and so on).
-  mutationCache: new MutationCache({ onSuccess: () => void queryClient.invalidateQueries() }),
+  // (Images are left alone: they never change, and refetching them after every answer save would
+  // send them again.)
+  mutationCache: new MutationCache({ onSuccess: () => void queryClient.invalidateQueries({ predicate: (q) => q.queryKey[0] !== 'media' }) }),
   defaultOptions: {
     queries: {
       staleTime: 30_000,
