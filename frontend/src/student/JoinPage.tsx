@@ -5,7 +5,7 @@ import { Link, useNavigate, useParams } from 'react-router';
 import { api, ApiError } from '../api/client';
 import type { AttemptState, RoomPreview } from '../api/types';
 import { KindCover } from '../components/pieces';
-import { KIND_LABEL, fmtSeconds } from '../components/quiz';
+import { KIND_LABEL, fmtSeconds, fmtWhen } from '../components/quiz';
 import { Button } from '../components/ui';
 import { Logo } from '../layouts/AppShell';
 import { enterFullscreen } from './fullscreen';
@@ -57,7 +57,7 @@ export default function JoinPage() {
   const err = (preview.error || go.error) as Error | null;
 
   return (
-    <div className="flex min-h-dvh flex-col bg-gradient-to-br from-[#2a1a6e] via-[#46239e] to-[#7b3fe4] text-white">
+    <div className="flex min-h-dvh flex-col stage text-white">
       <header className="flex items-center justify-between px-4 py-3">
         <Link to="/student" className="flex items-center gap-1 text-sm text-white/80 hover:text-white">
           <ArrowLeft className="h-4 w-4" /> My activities
@@ -109,7 +109,7 @@ export default function JoinPage() {
                       <Clock className="h-4 w-4" aria-hidden /> {fmtSeconds(p.time_limit_seconds)} in total
                     </li>
                   )}
-                  {p.due_at && <li>Closes {new Date(p.due_at).toLocaleString()}</li>}
+                  {p.due_at && <li>Closes {fmtWhen(p.due_at)}</li>}
                 </ul>
                 {p.instructions && (
                   <div className="rounded-xl bg-brand-50 px-3 py-2 text-sm">
@@ -118,7 +118,7 @@ export default function JoinPage() {
                   </div>
                 )}
                 {p.window === 'not_started' ? (
-                  <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">Not started yet. It opens {new Date(p.start_at).toLocaleString()}.</p>
+                  <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">Not started yet. It opens {fmtWhen(p.start_at)}.</p>
                 ) : (
                   !p.open && !p.joined && <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">This room is not accepting players right now.</p>
                 )}

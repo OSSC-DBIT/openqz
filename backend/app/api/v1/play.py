@@ -3,9 +3,9 @@
 import uuid
 from datetime import datetime
 from decimal import Decimal
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Header, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -20,6 +20,7 @@ from app.models import (
     Attempt,
     AttemptStatus,
     Role,
+    RoomRemoval,
     SubmitReason,
     User,
 )
@@ -64,6 +65,35 @@ async def my_attempt(
     return att
 
 
+# The player sends one id per browser tab with every request (kept for the life of the tab,
+# so a reload keeps it). Two different ids at work on one attempt within this window means the
+# attempt is open in two places at once: a second tab, a second phone, or a friend's laptop.
+PlayerSession = Annotated[str | None, Header(alias="X-Player-Session", max_length=64)]
+SESSION_WINDOW_SECONDS = 120
+SECOND_DEVICE_EVERY_SECONDS = 60
+
+
+async def note_player_session(session: AsyncSession, att: Attempt, sid: str | None) -> None:
+    """Count one warning when the attempt is being worked on from a second tab or device.
+
+    Call it with the attempt row locked. Switching device after a pause longer than the window
+    (a dead battery, a borrowed phone) is not flagged."""
+    if not sid or att.status != AttemptStatus.in_progress:
+        return
+    from app.core.redis import get_redis
+
+    r = get_redis()
+    key = f"ps:{att.id}"
+    seen = await r.get(key)
+    if isinstance(seen, bytes):
+        seen = seen.decode()
+    await r.set(key, sid, ex=SESSION_WINDOW_SECONDS)
+    if seen and seen != sid:
+        # at most one warning a minute, however fast the two sides take turns
+        if await r.set(f"ps:flag:{att.id}", "1", nx=True, ex=SECOND_DEVICE_EVERY_SECONDS):
+            await svc.record_violation(session, att, "second_device", {"other": seen[:64]}, sid)
+
+
 def attempt_state(att: Attempt) -> dict[str, Any]:
     a = att.assignment
     answered = {str(x.question_id) for x in att.answers if x.response}
@@ -94,11 +124,11 @@ def attempt_state(att: Attempt) -> dict[str, Any]:
 async def my_activities(session: SessionDep, user: CurrentUser) -> dict[str, list[dict[str, Any]]]:
     _student(user)
     pending, completed = [], []
-    for a in await svc.assignments_for_student(session, user):
-        atts = [
-            await svc.refresh_expired(session, x)
-            for x in await svc.attempts_of(session, a.id, user.id)
-        ]
+    assignments = await svc.assignments_for_student(session, user)
+    # one query for every attempt on the page, not one per assignment
+    mine = await svc.attempts_by_assignment(session, [a.id for a in assignments], user.id)
+    for a in assignments:
+        atts = [await svc.refresh_expired(session, x) for x in mine[a.id]]
         done = [x for x in atts if x.status == AttemptStatus.submitted]
         running = next((x for x in atts if x.status == AttemptStatus.in_progress), None)
         w = svc.window(a)
@@ -170,9 +200,14 @@ async def state(attempt_id: uuid.UUID, session: SessionDep, user: CurrentUser) -
 
 @router.get("/attempts/{attempt_id}/questions/{index}")
 async def question(
-    attempt_id: uuid.UUID, index: int, session: SessionDep, user: CurrentUser
+    attempt_id: uuid.UUID,
+    index: int,
+    session: SessionDep,
+    user: CurrentUser,
+    player: PlayerSession = None,
 ) -> dict[str, Any]:
-    att = await my_attempt(session, attempt_id, user)
+    att = await my_attempt(session, attempt_id, user, lock=True)  # opening a question writes
+    await note_player_session(session, att, player)
     try:
         return await svc.open_question(session, att, index)
     except AttemptError as exc:
@@ -186,9 +221,15 @@ class AnswerIn(BaseModel):
 
 @router.put("/attempts/{attempt_id}/answers/{question_id}")
 async def answer(
-    attempt_id: uuid.UUID, question_id: str, body: AnswerIn, session: SessionDep, user: CurrentUser
+    attempt_id: uuid.UUID,
+    question_id: str,
+    body: AnswerIn,
+    session: SessionDep,
+    user: CurrentUser,
+    player: PlayerSession = None,
 ) -> dict[str, Any]:
     att = await my_attempt(session, attempt_id, user, lock=True)
+    await note_player_session(session, att, player)
     try:
         return await svc.save_answer(session, att, question_id, body.response, body.final)
     except AttemptError as exc:
@@ -219,7 +260,7 @@ async def violation(
 
 @router.get("/attempts/{attempt_id}/review")
 async def review(attempt_id: uuid.UUID, session: SessionDep, user: CurrentUser) -> dict[str, Any]:
-    att = await my_attempt(session, attempt_id, user)
+    att = await my_attempt(session, attempt_id, user, lock=True)  # may auto-submit
     await svc.expire_if_needed(session, att)
     if att.status != AttemptStatus.submitted:
         raise HTTPException(status.HTTP_409_CONFLICT, "Submit the attempt first")
@@ -290,6 +331,16 @@ async def join(body: JoinIn, session: SessionDep, user: CurrentUser) -> dict[str
     _student(user)
     await _join_rate_limit(user)
     a = await _room(session, body.code)
+    removed = await session.scalar(
+        select(RoomRemoval.id).where(
+            RoomRemoval.assignment_id == a.id, RoomRemoval.student_id == user.id
+        )
+    )
+    if removed is not None:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            detail={"code": "room_removed", "message": "The host removed you from this room"},
+        )
     if not await svc.is_target(session, a, user):
         if not a.accepting_joins:
             raise HTTPException(

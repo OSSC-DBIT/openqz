@@ -4,46 +4,16 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>OpenQZ faculty guide | OpenQZ</title>
-<style>
-  :root { --brand:#5b3fd6; --ink:#1d1b2c; --muted:#6b6880; --bg:#f6f5fb; --card:#fff; --line:#e6e4ef; }
-  @media (prefers-color-scheme: dark) { :root { --ink:#ecebf5; --muted:#a29fb8; --bg:#12111a; --card:#1c1a27; --line:#2c2a3a; } }
-  * { box-sizing: border-box; }
-  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.65 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
-  main { max-width:760px; margin:0 auto; padding:24px 16px 64px; }
-  header { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
-  header a { color:var(--brand); font-weight:700; text-decoration:none; }
-  h1 { font-size:1.9rem; line-height:1.2; } h2 { margin-top:2rem; border-bottom:1px solid var(--line); padding-bottom:.3rem; }
-  a { color:var(--brand); } code { background:var(--card); border:1px solid var(--line); border-radius:6px; padding:1px 5px; }
-  table { border-collapse:collapse; width:100%; display:block; overflow-x:auto; }
-  th, td { border:1px solid var(--line); padding:6px 10px; text-align:left; vertical-align:top; }
-  th { background:var(--card); }
-  blockquote { margin:1rem 0; padding:.6rem 1rem; border-left:4px solid var(--brand); background:var(--card); border-radius:8px; }
-  figure.diagram { margin:1.25rem 0; padding:12px; background:var(--card); border:1px solid var(--line); border-radius:12px; overflow-x:auto; }
-  pre.mermaid { margin:0; text-align:center; background:none; }
-</style>
+<link rel="stylesheet" href="/guides/guides.css" />
 </head>
 <body><main>
 <header><a href="/login">&larr; OpenQZ</a></header>
 <h1>OpenQZ faculty guide</h1>
 <p>Create quizzes, assignments, polls and flashcards for your classes, assign them, and see results and marks in one place.</p>
 <h2>At a glance</h2>
-<figure class="diagram"><pre class="mermaid">flowchart LR
-    A([Create]) --&gt; B[Pick the type&lt;br/&gt;quiz, assignment, poll, flashcards]
-    B --&gt; C[Pick classes&lt;br/&gt;branch, then semesters and sections]
-    C --&gt; D[Editor: add questions&lt;br/&gt;timer and marks per question]
-    D --&gt; E{Share how?}
-    E -- "Assign to classes" --&gt; F[Set window, rules,&lt;br/&gt;full screen, review]
-    E -- "Host a room" --&gt; G[Show the join code&lt;br/&gt;and QR in the lobby]
-    F --&gt; H[Students take it]
-    G --&gt; H
-    H --&gt; I[Report: marks obtained&lt;br/&gt;per student and question]
-    I --&gt; J[Mark written answers]
-    J --&gt; K[Release marks]
-    I --&gt; L[Unblock a student&lt;br/&gt;auto-submitted for leaving]
-    L --&gt; H
-    I --&gt; M[Export Excel or CSV]</pre></figure>
+<figure class="diagram"><picture><source srcset="/guides/diagrams/c84ee7fc53b9-dark.svg" media="(prefers-color-scheme: dark)" /><img src="/guides/diagrams/c84ee7fc53b9-light.svg" width="2475" height="295" loading="lazy" alt="Flow diagram: Create; Pick the type, quiz, assignment, poll, flashcards; Pick classes, branch, then semesters and sections; Editor: add questions, timer and marks per question; Share how?; Set window, rules,, full screen, review; Assign to classes; Show the join code, and QR in the lobby; Host a room; Students take it; Report: marks obtained, per student and question; Mark written answers; Release marks; Unblock a student, auto-submitted for leaving; Export Excel or CSV" /></picture></figure>
 <h2>1. Sign in</h2>
-<p>Sign in with your <strong>email</strong> and the temporary password from your slip, or with <strong>Continue with Google</strong> if your Google account uses the same email. Choose your own password on first sign-in. Use the eye button next to a password field to show or hide what you typed; the field starts hidden.</p>
+<p>Sign in with your <strong>email</strong> and the temporary password from your slip, or with <strong>Continue with Google</strong> if your Google account uses the same email. Before <strong>Sign in</strong> or <strong>Continue with Google</strong>, tick <strong>I have read and agree to the Privacy Policy</strong> (the link opens it); signing in needs it, and the date you agreed is saved with your account. Choose your own password on first sign-in. Use the eye button next to a password field to show or hide what you typed; the field starts hidden.</p>
 <p>Your <strong>Home</strong> page has:</p>
 <ul>
 <li>one-tap <strong>create</strong> tiles (Quiz, Assignment, Poll, Flashcards) that open straight at the title step;</li>
@@ -90,6 +60,35 @@
 <p>The editor fills the whole screen. The top bar has the title (click to rename), Draft / Published, <strong>Preview</strong> and <strong>Assign or host</strong>. The panel on the left shows the question count, total marks and classes (<strong>Edit classes</strong>), <strong>Duplicate</strong> and <strong>Delete</strong>, and <strong>Timer / marks for all</strong> (pick a timer and/or marks, then <strong>Update all questions</strong>).</p>
 <p>Every question is a card showing its type and answers. Change its <strong>timer</strong> and <strong>marks</strong> right on the card. <strong>Drag</strong> a card by its handle to reorder (or use the arrows), and use <strong>Edit</strong>, <strong>Duplicate</strong> or <strong>Delete</strong> on each card.</p>
 <p><strong>Add question</strong> opens the list of question types; pick one and the full-screen question editor opens. Press <strong>Save question</strong> to add it, or <strong>Cancel</strong> to discard.</p>
+<h3>Import questions</h3>
+<p><strong>Import</strong> (next to <strong>Add question</strong>) brings in a whole set at once. Pick where it comes from:</p>
+<table>
+<thead>
+<tr>
+<th>From</th>
+<th>How</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Google Form</strong></td>
+<td>Paste the form&#39;s link. The form must be open to <strong>anyone with the link</strong> (in Google Forms: Settings, Responses, turn off the sign-in limit). Multiple choice, dropdown, checkbox, scale, short answer and paragraph questions come across.</td>
+</tr>
+<tr>
+<td><strong>Spreadsheet</strong></td>
+<td>Upload a <code>.csv</code> or <code>.xlsx</code> with one question per row. Columns: <strong>Question</strong> (required), Type, Option A to Option J, Correct, Marks, Time, Explanation. <strong>Download a sample sheet</strong> shows the layout. In <strong>Correct</strong> write the letter (<code>B</code>), several letters (<code>A, C</code>), <code>TRUE</code> / <code>FALSE</code>, or the accepted answers of a blank (`colour</td>
+</tr>
+<tr>
+<td><strong>Paste text</strong></td>
+<td>Type or paste questions with an empty line between them. Put a star before the correct option (<code>*B) Paris</code>) or add a line <code>Answer: B</code>.</td>
+</tr>
+</tbody></table>
+<p>Press <strong>Read questions</strong>. The review screen lists every question with its coloured answer tiles:</p>
+<ul>
+<li><strong>Tap a tile to mark it correct.</strong> Google does not share a form&#39;s answer key, so questions from a form always wait for this step. A question shows <strong>Ready</strong> when it has what it needs.</li>
+<li><strong>Untick</strong> a question to leave it out. <strong>Left out</strong> at the bottom lists what could not be read, and why (for example grid questions).</li>
+<li><strong>Add N questions</strong> puts all the ready ones at the end of your activity. You can then edit, time and mark them like any other question.</li>
+</ul>
+<p>Importing reads the questions as they are: nothing is written or changed for you.</p>
 <p>For each question:</p>
 <table>
 <thead>
@@ -112,7 +111,7 @@
 </tr>
 <tr>
 <td><strong>Image</strong></td>
-<td>Add an image to the question and to any answer tile (PNG, JPEG, GIF or WebP, up to 5 MB).</td>
+<td>Add an image to the question and to any answer tile (PNG, JPEG, GIF or WebP, up to 10 MB). OpenQZ makes it small before saving it (a phone photo of a few MB becomes a few hundred KB), turns it the right way up and removes hidden photo data such as the location, so it loads fast on every student&#39;s phone.</td>
 </tr>
 <tr>
 <td><strong>Answer explanation</strong></td>
@@ -206,18 +205,12 @@
 <li><strong>New code</strong>: the old code stops working (use it if the code leaked); students who joined keep access,</li>
 <li>a live count: <em>joined</em>, <em>finished</em>, and whether the room is open,</li>
 <li><strong>Present</strong>: a full-screen lobby for the projector with the address, the big code, the QR code and the names of players as they join (Esc or <strong>Close</strong> to leave).</li>
+<li><strong>Players</strong>: everyone who joined, with <em>not started</em>, <em>answering</em> or <em>finished</em>. <strong>Remove</strong> takes a student out: the room leaves their list and the code no longer lets them back in. If they are answering, what they have answered so far is submitted (the report shows it). <strong>Let back in</strong> undoes it; one attempt is still one attempt.</li>
 </ul>
 <p>The participant list updates every few seconds while you have the page open. All the other settings (deadline, attempts, timers, warnings, scores) work exactly as for a class assignment.</p>
 <h2>5b. Live games (Kahoot-style)</h2>
 <p>A live game is played together, at the pace you set. <strong>Your screen (the projector) shows the question; students&#39; phones show only the coloured answers.</strong> Good for revision in class, labs, tech fests and club events.</p>
-<figure class="diagram"><pre class="mermaid">flowchart LR
-    A["Assign or host&lt;br/&gt;Live game"] --&gt; B["Lobby: code + QR&lt;br/&gt;players appear"]
-    B -- Start --&gt; C["Question on the big screen&lt;br/&gt;answers on phones"]
-    C -- "time up or all answered" --&gt; D["Answer revealed&lt;br/&gt;counts per option"]
-    D --&gt; E["Leaderboard"]
-    E -- Next --&gt; C
-    D -- Next --&gt; C
-    E -- "last question" --&gt; F["Podium&lt;br/&gt;results and CSV"]</pre></figure>
+<figure class="diagram"><picture><source srcset="/guides/diagrams/90c5cb66bdbf-dark.svg" media="(prefers-color-scheme: dark)" /><img src="/guides/diagrams/90c5cb66bdbf-light.svg" width="1656" height="143" loading="lazy" alt="Flow diagram: Assign or host, Live game; Lobby: code + QR, players appear; Question on the big screen, answers on phones; Start; Answer revealed, counts per option; time up or all answered; Leaderboard; Next; Podium, results and CSV; last question" /></picture></figure>
 <ol>
 <li>Open a quiz or poll, press <strong>Assign or host</strong>, choose <strong>Live game</strong>.</li>
 <li>Pick the <strong>Scoring</strong>:<ul>
@@ -227,8 +220,8 @@
 </ul>
 </li>
 <li><strong>Let guests join with a nickname</strong>: tick it for open events (no account needed). Leave it off for class games, so only signed-in students with real names can play. Nicknames are checked for rude words and must be unique in the game.</li>
-<li>Press <strong>Start live game</strong>. The lobby shows <code>.../live</code>, the 6-digit code and a QR code. Players appear as they join; click a name to remove someone. <strong>Stop new joins</strong> closes the door.</li>
-<li>Press <strong>Start</strong>. Each question gets a 3-second &quot;get ready&quot;, then its timer (the question&#39;s own timer, or 20 seconds). The answer is shown automatically when time is up or everyone has answered; <strong>Show answer</strong> ends it early.</li>
+<li>Press <strong>Start live game</strong>. The lobby shows <code>.../live</code>, the 6-digit code and a QR code. Players appear as they join; click a name to remove someone. <strong>Stop new joins</strong> closes the door. A removed student cannot join again; a guest could come back with a new nickname, so stop new joins first if that matters.</li>
+<li>Press <strong>Start</strong>. Each question gets a 3-second &quot;get ready&quot;, then its timer (the question&#39;s own timer, or 20 seconds). The answer is shown automatically when time is up or everyone has answered; <strong>Show answer</strong> ends it early. During the game, <strong>Players</strong> (top right) lists everyone, removes a player at any time and stops or allows new joins.</li>
 <li>After each question: <strong>Leaderboard</strong> (top 5) or straight to <strong>Next</strong>. After the last one, <strong>Finish</strong> shows the podium.</li>
 <li><strong>View results</strong> (also under <strong>Reports, Live games</strong>): every player&#39;s rank, points, <strong>marks obtained</strong>, correct answers, per-question stats and a CSV export.</li>
 </ol>
@@ -268,8 +261,7 @@
 <li>For a room, put the QR code on the projector and press <strong>Stop new joins</strong> once everyone is in.</li>
 </ul>
 
+<footer><a href="/privacy">Privacy Policy</a> | <a href="mailto:osscdbit@gmail.com">osscdbit@gmail.com</a></footer>
 </main>
-<script src="/guides/vendor/mermaid.min.js"></script>
-<script src="/guides/diagrams.js"></script>
 </body>
 </html>

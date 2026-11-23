@@ -1,0 +1,260 @@
+{
+  "voice": "en-IN-NeerjaExpressiveNeural",
+  "rate": "+0%",
+  "chapters": {
+    "admin": {
+      "step": "Step 1",
+      "title": "The super admin sets up the college",
+      "who": "Super admin",
+      "device": "Desktop"
+    },
+    "faculty": {
+      "step": "Step 2",
+      "title": "A teacher builds a quiz and assigns it",
+      "who": "Faculty",
+      "device": "Desktop"
+    },
+    "student": {
+      "step": "Step 3",
+      "title": "A student answers on their phone",
+      "who": "Student",
+      "device": "Phone"
+    },
+    "marks": {
+      "step": "Step 4",
+      "title": "Marking and releasing marks",
+      "who": "Faculty and student",
+      "device": "Desktop and phone"
+    },
+    "live": {
+      "step": "Step 5",
+      "title": "A club runs a live game",
+      "who": "Club",
+      "device": "Big screen and phones"
+    },
+    "room": {
+      "step": "Step 6",
+      "title": "A room: everyone at their own pace",
+      "who": "Club",
+      "device": "Desktop and phone"
+    }
+  },
+  "lines": {
+    "intro": {
+      "do": "OpenQZ",
+      "text": "This is OpenQZ, the quiz and assignment platform of Don Bosco Institute of Technology, built by OSSC. Let's follow one class from setup to marks, and then a club running a live game."
+    },
+    "admin.chapter": {
+      "do": "Step 1",
+      "text": "Step one. The super admin sets up the college."
+    },
+    "admin.signin": {
+      "do": "Sign in as the super admin",
+      "text": "We start as the super admin, signing in with the college email and password."
+    },
+    "admin.dashboard": {
+      "do": "The admin dashboard",
+      "text": "The dashboard shows students, faculty, sections and recent activity at a glance."
+    },
+    "admin.section": {
+      "do": "Add a section",
+      "text": "First, a class. Under Sections, pick the department and the semester, name the section, and add it."
+    },
+    "admin.subject": {
+      "do": "Add a subject",
+      "text": "Next, the subject this class studies: Data Structures."
+    },
+    "admin.faculty": {
+      "do": "Add a teacher",
+      "text": "Now the people. Add user, choose the role Faculty, and fill in the name, the email and the department."
+    },
+    "admin.temp": {
+      "do": "A temporary password",
+      "text": "OpenQZ makes a temporary password. The teacher sets their own at the first sign in."
+    },
+    "admin.club": {
+      "do": "Add a club organiser",
+      "text": "A club organiser is added the same way, with the role Club. Clubs host rooms and live games for events, not class work."
+    },
+    "admin.student": {
+      "do": "Add a student",
+      "text": "A student gets a department and a section, so class assignments reach them."
+    },
+    "admin.more": {
+      "do": "The whole class",
+      "text": "The rest of the class is added the same way, or imported in one go from the office spreadsheet."
+    },
+    "admin.map": {
+      "do": "Map the teacher to the class",
+      "text": "Finally, faculty mapping: Doctor Ananya Rao teaches Data Structures to C S E, semester three, section A. Teachers only ever see the sections mapped to them."
+    },
+    "admin.done": {
+      "do": "The class is ready",
+      "text": "The class is ready. Now let's sign in as the teacher."
+    },
+    "faculty.chapter": {
+      "do": "Step 2",
+      "text": "Step two. A teacher builds a quiz and assigns it."
+    },
+    "faculty.first": {
+      "do": "First sign in",
+      "text": "Doctor Rao signs in with the temporary password, and OpenQZ asks for a new one straight away."
+    },
+    "faculty.home": {
+      "do": "The faculty home",
+      "text": "This is the faculty home. Creating a quiz takes one click."
+    },
+    "faculty.create": {
+      "do": "Name it and pick the class",
+      "text": "Give it a title, then pick the branch and the section. Only Doctor Rao's own sections are listed."
+    },
+    "faculty.editor": {
+      "do": "The question editor",
+      "text": "This is the editor. Add question, and choose from six question types."
+    },
+    "faculty.mcq": {
+      "do": "A multiple choice question",
+      "text": "A multiple choice question: type the question and the options, then mark the correct one."
+    },
+    "faculty.tf": {
+      "do": "A true or false question",
+      "text": "A true or false question takes one tap to set the answer."
+    },
+    "faculty.open": {
+      "do": "An open ended question with a rubric",
+      "text": "And an open ended question with a rubric, so written answers are marked fairly, criterion by criterion."
+    },
+    "faculty.assign": {
+      "do": "Assign it to the section",
+      "text": "Assign or host. The class is already selected. Set the deadline, the timer and full screen, and keep the marks hidden until the written answers are checked."
+    },
+    "faculty.report": {
+      "do": "The live report",
+      "text": "Assigned. The report fills in live as students submit."
+    },
+    "student.chapter": {
+      "do": "Step 3",
+      "text": "Step three. A student answers on their phone."
+    },
+    "student.first": {
+      "do": "First sign in on a phone",
+      "text": "Rahul opens OpenQZ on his phone and signs in for the first time."
+    },
+    "student.home": {
+      "do": "What is due",
+      "text": "His home screen lists what is due. The new quiz is right there, so he starts it."
+    },
+    "student.q1": {
+      "do": "One question at a time",
+      "text": "One question at a time, on big coloured tiles. The timer is kept by the server, not the phone."
+    },
+    "student.feedback": {
+      "do": "Instant feedback",
+      "text": "Instant feedback, when the teacher allows it."
+    },
+    "student.warn": {
+      "do": "Leaving the quiz is noticed",
+      "text": "If he switches to another app, OpenQZ notices. He gets a warning, the teacher sees it, and too many warnings submit the quiz."
+    },
+    "student.open": {
+      "do": "A written answer",
+      "text": "Written answers are saved as he types."
+    },
+    "student.submit": {
+      "do": "Submit",
+      "text": "Submit asks for a final confirmation, and it is done. The written answer goes to the teacher for marking."
+    },
+    "marks.chapter": {
+      "do": "Step 4",
+      "text": "Step four. Marking, and releasing the marks."
+    },
+    "marks.report": {
+      "do": "The report",
+      "text": "Back on the teacher's laptop, the report shows who has submitted, with the class average."
+    },
+    "marks.grade": {
+      "do": "Mark the written answers",
+      "text": "Grading lists each written answer with its rubric. Give marks for each criterion and a short note."
+    },
+    "marks.participants": {
+      "do": "Every student's marks",
+      "text": "Participants shows the marks obtained, the accuracy and any warnings, for every student."
+    },
+    "marks.release": {
+      "do": "Release marks and export",
+      "text": "Release marks, and students can see them. Export to Excel for the department records."
+    },
+    "marks.student": {
+      "do": "The student sees the marks",
+      "text": "On Rahul's phone, the marks are in, with the teacher's note on his answer."
+    },
+    "live.chapter": {
+      "do": "Step 5",
+      "text": "Step five. A club runs a live game, Kahoot style."
+    },
+    "live.first": {
+      "do": "The club organiser signs in",
+      "text": "Now the Tech Club. The organiser signs in on a laptop."
+    },
+    "live.create": {
+      "do": "A quiz with no classes",
+      "text": "Clubs create without picking classes. Anyone with the join code can take part."
+    },
+    "live.questions": {
+      "do": "Add the questions",
+      "text": "Add a few quick questions for the event."
+    },
+    "live.share": {
+      "do": "Start a live game",
+      "text": "Assign or host, then Live game. Rank players by marks with a speed bonus, and let guests join with just a nickname."
+    },
+    "live.lobby": {
+      "do": "The lobby on the big screen",
+      "text": "The big screen shows the join code and a QR code. Players appear as they join."
+    },
+    "live.join": {
+      "do": "Players join on phones",
+      "text": "A student types the code on her phone, and a guest joins with only a nickname, no account needed."
+    },
+    "live.question": {
+      "do": "Question on the big screen",
+      "text": "The host starts. The question is on the big screen, while phones show only the coloured answer tiles."
+    },
+    "live.reveal": {
+      "do": "The reveal",
+      "text": "Everyone has answered, so the screen reveals the right answer, and each phone shows how they did."
+    },
+    "live.board": {
+      "do": "The leaderboard",
+      "text": "The leaderboard comes up after every question."
+    },
+    "live.next": {
+      "do": "The next question",
+      "text": "On to the next question."
+    },
+    "live.podium": {
+      "do": "The podium",
+      "text": "And the podium at the end. The results are saved, with marks obtained for every player."
+    },
+    "room.chapter": {
+      "do": "Step 6",
+      "text": "Step six. A room, where everyone plays at their own pace."
+    },
+    "room.host": {
+      "do": "Host a room",
+      "text": "For a self paced round, host a room instead. One join code, and every player goes at their own speed."
+    },
+    "room.join": {
+      "do": "Join with the code",
+      "text": "A student joins with the code on her phone, and plays straight through."
+    },
+    "room.track": {
+      "do": "Who joined and who finished",
+      "text": "The host sees who joined and who finished, and can stop new joins at any time."
+    },
+    "outro": {
+      "do": "That is OpenQZ",
+      "text": "That is OpenQZ. Set up the college, build, assign, play, mark and release. Built by the Open Source Students Club at D B I T."
+    }
+  }
+}

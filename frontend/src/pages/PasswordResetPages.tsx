@@ -10,12 +10,12 @@ import { passwordProblem } from './ChangePasswordPage';
 
 function Frame({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="grid min-h-dvh place-items-center bg-gradient-to-br from-brand-50 via-surface to-surface px-4">
+    <div className="grid min-h-dvh place-items-center paper px-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 flex justify-center">
           <Logo />
         </div>
-        <div className="space-y-4 rounded-2xl border border-line bg-card p-6 shadow-sm">
+        <div className="space-y-4 sticker rounded-xl bg-card p-6">
           <h1 className="text-xl font-bold">{title}</h1>
           {children}
         </div>

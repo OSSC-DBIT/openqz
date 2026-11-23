@@ -4,6 +4,8 @@ import { login, ok, PW, seedClass } from './helpers';
 
 /** Live (Kahoot-style) game: host screen shows the question, phones show only the answers. */
 async function axe(page: Page) {
+  // settled page only (see a11y.spec.ts)
+  await page.evaluate(() => Promise.all(document.getAnimations().filter((x) => x.effect?.getComputedTiming().iterations !== Infinity).map((x) => x.finished.catch(() => undefined))));
   const r = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
   const serious = r.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
   expect(serious.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
@@ -13,7 +15,7 @@ test('host runs a live game; a student and a guest play on phones', async ({ bro
   test.skip(info.project.name !== 'desktop', 'one run: it drives three browsers itself');
   test.setTimeout(180_000);
   const c = await seedClass(request);
-  const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { email: c.facEmail, password: PW } }));
+  const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { privacy_accepted: true, email: c.facEmail, password: PW } }));
   const H = { Authorization: `Bearer ${t.access_token}` };
   const act = await ok<{ id: string }>(await request.post('/api/v1/activities', { headers: H, data: { title: 'Live fest round', kind: 'quiz', section_ids: [c.sectionId] } }));
   for (const [stem, right, wrong] of [
@@ -33,7 +35,7 @@ test('host runs a live game; a student and a guest play on phones', async ({ bro
   await host.goto(`/faculty/activities/${act.id}`);
   await host.getByRole('button', { name: 'Assign or host' }).click();
   await host.getByRole('radio', { name: /Live game/ }).click();
-  await host.getByLabel('Scoring').selectOption('marks_speed');
+  await host.getByLabel('How players are ranked').selectOption('marks_speed');
   await host.getByLabel(/Let guests join/).check();
   await host.getByRole('button', { name: 'Start live game' }).click();
   const codeEl = host.getByLabel(/^Join code /);
@@ -83,6 +85,16 @@ test('host runs a live game; a student and a guest play on phones', async ({ bro
   await expect(host.getByRole('heading', { name: 'Leaderboard' })).toBeVisible();
   await expect(host.getByRole('listitem').first()).toContainText('E2E student');
   await expect(stu.getByText('1st')).toBeVisible();
+
+  // ---- the host can see and manage players mid-game
+  await host.getByRole('button', { name: /^Players \(2\)$/ }).click();
+  const roster = host.getByRole('dialog', { name: 'Players' });
+  await expect(roster.getByRole('button', { name: 'Remove Guest Ninja' })).toBeVisible();
+  await expect(roster.getByRole('button', { name: 'Remove E2E student' })).toBeVisible();
+  // measure colours after the dialog has finished fading in
+  await roster.evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished)));
+  await axe(host);
+  await roster.getByRole('button', { name: 'Done' }).click();
 
   // ---- question 2, then the podium
   await host.getByRole('button', { name: 'Next question' }).click();

@@ -3,7 +3,7 @@ import { Download, FileSpreadsheet } from 'lucide-react';
 import { useState } from 'react';
 import { api, downloadFile } from '../../api/client';
 import type { AdminStats, Department } from '../../api/types';
-import { Badge, Button, Card, EmptyState, ErrorText, Field, Input, PageHeader, Select, Spinner, Table, Td } from '../../components/ui';
+import { Badge, Button, Card, EmptyState, ErrorText, Field, Input, Loading, PageHeader, Select, Table, Td } from '../../components/ui';
 
 const pct = (v: number | null) => (v === null ? '-' : `${v}%`);
 
@@ -31,6 +31,9 @@ function Meter({ value }: { value: number | null }) {
 }
 
 /** Admin: numbers for the whole college, per department and per teacher, with export. */
+/** Ten and eleven columns: tighter cells, so the table fits its box with wider system fonts too. */
+const DENSE = '[&_td]:!px-2 [&_th]:!px-2';
+
 export default function StatsPage() {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
@@ -102,7 +105,7 @@ export default function StatsPage() {
       <ErrorText error={stats.error || exportFile.error} />
 
       {!s || !t ? (
-        stats.isLoading && <Spinner />
+        stats.isLoading && <Loading kind="page" />
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -121,6 +124,7 @@ export default function StatsPage() {
           {s.departments.length === 0 ? (
             <EmptyState title="No departments yet" />
           ) : (
+            <div className={DENSE}>
             <Table
               compact
               head={['Department', 'Students', 'Faculty', 'Sections', 'Activities', 'Assignments', 'Assigned', 'Submitted', 'Completion', 'Average marks']}
@@ -150,6 +154,7 @@ export default function StatsPage() {
                 </tr>
               ))}
             </Table>
+            </div>
           )}
 
           <h2 className="mb-2 mt-8 text-lg font-bold">By teacher and organiser</h2>
@@ -157,6 +162,7 @@ export default function StatsPage() {
           {s.faculty.length === 0 ? (
             <EmptyState title="No faculty or club organisers here yet" />
           ) : (
+            <div className={DENSE}>
             <Table
               compact
               head={['Name', 'Departments', 'Classes', 'Activities', 'Assignments', 'Rooms', 'Live', 'Submitted', 'Completion', 'Average marks', 'To grade']}
@@ -193,6 +199,7 @@ export default function StatsPage() {
                 </tr>
               ))}
             </Table>
+            </div>
           )}
         </>
       )}

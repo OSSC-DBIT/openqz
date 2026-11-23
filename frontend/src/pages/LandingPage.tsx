@@ -1,231 +1,233 @@
-import {
-  ArrowRight,
-  BarChart3,
-  BookOpen,
-  Clock,
-  Compass,
-  GraduationCap,
-  KeyRound,
-  LayoutGrid,
-  LogIn,
-  Maximize2,
-  Menu,
-  RotateCcw,
-  Shield,
-  ShieldCheck,
-  Smartphone,
-  UploadCloud,
-  Users,
-  X,
-  Zap,
-  type LucideIcon,
-} from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router';
+import { useQuery } from '@tanstack/react-query';
+import { ArrowRight, Clock, Compass, GraduationCap, Volume2, VolumeX, KeyRound, LayoutGrid, Maximize2, Menu, Play, RotateCcw, Shield, ShieldCheck, Smartphone, UploadCloud, X, type LucideIcon } from 'lucide-react';
+import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type ReactNode } from 'react';
+import { Link, useNavigate } from 'react-router';
+import { api } from '../api/client';
 import { cx } from '../components/ui';
-import './landing.css';
+import { Logo } from '../layouts/AppShell';
 
-/* =========================================================
-   Static Data
-   ========================================================= */
+/* The public front page, laid out the way Wayground lays out its own: a plum header and hero
+   with a centred headline and the product video, then cream sections. OpenQZ's own words,
+   logo and features. Sections fade in as they are reached ("reduce motion" turns that off). */
 
-const heroFeatures: { icon: LucideIcon; title: string }[] = [
-  { icon: Zap, title: 'Interactive Quizzes' },
-  { icon: ShieldCheck, title: 'Secure Examinations' },
-  { icon: BarChart3, title: 'Live Analytics' },
-  { icon: Users, title: 'Built for Institutions' },
+const CREAM = 'text-[#f3efda]';
+
+const steps = [
+  { title: 'The college', body: 'imports students and faculty, and everyone signs in with their college email or Google.' },
+  { title: 'A teacher or club', body: 'builds a quiz, assignment, poll or flashcards, then assigns it to sections or hosts a room with a 6-digit code.' },
+  { title: 'Every student', body: 'takes it on a phone or laptop, one question at a time, on a server-kept timer.' },
+  { title: 'Marks and reports', body: 'are ready at once: marks obtained, a marking queue, a participant tracker, Excel and CSV.' },
 ];
 
-const howItWorksSteps = [
-  {
-    number: '01',
-    title: 'Import and Access',
-    body: 'The college imports students and faculty, and everyone signs in with their college email or Google.',
-  },
-  {
-    number: '02',
-    title: 'Create and Assign',
-    body: 'Faculty build a quiz, assignment, poll or flashcards, pick branch, semesters and sections, then assign it or host a room with a 6-digit code.',
-  },
-  {
-    number: '03',
-    title: 'Attempt and Review',
-    body: 'Students take it on their phone or laptop, one question at a time, and see their marks obtained.',
-  },
+const numbers = [
+  { value: '10', label: 'developers' },
+  { value: '50+', label: 'hours of building' },
+  { value: '6', label: 'question types' },
+  { value: '100%', label: 'open source' },
 ];
 
-const roleCards = [
-  {
-    role: 'For students',
-    icon: GraduationCap,
-    description:
-      'Join with a code, link or QR, timed one-question-at-a-time player, instant feedback when allowed, review marks.',
-    guideUrl: '/guides/student.html',
-    guideLabel: 'Read the student guide',
-  },
-  {
-    role: 'For faculty',
-    icon: LayoutGrid,
-    description:
-      '6 question types, rubrics, marking queue, overview grid, Excel and CSV export, unblock.',
-    guideUrl: '/guides/faculty.html',
-    guideLabel: 'Read the faculty guide',
-  },
-  {
-    role: 'For admins and clubs',
-    icon: Shield,
-    description:
-      'Import sheets, accounts, audit and integrity logs; clubs host rooms for events.',
-    guideUrl: '/guides/admin.html',
-    guideLabel: 'Read the admin guide',
-  },
+const features: { title: string; body: string; points: string[] }[] = [
+  { title: 'One activity, many ways to run it', body: 'Assign it to your sections with a deadline, open it as a room with a join code, or run it as a live game on the projector.', points: ['Quiz, assignment, poll, flashcards', 'Six question types with rubrics', 'Import from Google Forms or a sheet'] },
+  { title: 'Marks you can trust', body: 'One attempt per student, timers kept by the server and answer keys that never leave it early.', points: ['Leaving the quiz is counted', 'Full screen when you ask for it', 'Unblock a student in one click'] },
 ];
 
-const integrityList = [
-  {
-    title: 'Full screen required',
-    desc: 'The player requires full-screen mode per assignment before questions appear.',
-    icon: Maximize2,
-  },
-  {
-    title: 'Integrity monitoring',
-    desc: 'Tab or app switches, Back and reloads are counted by the server with auto-submit at the teacher limit.',
-    icon: ShieldCheck,
-  },
-  {
-    title: 'Server-enforced timers',
-    desc: 'Deadlines and question timers are calculated on the server with a network grace window.',
-    icon: Clock,
-  },
-  {
-    title: 'Single attempt rule',
-    desc: 'One attempt per student guarantees fair assessment and clean marks distribution.',
-    icon: RotateCcw,
-  },
-  {
-    title: 'Protected answer keys',
-    desc: 'Answer keys and rubrics are kept on the server and never sent early to students.',
-    icon: KeyRound,
-  },
+const roles: { role: string; icon: LucideIcon; description: string; guideUrl: string; guideLabel: string }[] = [
+  { role: 'For students', icon: GraduationCap, description: 'Join with a code, link or QR. A timed player shows one question at a time, with instant feedback when the teacher allows it, and a review of your marks.', guideUrl: '/guides/student.html', guideLabel: 'Read the student guide' },
+  { role: 'For faculty', icon: LayoutGrid, description: 'Six question types, rubrics, a marking queue, an overview grid, Excel and CSV export, import from Google Forms, and a tracker of every participant.', guideUrl: '/guides/faculty.html', guideLabel: 'Read the faculty guide' },
+  { role: 'For admins and clubs', icon: Shield, description: 'Import office sheets, manage accounts, read the audit and integrity logs. Clubs host rooms and live games for events and track who took part.', guideUrl: '/guides/admin.html', guideLabel: 'Read the admin guide' },
 ];
 
-const collegePillars = [
-  {
-    title: 'Branches, semesters and sections',
-    desc: 'Faculty pick classes they teach across departments with granular section assignment.',
-    icon: Compass,
-  },
-  {
-    title: 'Imports from office sheets',
-    desc: 'Admins import students, faculty and subject mappings directly from CSV or Excel spreadsheets.',
-    icon: UploadCloud,
-  },
-  {
-    title: 'Installable on phones (PWA)',
-    desc: 'Students can install OpenQZ as a lightweight progressive web app on Android, iOS or laptop.',
-    icon: Smartphone,
-  },
+const fair: { title: string; desc: string; icon: LucideIcon }[] = [
+  { title: 'Full screen required', desc: 'Questions stay hidden until the student is in full screen, when the teacher asks for it.', icon: Maximize2 },
+  { title: 'Leaving is counted', desc: 'Tab or app switches, Back, reloads and a second device are counted by the server, with auto-submit at the teacher limit.', icon: ShieldCheck },
+  { title: 'Timers run on the server', desc: 'Deadlines and question timers are kept by the server, with a short allowance for slow networks.', icon: Clock },
+  { title: 'One attempt each', desc: 'One attempt per student keeps the assessment fair and the marks clean.', icon: RotateCcw },
+  { title: 'Answer keys stay put', desc: 'Keys and rubrics stay on the server and are never sent to students early.', icon: KeyRound },
 ];
 
-/* Helper to generate deterministic shiny star dots across any section */
-function generateDots(count: number, seed: number) {
-  return Array.from({ length: count }, (_, i) => {
-    const rawX = (i * 137.508 + seed * 31.7) % 1440;
-    const rawY = (i * 73.31 + seed * 47.9) % 720;
-    const isSpecial = i % 7 === 0;
-    const isMedium = i % 3 === 0;
-    return {
-      x: Math.round(rawX),
-      y: Math.round(rawY),
-      r: isSpecial ? 1.8 : isMedium ? 1.2 : 0.7,
-      color: isSpecial ? '#c4b5fd' : isMedium ? '#ddd6fe' : '#ffffff',
-      opacity: 0.2 + ((i * 19 + seed * 13) % 60) / 100,
-      className:
-        isSpecial
-          ? 'lp-twinkle-pulse'
-          : i % 2 === 0
-            ? 'lp-twinkle-slow'
-            : 'lp-twinkle-fast',
-    };
-  });
-}
+const college: { title: string; desc: string; icon: LucideIcon }[] = [
+  { title: 'Branches, semesters, sections', desc: 'Faculty pick the classes they teach, across departments, down to the section.', icon: Compass },
+  { title: 'Imports from office sheets', desc: 'Admins bring in students, faculty and subject mappings from CSV or Excel.', icon: UploadCloud },
+  { title: 'Installs on phones', desc: 'OpenQZ installs as a light app on Android, iPhone or a laptop. No app store needed.', icon: Smartphone },
+];
 
-const heroDots = generateDots(75, 1);
-const howItWorksDots = generateDots(50, 2);
-const rolesDots = generateDots(50, 3);
-const integrityDots = generateDots(50, 4);
-const pillarsDots = generateDots(50, 5);
-const footerDots = generateDots(30, 6);
-
-/* =========================================================
-   Visual Components
-   ========================================================= */
-
-function PlanetLogo() {
+/** Fades its children up the first time they scroll into view. */
+function Reveal({ children, delay = 0, className, as: Tag = 'div' }: { children: ReactNode; delay?: number; className?: string; as?: 'div' | 'li' | 'article' }) {
+  const ref = useRef<HTMLElement>(null);
+  const [seen, setSeen] = useState(typeof IntersectionObserver === 'undefined');
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setSeen(true);
+          io.disconnect();
+        }
+      },
+      { rootMargin: '0px 0px -6% 0px', threshold: 0.05 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
   return (
-    <svg viewBox="0 0 40 40" className="h-8 w-8 shrink-0" aria-hidden="true" focusable="false">
-      <defs>
-        <linearGradient id="lp-planet-fill" x1="8" y1="8" x2="32" y2="32" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#ddd6fe" />
-          <stop offset="1" stopColor="#7c3aed" />
-        </linearGradient>
-      </defs>
-      <circle cx="20" cy="20" r="8.5" fill="url(#lp-planet-fill)" />
-      <ellipse
-        cx="20"
-        cy="20"
-        rx="17"
-        ry="5.5"
-        fill="none"
-        stroke="#a78bfa"
-        strokeWidth="2"
-        transform="rotate(-20 20 20)"
-      />
-      <circle cx="32" cy="9" r="1.6" fill="#ddd6fe" />
-    </svg>
+    <Tag ref={ref as never} className={cx('reveal', seen && 'is-seen', className)} style={{ '--reveal-delay': `${delay}ms` } as CSSProperties}>
+      {children}
+    </Tag>
   );
 }
 
-function StarDots({ dots }: { dots: ReturnType<typeof generateDots> }) {
+/** The walkthrough video, rendered with Remotion from the `video/` folder (`pnpm render`).
+ * Null shows a placeholder frame instead. */
+const INTRO_VIDEO_URL: string | null = '/landing/intro-v6.mp4';
+
+/** The product video under the headline. A framed placeholder until the video is added. */
+function IntroVideo() {
+  // People who ask for less motion get a still frame with a play button, not a moving video.
+  const reduced = typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  const video = useRef<HTMLVideoElement>(null);
+  const [sound, setSound] = useState(false);
+  const toggleSound = () => {
+    const v = video.current;
+    if (!v) return;
+    const on = !sound;
+    v.muted = !on;
+    if (on) {
+      v.volume = 0.7;
+      void v.play().catch(() => undefined);
+    }
+    setSound(on);
+    wake();
+  };
+  // The sound button shows like a video player's controls: on touch, mouse movement or scroll,
+  // then fades out when nothing happens for a moment (it stays while it has keyboard focus).
+  const [awake, setAwake] = useState(true);
+  const timer = useRef<number | undefined>(undefined);
+  const wake = () => {
+    setAwake(true);
+    window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => setAwake(false), 2500);
+  };
+  useEffect(() => {
+    if (reduced) return;
+    timer.current = window.setTimeout(() => setAwake(false), 3500);
+    const opts = { passive: true } as const;
+    window.addEventListener('scroll', wake, opts);
+    window.addEventListener('touchstart', wake, opts);
+    return () => {
+      window.clearTimeout(timer.current);
+      window.removeEventListener('scroll', wake);
+      window.removeEventListener('touchstart', wake);
+    };
+  }, [reduced]);
   return (
-    <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-      <svg
-        className="h-full w-full"
-        viewBox="0 0 1440 720"
-        preserveAspectRatio="xMidYMid slice"
-        fill="none"
-      >
-        {dots.map((d, idx) => (
-          <circle
-            key={idx}
-            cx={d.x}
-            cy={d.y}
-            r={d.r}
-            fill={d.color}
-            opacity={d.opacity}
-            className={d.className}
+    <div onPointerMove={wake} onPointerDown={wake} className="relative mx-auto max-w-5xl rounded-t-lg border-4 border-b-0 border-[#592643] bg-[#3b142a]">
+      {INTRO_VIDEO_URL ? (
+        <>
+          <video
+            ref={video}
+            className="aspect-video w-full rounded-t-[2px] bg-[#3b142a]"
+            src={INTRO_VIDEO_URL}
+            poster="/landing/intro-v6-poster.jpg"
+            autoPlay={!reduced}
+            muted
+            loop
+            playsInline
+            controls={reduced}
+            preload="metadata"
+            aria-label="A short walkthrough of OpenQZ with music: pick a kind of activity, import or build questions, host a room with a code, students answer on coloured tiles, and marks appear as they submit"
           />
-        ))}
-      </svg>
+          {!reduced && (
+            <button
+              type="button"
+              onClick={toggleSound}
+              aria-pressed={sound}
+              onFocus={() => {
+                window.clearTimeout(timer.current);
+                setAwake(true);
+              }}
+              onBlur={wake}
+              className={cx(
+                'absolute bottom-2 right-2 inline-flex items-center gap-1.5 rounded-md bg-[#f3efda] px-2.5 py-1.5 text-xs font-bold text-[#3b142a] shadow-pop-lg transition-[opacity,background-color] duration-300 hover:bg-white sm:bottom-4 sm:right-4 sm:gap-2 sm:px-3 sm:py-2 sm:text-sm',
+                awake ? 'opacity-100' : 'pointer-events-none opacity-0',
+              )}
+            >
+              {sound ? <Volume2 className="h-4 w-4" aria-hidden /> : <VolumeX className="h-4 w-4" aria-hidden />}
+              {sound ? 'Sound on' : 'Turn sound on'}
+            </button>
+          )}
+        </>
+      ) : (
+        <div className="grid aspect-video w-full place-items-center px-4 text-center" role="img" aria-label="Video placeholder: a walkthrough of OpenQZ will be added here">
+          <div className={CREAM}>
+            <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-brand-600 text-white sm:h-20 sm:w-20">
+              <Play className="ml-1 h-7 w-7 fill-current sm:h-9 sm:w-9" aria-hidden />
+            </span>
+            <p className="mt-5 text-2xl font-bold tracking-tight sm:text-4xl">See OpenQZ in two minutes</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-/* =========================================================
-   Main Landing Page
-   ========================================================= */
+interface Person {
+  login: string;
+  name: string;
+  avatar: string | null;
+  url: string;
+  contributions: number;
+}
+
+/** The people who built OpenQZ, from the repository (the server refreshes the list twice a
+ * day and keeps the pictures, so this page never calls GitHub). */
+function Contributors() {
+  const q = useQuery({ queryKey: ['site', 'contributors'], queryFn: () => api<{ people: Person[] }>('/site/contributors'), staleTime: 3_600_000, retry: false });
+  const people = q.data?.people ?? [];
+  return (
+    <section id="contributors" aria-labelledby="contributors-title" className="scroll-mt-20 border-t border-line bg-card">
+      <div className="mx-auto max-w-7xl px-4 py-16 sm:px-8 sm:py-24">
+        <Reveal className="mx-auto max-w-2xl text-center">
+          <h2 id="contributors-title" className="text-3xl font-bold leading-[1.05] tracking-tight sm:text-5xl">
+            Built by our contributors
+          </h2>
+          <p className="mt-4 text-lg text-muted">OpenQZ is open source, built and maintained by the Open Source Students Club, DBIT. These are the people who wrote it.</p>
+        </Reveal>
+        {people.length > 0 ? (
+          <ul className="mt-10 flex flex-wrap justify-center gap-4">
+            {people.map((p, i) => (
+              <Reveal as="li" key={p.login} delay={Math.min(i, 12) * 50}>
+                <a href={p.url} target="_blank" rel="noreferrer" className="flex w-40 flex-col items-center rounded-lg border border-edge bg-surface p-5 text-center transition-colors duration-200 hover:border-brand-600 sm:w-44">
+                  {p.avatar ? (
+                    <img src={p.avatar} alt="" width={72} height={72} className="h-[72px] w-[72px] rounded-full" />
+                  ) : (
+                    <span className="grid h-[72px] w-[72px] place-items-center rounded-full bg-brand-600 text-2xl font-bold text-white" aria-hidden>
+                      {p.name.slice(0, 1).toUpperCase()}
+                    </span>
+                  )}
+                  <span className="mt-3 w-full truncate font-bold">{p.name}</span>
+                  <span className="w-full truncate text-sm text-muted">@{p.login}</span>
+                </a>
+              </Reveal>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-8 text-center text-muted">{q.isLoading ? 'Loading the list...' : 'The list of contributors will appear here shortly.'}</p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+const navLink = 'rounded px-3 py-2 text-base font-bold text-[#f3efda] transition-colors hover:text-[#ff5cb0]';
+const btnPink = 'inline-flex items-center justify-center gap-2 rounded-md bg-brand-600 px-4 py-2.5 font-bold text-white transition-colors hover:bg-brand-700';
+const btnCream = 'inline-flex items-center justify-center gap-2 rounded-md bg-[#f3efda] px-4 py-2.5 font-bold text-[#3b142a] transition-colors hover:bg-white';
 
 export default function LandingPage() {
-  const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8);
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+  const nav = useNavigate();
+  const [code, setCode] = useState('');
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -239,61 +241,63 @@ export default function LandingPage() {
   }, [menuOpen]);
 
   const closeMenu = () => setMenuOpen(false);
+  const enterCode = (e: FormEvent) => {
+    e.preventDefault();
+    if (code.length !== 6) return;
+    // A live game opens at once (guests welcome); anything else is a room, which asks the
+    // student to sign in first.
+    api(`/live/join/${code}`)
+      .then(() => nav(`/live/${code}`))
+      .catch(() => nav(`/join/${code}`));
+  };
+  const joinInput = useRef<HTMLInputElement>(null);
+  /** "Have a code?" lands on the join box of this page, with the cursor already in it. */
+  const toJoin = () => {
+    setMenuOpen(false);
+    setTimeout(() => joinInput.current?.focus({ preventScroll: true }), 450);
+  };
+  const links: [string, string][] = [
+    ['#how-to-use', 'How to use'],
+    ['#for-you', 'Guides'],
+    ['#fair', 'Fair exams'],
+    ['#contributors', 'Contributors'],
+  ];
 
   return (
-    <div className="lp-page-ambient min-h-dvh text-slate-100">
-      <a href="#main-content" className="lp-skip-link">
+    <div className="min-h-dvh overflow-x-clip bg-surface">
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[60] focus:rounded-md focus:bg-brand-600 focus:px-4 focus:py-2 focus:font-bold focus:text-white">
         Skip to content
       </a>
 
-      {/* =====================================================
-          STICKY TOP BAR
-          ===================================================== */}
-      <header
-        className={cx(
-          'sticky top-0 z-50 transition-colors duration-300',
-          scrolled || menuOpen
-            ? 'border-b border-violet-500/15 bg-[#05020a]/90 backdrop-blur-xl'
-            : 'border-b border-transparent bg-transparent',
-        )}
-      >
-        <div className="relative mx-auto flex h-20 max-w-7xl items-center justify-between gap-3 px-5 sm:px-8">
-          <Link
-            to="/"
-            className="flex items-center gap-2.5 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
-            aria-label="OpenQZ home"
-          >
-            <PlanetLogo />
-            <span className="lp-font-display text-xl font-extrabold tracking-tight text-white">
-              OpenQZ
-            </span>
-          </Link>
-
-          <nav
-            className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-10 md:flex"
-            aria-label="Main"
-          >
-            <Link
-              to="/"
-              aria-current="page"
-              className="relative py-2 text-sm font-medium text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#05020a]"
-            >
-              Home
-              <span aria-hidden="true" className="absolute inset-x-0 -bottom-0.5 h-0.5 rounded-full bg-violet-400" />
+      <header className="sticky top-0 z-50 bg-[#3b142a]">
+        <div className="mx-auto flex h-[72px] max-w-[1440px] items-center justify-between gap-3 px-4 sm:px-8">
+          <div className="flex min-w-0 items-center gap-6">
+            <Link to="/" aria-label="OpenQZ home" className="rounded">
+              <Logo light />
             </Link>
-            <a
-              href="#how-to-use"
-              className="py-2 text-sm font-medium text-slate-300 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#05020a]"
-            >
-              How to Use
-            </a>
-          </nav>
-
+            <nav className="hidden items-center lg:flex" aria-label="Main">
+              {links.map(([href, label]) => (
+                <a key={href} href={href} className={navLink}>
+                  {label}
+                </a>
+              ))}
+            </nav>
+          </div>
           <div className="flex items-center gap-2">
-            <Link
-              to="/login"
-              className="inline-flex rounded-full border border-violet-300/60 px-5 py-2 text-sm font-semibold text-white transition hover:border-violet-300 hover:bg-violet-600/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#05020a] sm:px-6"
-            >
+            <form onSubmit={enterCode} className="hidden items-center gap-1 sm:flex">
+              <input
+                inputMode="numeric"
+                aria-label="Enter a join code"
+                placeholder="Enter code"
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                className="w-28 rounded-md border border-[#f3efda]/40 bg-transparent px-3 py-2 text-base font-bold tracking-widest text-[#f3efda] outline-none placeholder:tracking-normal placeholder:text-[#f3efda]/75 focus:border-[#f3efda]"
+              />
+              <button type="submit" disabled={code.length !== 6} className={cx(btnCream, 'px-3 disabled:opacity-60')}>
+                Join
+              </button>
+            </form>
+            <Link to="/login" className={btnPink}>
               Login
             </Link>
             <button
@@ -301,378 +305,277 @@ export default function LandingPage() {
               type="button"
               aria-label={menuOpen ? 'Close menu' : 'Open menu'}
               aria-expanded={menuOpen}
-              aria-controls="mobile-menu"
-              onClick={() => setMenuOpen((open) => !open)}
-              className="grid h-10 w-10 place-items-center rounded-full border border-white/20 text-white transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#05020a] md:hidden"
+              aria-controls="landing-menu"
+              onClick={() => setMenuOpen((o) => !o)}
+              className="rounded-md border border-[#f3efda]/40 p-2 text-[#f3efda] lg:hidden"
             >
-              {menuOpen ? (
-                <X className="h-5 w-5" aria-hidden="true" />
-              ) : (
-                <Menu className="h-5 w-5" aria-hidden="true" />
-              )}
+              {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
           </div>
         </div>
-
         {menuOpen && (
-          <div
-            id="mobile-menu"
-            className="border-t border-violet-500/20 bg-[#05020a]/98 px-5 py-4 backdrop-blur-xl md:hidden"
-          >
-            <nav className="flex flex-col gap-1" aria-label="Mobile">
-              <Link
-                to="/"
-                aria-current="page"
-                onClick={closeMenu}
-                className="rounded-xl bg-violet-500/15 px-4 py-3 text-base font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
-              >
-                Home
-              </Link>
-              <a
-                href="#how-to-use"
-                onClick={closeMenu}
-                className="rounded-xl px-4 py-3 text-base font-medium text-slate-300 transition hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
-              >
-                How to Use
+          <nav id="landing-menu" aria-label="Menu" className="border-t border-[#592643] px-4 py-3 lg:hidden">
+            {links.map(([href, label]) => (
+              <a key={href} href={href} onClick={closeMenu} className="block rounded px-3 py-2.5 font-bold text-[#f3efda] hover:bg-white/10">
+                {label}
               </a>
-              <Link
-                to="/login"
-                onClick={closeMenu}
-                className="mt-2 rounded-xl bg-violet-600 px-4 py-3 text-center text-base font-semibold text-white transition hover:bg-violet-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
-              >
-                Login
-              </Link>
-            </nav>
-          </div>
+            ))}
+            <a href="#join" onClick={toJoin} className="block rounded px-3 py-2.5 font-bold text-[#ff5cb0] hover:bg-white/10 sm:hidden">
+              Enter a join code
+            </a>
+          </nav>
         )}
       </header>
 
       <main id="main-content">
-
-        {/* =================================================
-            HERO SECTION
-            hero.webp at center bottom:
-            - Astronaut at bottom-left sits clearly visible on the rocks
-            - Black hole on the right
-            - Soft scrim behind top-left headline text for AA contrast
-            ================================================= */}
-        <section className="relative isolate overflow-hidden lp-hero-bg">
-          <StarDots dots={heroDots} />
-
-          <div className="relative z-10 mx-auto flex min-h-[calc(100dvh-5rem)] max-w-7xl flex-col justify-between px-5 pb-12 pt-14 sm:px-8 sm:pt-20 lg:min-h-[780px]">
-            {/* Top-left content block */}
-            <div className="max-w-[42rem]">
-              {/* Eyebrow */}
-              <p className="lp-font-eyebrow flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs font-bold uppercase text-violet-300">
-                <span>EXPLORE</span>
-                <span aria-hidden="true" className="text-violet-400/50">|</span>
-                <span>LEARN</span>
-                <span aria-hidden="true" className="text-violet-400/50">|</span>
-                <span>COMPETE</span>
-              </p>
-
-              {/* Headline */}
-              <h1 className="lp-font-display mt-5 text-4xl font-extrabold leading-[1.08] tracking-tight text-white drop-shadow-[0_2px_16px_rgba(0,0,0,0.6)] sm:text-5xl lg:text-6xl">
-                <span className="block">
-                  Discover a{' '}
-                  <span className="bg-gradient-to-r from-violet-300 via-violet-400 to-fuchsia-400 bg-clip-text text-transparent drop-shadow-[0_0_24px_rgba(168,85,247,0.45)]">
-                    New Dimension
-                  </span>
-                </span>
-                <span className="block">of Learning.</span>
+        {/* hero: plum, centred, the video rising out of the bottom edge */}
+        <section className={cx('stage', CREAM)}>
+          <div className="mx-auto max-w-7xl px-4 pt-14 text-center sm:px-8 sm:pt-24">
+            <div className="animate-rise">
+              <h1 className="mx-auto max-w-4xl text-4xl font-bold leading-[0.98] tracking-tight min-[400px]:text-5xl sm:text-6xl lg:text-[4rem]">
+                Quizzes that play like a game. Marks that count.
               </h1>
-
-              {/* Subtitle */}
-              <p className="mt-6 max-w-xl text-base leading-7 text-slate-200 drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)] sm:text-lg">
-                Experience smarter quizzes and examinations with OpenQZ. A modern platform built to
-                make learning, assessment, and academic participation seamless.
+              <p className="mx-auto mt-6 max-w-3xl text-lg leading-snug text-[#f3efda]/95 sm:text-[1.375rem]">
+                OpenQZ turns anything you teach at Don Bosco Institute of Technology into a timed quiz, an assignment, a poll or a live game that every student can take on their own phone, then shows you exactly how each one did.
               </p>
-
-              {/* CTA buttons */}
-              <div className="mt-8 flex flex-wrap items-center gap-3">
-                <Link
-                  to="/login"
-                  className="inline-flex items-center gap-2 rounded-full bg-violet-600 px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-violet-600/40 transition hover:bg-violet-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#05020a]"
-                >
-                  <LogIn className="h-4 w-4" aria-hidden="true" />
-                  Login to OpenQZ
+              <div className="mt-9 flex flex-wrap justify-center gap-4">
+                <Link to="/login" className="w-full rounded-md bg-brand-600 px-6 py-3 text-left transition-colors hover:bg-brand-700 min-[420px]:w-48">
+                  <span className="block text-sm font-bold uppercase text-white">Faculty and students</span>
+                  <span className="block text-lg font-bold text-white">Login</span>
                 </Link>
-                <a
-                  href="#how-to-use"
-                  className="inline-flex items-center gap-2 rounded-full border border-violet-300/50 bg-[#05020a]/40 px-7 py-3.5 text-sm font-semibold text-white backdrop-blur-sm transition hover:border-violet-300 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#05020a]"
-                >
-                  <BookOpen className="h-4 w-4" aria-hidden="true" />
-                  How to Use
+                <a href="#join" onClick={toJoin} className="w-full rounded-md bg-[#f3efda] px-6 py-3 text-left text-[#3b142a] transition-colors hover:bg-white min-[420px]:w-48">
+                  <span className="block text-sm font-medium uppercase">Have a code?</span>
+                  <span className="block text-lg font-bold">Join a room</span>
                 </a>
               </div>
             </div>
-
-            {/* Bottom-right feature tiles */}
-            <div className="mt-16 w-full self-end lg:mt-0 lg:w-[58%]">
-              <ul className="grid grid-cols-2 overflow-hidden rounded-2xl border border-violet-400/25 bg-[#05020a]/70 backdrop-blur-md sm:grid-cols-4">
-                {heroFeatures.map(({ icon: Icon, title }, idx) => (
-                  <li
-                    key={title}
-                    className={cx(
-                      'lp-feature-tile flex flex-col items-center px-4 py-6 text-center',
-                      idx > 0 ? 'border-l border-white/10' : '',
-                      idx >= 2 ? 'border-t border-white/10 sm:border-t-0' : '',
-                    )}
-                  >
-                    <span className="lp-glow-box grid h-12 w-12 place-items-center rounded-2xl border border-violet-400/50 bg-violet-500/15 text-violet-300">
-                      <Icon className="h-5 w-5" aria-hidden="true" />
-                    </span>
-                    <span className="lp-font-display mt-3 text-sm font-semibold leading-tight text-white">
-                      {title}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+            <div className="mt-14 sm:mt-16">
+              <IntroVideo />
             </div>
           </div>
         </section>
 
-        {/* =================================================
-            HOW TO USE
-            Shiny dots continue down through this section
-            ================================================= */}
-        <section id="how-to-use" className="relative z-10 scroll-mt-24">
-          <hr className="lp-divider-glow" />
-          <StarDots dots={howItWorksDots} />
-
-          <div className="relative mx-auto max-w-7xl px-5 py-20 sm:px-8 sm:py-28">
-            <div className="max-w-2xl">
-              <p className="lp-font-eyebrow text-xs font-bold uppercase text-violet-300">
-                How to Use
-              </p>
-              <h2 className="lp-font-display mt-3 text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
-                Three steps from sign-in to your marks.
+        {/* join with a code: the first thing under the hero */}
+        <section id="join" aria-labelledby="join-title" className="scroll-mt-24 border-b border-line bg-card">
+          <div className="mx-auto flex max-w-5xl flex-col items-center gap-6 px-4 py-12 text-center sm:px-8 md:flex-row md:justify-between md:text-left">
+            <div className="min-w-0">
+              <h2 id="join-title" className="text-3xl font-bold leading-[1.05] tracking-tight sm:text-4xl">
+                Got a 6-digit code?
               </h2>
-              <p className="mt-4 text-base leading-7 text-slate-300">
-                OpenQZ brings the assessment workflow into a clean three-step sequence for teachers
-                and students alike.
-              </p>
+              <p className="mt-2 text-lg text-muted">Type the code from your teacher or club. Guests need no account for live games that allow them.</p>
             </div>
+            <form onSubmit={enterCode} className="flex w-full max-w-sm shrink-0 items-stretch gap-2">
+              <input
+                ref={joinInput}
+                inputMode="numeric"
+                aria-label="Join code"
+                placeholder="123 456"
+                value={code.length > 3 ? `${code.slice(0, 3)} ${code.slice(3)}` : code}
+                onChange={(e) => setCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                className="min-w-0 flex-1 rounded-md border-2 border-[#3b142a] bg-white px-3 py-3 text-center text-3xl font-bold tracking-[0.2em] text-[#3b142a] outline-none placeholder:text-[#3b142a]/40 focus:border-brand-600"
+              />
+              <button type="submit" disabled={code.length !== 6} className={cx(btnPink, 'px-6 text-xl disabled:opacity-60')}>
+                Join
+              </button>
+            </form>
+          </div>
+        </section>
 
-            <ol className="mt-12 grid gap-6 md:grid-cols-3">
-              {howItWorksSteps.map((step) => (
-                <li
-                  key={step.title}
-                  className="lp-card-hover rounded-2xl border border-violet-500/20 bg-[#0c051a]/60 p-7 backdrop-blur-sm"
-                >
-                  <span className="inline-block rounded-lg border border-violet-400/30 bg-violet-500/20 px-3 py-1 font-mono text-xs font-bold tracking-widest text-violet-300">
-                    Step {step.number}
+        {/* the numbers */}
+        <section aria-label="OpenQZ in numbers" className="mx-auto max-w-7xl px-4 pt-16 sm:px-8 sm:pt-24">
+          <dl className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            {numbers.map((n, i) => (
+              <Reveal key={n.label} delay={i * 80} className={cx('rounded-lg p-6 text-center', i % 2 === 0 ? 'bg-[#3b142a] text-[#f3efda]' : 'bg-brand-600 text-white')}>
+                <dd className="text-5xl font-bold tracking-tight sm:text-6xl">{n.value}</dd>
+                <dt className="mt-1 text-base font-medium sm:text-lg">{n.label}</dt>
+              </Reveal>
+            ))}
+          </dl>
+          <Reveal>
+            <p className="mt-6 text-center text-lg font-medium">
+              Built and maintained by the <b className="text-brand-ink">Open Source Students Club (OSSC)</b>, Don Bosco Institute of Technology.
+            </p>
+          </Reveal>
+        </section>
+
+        {/* how it works: numbered plum cards on cream */}
+        <section id="how-to-use" className="mx-auto max-w-7xl scroll-mt-20 px-4 py-16 sm:px-8 sm:py-24">
+          <Reveal>
+            <h2 className="mx-auto max-w-3xl text-center text-3xl font-bold leading-[1.05] tracking-tight sm:text-5xl">From the office sheet to the marks, in one place</h2>
+          </Reveal>
+          <ol className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {steps.map((s, i) => (
+              <Reveal as="li" key={s.title} delay={i * 90}>
+                <div className="relative flex h-full min-h-56 flex-col overflow-hidden rounded-lg bg-[linear-gradient(180deg,#3b142a_55%,#6e1f4c_130%)] p-6 text-[#f3efda]">
+                  <p className="text-lg leading-snug">
+                    <b>{s.title}</b> {s.body}
+                  </p>
+                  <span className="pointer-events-none mt-auto select-none self-end text-8xl font-bold italic leading-[0.7] text-[#f3efda]/35" aria-hidden>
+                    {i + 1}
                   </span>
-                  <h3 className="lp-font-display mt-4 text-xl font-bold text-white">{step.title}</h3>
-                  <p className="mt-3 text-sm leading-6 text-slate-300">{step.body}</p>
-                </li>
-              ))}
-            </ol>
+                </div>
+              </Reveal>
+            ))}
+          </ol>
+          <Reveal className="mt-8">
+            <p className="rounded-md border-l-4 border-brand-600 bg-[#e4dfc8] px-4 py-4 text-lg dark:bg-brand-50">Admins, teachers, clubs and students work from the same lists and the same results, and nobody spends an evening copying marks into a spreadsheet.</p>
+          </Reveal>
+        </section>
 
-            {/* Join room banner */}
-            <div className="mt-10 flex flex-col items-start justify-between gap-5 rounded-2xl border border-violet-400/30 bg-gradient-to-r from-violet-950/40 via-purple-950/30 to-[#0c051a]/60 p-6 backdrop-blur-sm sm:flex-row sm:items-center sm:p-8">
-              <div>
-                <h3 className="lp-font-display text-lg font-bold text-white">
-                  Have a join code? Join a room
-                </h3>
-                <p className="mt-1 text-sm text-slate-300">
-                  Students can enter the 6-digit code from their teacher or club organizer to jump
-                  straight into a live session.
-                </p>
+        {/* two feature cards */}
+        <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-8 sm:pb-24">
+          <Reveal>
+            <h2 className="mx-auto max-w-3xl text-center text-3xl font-bold leading-[1.05] tracking-tight sm:text-5xl">Class tests, club events and everything in between</h2>
+          </Reveal>
+          <div className="mt-10 grid gap-5 md:grid-cols-2">
+            {features.map((f, i) => (
+              <Reveal as="article" key={f.title} delay={i * 100}>
+                <div className="h-full rounded-lg border border-edge bg-card p-6 sm:p-8">
+                  <h3 className="text-2xl font-bold tracking-tight">{f.title}</h3>
+                  <p className="mt-3 text-lg text-muted">{f.body}</p>
+                  <ul className="mt-5 space-y-2">
+                    {f.points.map((pt) => (
+                      <li key={pt} className="flex items-start gap-2 font-medium">
+                        <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-brand-600" aria-hidden /> {pt}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+          <Reveal className="mt-6">
+            <div className="flex flex-col items-start gap-4 rounded-lg bg-[#3b142a] p-6 text-[#f3efda] sm:flex-row sm:items-center sm:justify-between sm:p-8">
+              <div className="min-w-0">
+                <h3 className="text-2xl font-bold tracking-tight">Got a 6-digit code from your teacher or club?</h3>
+                <p className="mt-1 text-[#f3efda]/90">Enter it, or scan the QR code on the screen. Guests need no account for live games that allow them.</p>
               </div>
-              <Link
-                to="/join"
-                className="inline-flex shrink-0 items-center gap-2 rounded-full bg-violet-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-violet-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#05020a]"
-              >
-                Join a room
-                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              <a href="#join" onClick={toJoin} className={cx(btnPink, 'shrink-0 px-5 py-3 text-lg')}>
+                Enter a code <ArrowRight className="h-5 w-5" aria-hidden />
+              </a>
+            </div>
+          </Reveal>
+        </section>
+
+        {/* fair exams: plum */}
+        <section id="fair" className="scroll-mt-20 bg-[#3b142a] text-[#f3efda]">
+          <div className="mx-auto max-w-7xl px-4 py-16 sm:px-8 sm:py-24">
+            <Reveal className="mx-auto max-w-3xl text-center">
+              <h2 className="text-3xl font-bold leading-[1.05] tracking-tight sm:text-5xl">The server keeps the rules, so every student gets the same exam</h2>
+            </Reveal>
+            <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {fair.map((f, i) => (
+                <Reveal as="li" key={f.title} delay={i * 70}>
+                  <div className="h-full rounded-lg border border-[#592643] bg-[#4a1a35] p-6">
+                    <f.icon className="h-7 w-7 text-[#ff5cb0]" aria-hidden />
+                    <h3 className="mt-4 text-xl font-bold">{f.title}</h3>
+                    <p className="mt-2 text-[#f3efda]/85">{f.desc}</p>
+                  </div>
+                </Reveal>
+              ))}
+            </ul>
+          </div>
+        </section>
+
+        {/* guides */}
+        <section id="for-you" className="mx-auto max-w-7xl scroll-mt-20 px-4 py-16 sm:px-8 sm:py-24">
+          <Reveal>
+            <h2 className="mx-auto max-w-3xl text-center text-3xl font-bold leading-[1.05] tracking-tight sm:text-5xl">Made for everyone on campus</h2>
+            <p className="mt-4 text-center text-lg text-muted">Each guide opens without signing in.</p>
+          </Reveal>
+          <div className="mt-10 grid gap-5 md:grid-cols-3">
+            {roles.map((c, i) => (
+              <Reveal as="article" key={c.role} delay={i * 90}>
+                <div className="flex h-full flex-col rounded-lg border border-edge bg-card p-6">
+                  <c.icon className="h-8 w-8 text-brand-ink" aria-hidden />
+                  <h3 className="mt-4 text-2xl font-bold tracking-tight">{c.role}</h3>
+                  <p className="mt-2 flex-1 text-muted">{c.description}</p>
+                  <a href={c.guideUrl} className="mt-5 inline-flex items-center gap-1.5 font-bold text-brand-ink underline underline-offset-4">
+                    {c.guideLabel} <ArrowRight className="h-4 w-4" aria-hidden />
+                  </a>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+          <div className="mt-5 grid gap-5 md:grid-cols-3">
+            {college.map((p, i) => (
+              <Reveal as="article" key={p.title} delay={i * 90}>
+                <div className="h-full rounded-lg border border-edge bg-card p-6">
+                  <p.icon className="h-7 w-7 text-brand-ink" aria-hidden />
+                  <h3 className="mt-3 text-xl font-bold">{p.title}</h3>
+                  <p className="mt-2 text-muted">{p.desc}</p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </section>
+
+        <Contributors />
+
+        {/* closing call */}
+        <section className={cx('stage', CREAM)}>
+          <div className="mx-auto max-w-3xl px-4 py-16 text-center sm:px-8 sm:py-24">
+            <h2 className="text-3xl font-bold leading-[1.05] tracking-tight sm:text-5xl">Ready when your class is</h2>
+            <p className="mt-4 text-lg text-[#f3efda]/90">Sign in with the email your college registered for you.</p>
+            <div className="mt-8 flex flex-wrap justify-center gap-3">
+              <Link to="/login" className={cx(btnPink, 'px-6 py-3 text-lg')}>
+                Login to OpenQZ
               </Link>
-            </div>
-          </div>
-        </section>
-
-        {/* =================================================
-            ROLE CARDS
-            Shiny dots continue down through this section
-            ================================================= */}
-        <section className="relative z-10">
-          <hr className="lp-divider-glow" />
-          <StarDots dots={rolesDots} />
-
-          <div className="relative mx-auto max-w-7xl px-5 py-20 sm:px-8 sm:py-28">
-            <div className="max-w-2xl">
-              <p className="lp-font-eyebrow text-xs font-bold uppercase text-violet-300">
-                Roles
-              </p>
-              <h2 className="lp-font-display mt-3 text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
-                Tailored experiences for every campus user.
-              </h2>
-              <p className="mt-4 text-base leading-7 text-slate-300">
-                Each role gets an interface designed for their specific academic tasks.
-              </p>
-            </div>
-
-            <div className="mt-12 grid gap-6 md:grid-cols-3">
-              {roleCards.map((c) => {
-                const Icon = c.icon;
-                return (
-                  <div
-                    key={c.role}
-                    className="lp-card-hover flex flex-col rounded-2xl border border-violet-500/20 bg-[#0c051a]/60 p-7 backdrop-blur-sm"
-                  >
-                    <div className="lp-glow-box grid h-12 w-12 place-items-center rounded-2xl border border-violet-400/40 bg-violet-500/10 text-violet-300">
-                      <Icon className="h-6 w-6" aria-hidden="true" />
-                    </div>
-                    <h3 className="lp-font-display mt-5 text-xl font-bold text-white">{c.role}</h3>
-                    <p className="mt-3 flex-1 text-sm leading-6 text-slate-300">{c.description}</p>
-                    <div className="mt-6 border-t border-white/10 pt-4">
-                      <a
-                        href={c.guideUrl}
-                        className="inline-flex items-center gap-1.5 rounded text-sm font-semibold text-violet-300 hover:text-violet-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
-                      >
-                        {c.guideLabel}
-                        <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-                      </a>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-
-        {/* =================================================
-            FAIR BY DESIGN (Integrity)
-            Shiny dots continue down through this section
-            ================================================= */}
-        <section className="relative z-10">
-          <hr className="lp-divider-glow" />
-          <StarDots dots={integrityDots} />
-
-          <div className="relative mx-auto max-w-7xl px-5 py-20 sm:px-8 sm:py-28">
-            <div className="max-w-2xl">
-              <p className="lp-font-eyebrow text-xs font-bold uppercase text-violet-300">
-                Integrity
-              </p>
-              <h2 className="lp-font-display mt-3 text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
-                Fair by design.
-              </h2>
-              <p className="mt-4 text-base leading-7 text-slate-300">
-                Automated checks protect assessment integrity transparently, with no intrusive camera
-                proctoring or fragile workarounds.
-              </p>
-            </div>
-
-            <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {integrityList.map((pt) => {
-                const Icon = pt.icon;
-                return (
-                  <div
-                    key={pt.title}
-                    className="lp-card-hover rounded-2xl border border-violet-500/20 bg-[#0c051a]/60 p-6 backdrop-blur-sm"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-violet-400/30 bg-violet-500/10 text-violet-300">
-                        <Icon className="h-5 w-5" aria-hidden="true" />
-                      </span>
-                      <h3 className="lp-font-display text-base font-bold text-white">{pt.title}</h3>
-                    </div>
-                    <p className="mt-3 text-sm leading-6 text-slate-300">{pt.desc}</p>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-
-        {/* =================================================
-            BUILT FOR COLLEGES (Architecture)
-            Shiny dots continue down through this section
-            ================================================= */}
-        <section className="relative z-10">
-          <hr className="lp-divider-glow" />
-          <StarDots dots={pillarsDots} />
-
-          <div className="relative mx-auto max-w-7xl px-5 py-20 sm:px-8 sm:py-28">
-            <div className="max-w-2xl">
-              <p className="lp-font-eyebrow text-xs font-bold uppercase text-violet-300">
-                Architecture
-              </p>
-              <h2 className="lp-font-display mt-3 text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
-                Built for colleges.
-              </h2>
-              <p className="mt-4 text-base leading-7 text-slate-300">
-                Engineered around institutional hierarchies, existing spreadsheets, and low-latency
-                local hosting.
-              </p>
-            </div>
-
-            <div className="mt-12 grid gap-6 md:grid-cols-3">
-              {collegePillars.map((p) => {
-                const Icon = p.icon;
-                return (
-                  <div
-                    key={p.title}
-                    className="lp-card-hover rounded-2xl border border-violet-500/20 bg-[#0c051a]/60 p-7 backdrop-blur-sm"
-                  >
-                    <span className="lp-glow-box grid h-12 w-12 place-items-center rounded-2xl border border-violet-400/30 bg-violet-500/10 text-violet-300">
-                      <Icon className="h-6 w-6" aria-hidden="true" />
-                    </span>
-                    <h3 className="lp-font-display mt-5 text-xl font-bold text-white">{p.title}</h3>
-                    <p className="mt-3 text-sm leading-6 text-slate-300">{p.desc}</p>
-                  </div>
-                );
-              })}
+              <a href="#join" onClick={toJoin} className={cx(btnCream, 'px-6 py-3 text-lg')}>
+                I have a join code
+              </a>
             </div>
           </div>
         </section>
       </main>
 
-      {/* =================================================
-          FOOTER
-          Shiny dots continue right into the footer
-          ================================================= */}
-      <footer className="relative z-10 pb-12 pt-6 text-sm text-slate-400">
-        <hr className="lp-divider-glow" />
-        <StarDots dots={footerDots} />
-
-        <div className="relative mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 px-5 pt-10 sm:flex-row sm:px-8">
-          <div className="flex flex-col items-center gap-2 sm:items-start">
-            <div className="flex items-center gap-2 text-base font-extrabold text-white">
-              <PlanetLogo />
-              <span className="lp-font-display">OpenQZ</span>
+      <footer className="bg-[#2b0e1e] text-[#f3efda]">
+        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-8">
+          <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+            <div className="min-w-0">
+              <Logo light />
+              <p className="mt-3 max-w-md text-sm text-[#f3efda]/85">Open source. Built and maintained by the Open Source Students Club (OSSC), Don Bosco Institute of Technology, Bangalore.</p>
             </div>
-            <p className="text-xs text-slate-500">
-              Open source, MIT license | Built by OSSC DBIT
-            </p>
+            <div className="flex flex-wrap items-center gap-4">
+              <a href="https://dbit.edu.in/" target="_blank" rel="noreferrer" className="rounded-lg bg-[#f3efda] px-4 py-3 transition-colors hover:bg-white" aria-label="Don Bosco Institute of Technology, Bangalore (opens the college site)">
+                <img src="/landing/dbit-logo.png" alt="Don Bosco Institute of Technology, Bangalore" width={726} height={180} className="h-12 w-auto sm:h-14" />
+              </a>
+              <a href="https://github.com/OSSC-DBIT" target="_blank" rel="noreferrer" className="flex items-center gap-3 rounded-lg border border-[#592643] px-3 py-2 transition-colors hover:border-[#ff5cb0]" aria-label="Open Source Students Club, DBIT (opens GitHub)">
+                <img src="/landing/ossc-logo.jpg" alt="" width={200} height={200} className="h-12 w-12 rounded-md sm:h-14 sm:w-14" />
+                <span className="text-sm font-bold leading-tight">
+                  Open Source
+                  <br />
+                  Students Club
+                </span>
+              </a>
+            </div>
           </div>
-
-          <nav className="flex flex-wrap items-center justify-center gap-6" aria-label="Footer">
-            <a
-              href="/guides/student.html"
-              className="rounded text-slate-300 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
-            >
-              Student guide
-            </a>
-            <a
-              href="/guides/faculty.html"
-              className="rounded text-slate-300 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
-            >
-              Faculty guide
-            </a>
-            <a
-              href="/guides/admin.html"
-              className="rounded text-slate-300 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
-            >
-              Admin guide
-            </a>
-            <Link
-              to="/login"
-              className="rounded text-slate-300 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
-            >
-              Login
-            </Link>
-          </nav>
+          <div className="mt-8 flex flex-col gap-4 border-t border-[#592643] pt-6 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-[#f3efda]/75">An OSSC DBIT project.</p>
+            <nav aria-label="Footer" className="flex flex-wrap gap-x-6 gap-y-2 font-bold">
+              <a href="/guides/student.html" className="hover:text-[#ff5cb0]">
+                Student guide
+              </a>
+              <a href="/guides/faculty.html" className="hover:text-[#ff5cb0]">
+                Faculty guide
+              </a>
+              <a href="/guides/admin.html" className="hover:text-[#ff5cb0]">
+                Admin guide
+              </a>
+              <a href="https://github.com/OSSC-DBIT/openqz" target="_blank" rel="noreferrer" className="hover:text-[#ff5cb0]">
+                GitHub
+              </a>
+              <Link to="/privacy" className="hover:text-[#ff5cb0]">
+                Privacy Policy
+              </Link>
+              <a href="mailto:osscdbit@gmail.com" className="hover:text-[#ff5cb0]">
+                osscdbit@gmail.com
+              </a>
+              <Link to="/login" className="text-[#ff8cc8] hover:text-white">
+                Login
+              </Link>
+            </nav>
+          </div>
         </div>
       </footer>
     </div>

@@ -1,10 +1,11 @@
+import { fmtWhen } from '../../components/quiz';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Download, FileSpreadsheet, Upload } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { api } from '../../api/client';
 import type { ImportJob, ImportKind } from '../../api/types';
-import { Badge, Button, Card, EmptyState, ErrorText, Field, Input, PageHeader, Select, Spinner, Table, Td } from '../../components/ui';
+import { Badge, Button, Card, EmptyState, ErrorText, Field, Input, Loading, PageHeader, Select, Table, Td } from '../../components/ui';
 import { currentAcademicYear } from './OrgPage';
 
 export const KIND_LABEL: Record<ImportKind, string> = {
@@ -107,7 +108,7 @@ export default function ImportsPage() {
 
       <h2 className="mb-3 mt-8 font-bold">Recent imports</h2>
       {jobs.isLoading ? (
-        <Spinner />
+        <Loading />
       ) : jobs.data?.length ? (
         <Table head={['File', 'Type', 'Year', 'Status', 'Rows', 'When']} cols={[undefined, 'hidden md:table-cell', 'hidden md:table-cell', undefined, 'hidden lg:table-cell', 'hidden lg:table-cell']} compact>
           {jobs.data.map((j) => (
@@ -132,7 +133,7 @@ export default function ImportsPage() {
               <Td className="hidden text-muted lg:table-cell">
                 {j.status === 'done' ? `${j.created_count} new, ${j.updated_count} updated` : `${j.valid_rows}/${j.total_rows} valid`}
               </Td>
-              <Td className="hidden text-muted lg:table-cell">{new Date(j.created_at).toLocaleString()}</Td>
+              <Td className="hidden text-muted lg:table-cell">{fmtWhen(j.created_at)}</Td>
             </tr>
           ))}
         </Table>

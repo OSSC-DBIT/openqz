@@ -3,8 +3,8 @@ import { Link } from 'react-router';
 import { api } from '../../api/client';
 import type { AssignmentInfo } from '../../api/types';
 import { SCORING_LABEL, type LiveGameRow } from '../../live/api';
-import { Badge, EmptyState, ErrorText, PageHeader, Spinner, Table, Td } from '../../components/ui';
-import { KIND_LABEL } from '../../components/quiz';
+import { Badge, EmptyState, ErrorText, Loading, PageHeader, Table, Td } from '../../components/ui';
+import { KIND_LABEL, fmtWhen } from '../../components/quiz';
 
 export default function ReportsListPage() {
   const list = useQuery({ queryKey: ['my-assignments'], queryFn: () => api<AssignmentInfo[]>('/activity-assignments') });
@@ -15,7 +15,7 @@ export default function ReportsListPage() {
       <PageHeader title="Reports" subtitle="Everything you have assigned" />
       <ErrorText error={list.error} />
       {list.isLoading ? (
-        <Spinner />
+        <Loading />
       ) : list.data?.length ? (
         <Table head={['Activity', 'Assigned to', 'Deadline', 'Submitted', '']} cols={[undefined, 'hidden md:table-cell', 'hidden lg:table-cell', undefined, 'hidden sm:table-cell']} compact>
           {list.data.map((a) => {
@@ -29,13 +29,13 @@ export default function ReportsListPage() {
                   <div className="text-xs text-muted">{KIND_LABEL[a.activity_kind]}</div>
                   {/* smaller screens: classes, deadline and state under the title */}
                   <div className="mt-1 text-xs text-muted md:hidden">{a.target_labels.join(', ') || 'Join code only'}</div>
-                  <div className="text-xs text-muted lg:hidden">Deadline: {a.due_at ? new Date(a.due_at).toLocaleString() : 'none'}</div>
+                  <div className="text-xs text-muted lg:hidden">Deadline: {a.due_at ? fmtWhen(a.due_at) : 'none'}</div>
                   <div className="mt-1 sm:hidden">
                     <Badge tone={open ? 'green' : 'neutral'}>{open ? 'running' : 'ended'}</Badge>
                   </div>
                 </Td>
                 <Td className="hidden text-sm md:table-cell">{a.target_labels.join(', ')}</Td>
-                <Td className="hidden text-sm text-muted lg:table-cell">{a.due_at ? new Date(a.due_at).toLocaleString() : 'none'}</Td>
+                <Td className="hidden text-sm text-muted lg:table-cell">{a.due_at ? fmtWhen(a.due_at) : 'none'}</Td>
                 <Td className="whitespace-nowrap">
                   {a.submitted_count} / {a.student_count}
                 </Td>
@@ -55,14 +55,14 @@ export default function ReportsListPage() {
           <h2 id="live-games" className="mb-3 text-lg font-bold">
             Live games
           </h2>
-          <Table head={['Game', 'Scoring', 'Players', '']} cols={[undefined, 'hidden md:table-cell', undefined, 'hidden sm:table-cell']} compact>
+          <Table head={['Game', 'Ranking', 'Players', '']} cols={[undefined, 'hidden md:table-cell', undefined, 'hidden sm:table-cell']} compact>
             {games.data.map((g) => (
               <tr key={g.id}>
                 <Td>
                   <Link to={g.status === 'ended' ? `/faculty/live/${g.id}` : `/live/host/${g.id}`} className="font-semibold text-brand-ink hover:underline">
                     {g.title}
                   </Link>
-                  <div className="text-xs text-muted">{new Date(g.created_at).toLocaleString()}</div>
+                  <div className="text-xs text-muted">{fmtWhen(g.created_at)}</div>
                 </Td>
                 <Td className="hidden text-sm md:table-cell">{SCORING_LABEL[g.scoring]}</Td>
                 <Td>{g.players}</Td>

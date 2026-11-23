@@ -15,7 +15,7 @@ json() { python3 -c "import sys,json; d=json.load(sys.stdin); print(eval(sys.arg
 
 login() {
   curl -fsS -X POST "$BASE/auth/login" -H 'Content-Type: application/json' \
-    -d "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$1\"}"
+    -d "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$1\",\"privacy_accepted\":true}"
 }
 
 if ! RESP=$(login "$PASS" 2>/dev/null); then
@@ -58,7 +58,7 @@ make_tester() { # role username name email password
   tmp=$(echo "$resp" | json "d.get('temporary_password', '')")
   [ -z "$tmp" ] && { echo "$4 already exists"; return; }
   t=$(curl -fsS -X POST "$BASE/auth/login" -H 'Content-Type: application/json' \
-    -d "{\"email\":\"$4\",\"password\":\"$tmp\"}" | json "d['access_token']")
+    -d "{\"email\":\"$4\",\"password\":\"$tmp\",\"privacy_accepted\":true}" | json "d['access_token']")
   curl -fsS -o /dev/null -X POST "$BASE/auth/change-password" -H "Authorization: Bearer $t" \
     -H 'Content-Type: application/json' -d "{\"current_password\":\"$tmp\",\"new_password\":\"$5\"}"
   echo "created $4"

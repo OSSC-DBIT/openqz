@@ -1,24 +1,13 @@
+import { useAuth } from '../../auth/AuthProvider';
+import { fmtWhen } from '../../components/quiz';
+import { useConfirm } from '../../components/Confirm';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { KeyRound, Lock, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { api } from '../../api/client';
 import type { Department, Page, Role, Section, User } from '../../api/types';
 import { DeleteForever } from '../../components/DeleteForever';
-import {
-  Badge,
-  Button,
-  EmptyState,
-  ErrorText,
-  Field,
-  Input,
-  Modal,
-  PageHeader,
-  Select,
-  Spinner,
-  Table,
-  Td,
-  cx,
-} from '../../components/ui';
+import { Badge, Button, cx, EmptyState, ErrorText, Field, Input, Loading, Modal, PageHeader, Select, Spinner, Table, Td } from '../../components/ui';
 
 function TempPassword({ username, email, password, onClose }: { username: string; email: string | null; password: string; onClose: () => void }) {
   return (
@@ -62,6 +51,7 @@ const ROLE_HINT: Record<Role, string> = {
 
 /** The fields shared by "Add user" and "Edit user". */
 function UserFields({ form, set, depts, sections, creating }: { form: UserForm; set: (f: UserForm) => void; depts: Department[]; sections: Section[]; creating: boolean }) {
+  const { user: me } = useAuth();
   const isStudent = form.role === 'student';
   const isFaculty = form.role === 'faculty';
   const toggleDept = (id: number) =>
@@ -81,7 +71,7 @@ function UserFields({ form, set, depts, sections, creating }: { form: UserForm; 
               <option value="student">Student</option>
               <option value="faculty">Faculty</option>
               <option value="club">Club organiser</option>
-              <option value="admin">Admin</option>
+              {me?.is_superadmin && <option value="admin">Admin</option>}
             </Select>
           </Field>
         </div>
@@ -254,6 +244,11 @@ function EditUser({ user, onClose, depts, sections }: { user: User; onClose: () 
           {user.google_linked ? ' | changing the email unlinks their Google account' : ''}
         </p>
         <UserFields form={form} set={setForm} depts={depts} sections={sections} creating={false} />
+        <p className="text-xs text-muted">
+          {user.privacy_accepted_at
+            ? `Agreed to the privacy policy (version ${user.privacy_version ?? '?'}) on ${new Date(user.privacy_accepted_at).toLocaleString()}.`
+            : 'Has not agreed to the privacy policy yet: asked at the next sign-in.'}
+        </p>
         <ErrorText error={save.error} />
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>
@@ -354,6 +349,12 @@ export default function UsersPage() {
     placeholderData: (prev) => prev,
   });
 
+  const [ask, confirmDialog] = useConfirm();
+  const { user: me } = useAuth();
+  const sup = !!me?.is_superadmin;
+  // Admin accounts are managed by super admins; everyone may edit their own details.
+  const mayManage = (u: User) => u.role !== 'admin' || sup || u.id === me?.id;
+  const promote = useMutation({ mutationFn: (u: User) => api(`/users/${u.id}`, { method: 'PATCH', json: { is_superadmin: !u.is_superadmin } }) });
   const reset = useMutation({
     mutationFn: (u: User) =>
       api<{ username: string; email: string | null; temporary_password: string }>(`/users/${u.id}/reset-password`, { method: 'POST' }),
@@ -389,6 +390,7 @@ export default function UsersPage() {
           <Input
             className="pl-9"
             placeholder="Search by name, email, phone or USN"
+            aria-label="Search by name, email, phone or USN"
             value={q}
             onChange={(e) => {
               setQ(e.target.value);
@@ -429,9 +431,10 @@ export default function UsersPage() {
         </Select>
       </div>
 
-      <ErrorText error={users.error || reset.error || toggle.error} />
+      <ErrorText error={users.error || reset.error || toggle.error || unlock.error || promote.error} />
+      {confirmDialog}
       {users.isLoading ? (
-        <Spinner />
+        <Loading count={8} />
       ) : users.data && users.data.items.length === 0 ? (
         <EmptyState title="No users found">Import a sheet from the Imports page or add a user.</EmptyState>
       ) : (
@@ -450,12 +453,12 @@ export default function UsersPage() {
                 <div className="text-xs text-muted md:hidden">{[deptCodes(u), u.section_label].filter(Boolean).join(' | ')}</div>
                 {/* phones: role and status under the name (their columns are hidden) */}
                 <div className="mt-1.5 flex flex-wrap gap-1 sm:hidden">
-                  <Badge tone={u.role === 'admin' ? 'brand' : 'neutral'}>{u.role}</Badge>
+                  <Badge tone={u.role === 'admin' ? 'brand' : 'neutral'}>{u.role === 'admin' && u.is_superadmin ? 'super admin' : u.role}</Badge>
                   <UserStatus u={u} locked={locked(u)} />
                 </div>
               </Td>
               <Td className="hidden sm:table-cell">
-                <Badge tone={u.role === 'admin' ? 'brand' : 'neutral'}>{u.role}</Badge>
+                <Badge tone={u.role === 'admin' ? 'brand' : 'neutral'}>{u.role === 'admin' && u.is_superadmin ? 'super admin' : u.role}</Badge>
               </Td>
               <Td className="hidden md:table-cell">
                 {deptCodes(u)}
@@ -466,15 +469,17 @@ export default function UsersPage() {
                   <UserStatus u={u} locked={locked(u)} />
                 </div>
               </Td>
-              <Td className="hidden text-muted xl:table-cell">{u.last_login_at ? new Date(u.last_login_at).toLocaleString() : 'never'}</Td>
+              <Td className="hidden text-muted xl:table-cell">{u.last_login_at ? fmtWhen(u.last_login_at) : 'never'}</Td>
               <Td>
                 {/* phones: a 2 x 2 grid of actions; wider screens: one row */}
-                <div className="grid grid-cols-[auto_auto] justify-end gap-1 sm:flex sm:justify-end">
+                <div className="grid grid-cols-[auto_auto] justify-end gap-1 sm:flex sm:justify-end [&>button]:!px-2.5">
                   {locked(u) && (
                     <Button variant="ghost" title="Unlock" aria-label={`Unlock ${u.username}`} onClick={() => unlock.mutate(u)}>
                       <Lock className="h-4 w-4" />
                     </Button>
                   )}
+                  {mayManage(u) && (
+                    <>
                   <Button variant="ghost" title="Edit details" aria-label={`Edit details of ${u.username}`} onClick={() => setEditing(u)}>
                     <Pencil className="h-4 w-4" />
                   </Button>
@@ -483,7 +488,7 @@ export default function UsersPage() {
                     title="Reset password"
                     aria-label={`Reset password for ${u.username}`}
                     onClick={() => {
-                      if (confirm(`Reset password for ${u.username}?`)) reset.mutate(u);
+                      void ask({ title: `Reset password for ${u.username}?`, body: 'They get a new temporary password and are signed out everywhere.', action: 'Reset password' }).then((ok) => ok && reset.mutate(u));
                     }}
                   >
                     <KeyRound className="h-4 w-4" />
@@ -491,9 +496,20 @@ export default function UsersPage() {
                   <Button variant="ghost" onClick={() => toggle.mutate(u)}>
                     {u.is_active ? 'Disable' : 'Enable'}
                   </Button>
+                    </>
+                  )}
+                  {sup && u.role === 'admin' && u.id !== me?.id && (
+                    <Button variant="ghost" title={u.is_superadmin ? 'Make a day-to-day admin' : 'Give every admin power'} onClick={() => promote.mutate(u)}>
+                      {u.is_superadmin ? 'Make admin' : 'Make super admin'}
+                    </Button>
+                  )}
+                  {sup && (
+                    <>
                   <Button variant="ghost" title="Delete for good" aria-label={`Delete ${u.username} for good`} className="hover:!bg-red-50 hover:!text-red-700 dark:hover:!bg-red-950" onClick={() => setDeleting(u)}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
+                    </>
+                  )}
                 </div>
               </Td>
             </tr>

@@ -1,8 +1,9 @@
+import { fmtWhen } from '../components/quiz';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Download, Monitor } from 'lucide-react';
 import { Link, useParams } from 'react-router';
 import { api, downloadFile } from '../api/client';
-import { Badge, Button, Card, ErrorText, PageHeader, Spinner, Table, Td } from '../components/ui';
+import { Badge, Button, Card, ErrorText, Loading, PageHeader, Table, Td } from '../components/ui';
 import { SCORING_LABEL, type LiveScoring, type LiveStatus } from './api';
 
 interface Results {
@@ -29,12 +30,12 @@ export default function LiveResultsPage() {
       </Link>
       <ErrorText error={r.error} />
       {!d ? (
-        <Spinner />
+        <Loading />
       ) : (
         <>
           <PageHeader
             title={d.title}
-            subtitle={`Live game | ${SCORING_LABEL[d.scoring]} | ${new Date(d.created_at).toLocaleString()}`}
+            subtitle={`Live game | ${SCORING_LABEL[d.scoring]} | ${fmtWhen(d.created_at)}`}
             actions={
               <div className="flex flex-wrap gap-2">
                 {d.status !== 'ended' && (

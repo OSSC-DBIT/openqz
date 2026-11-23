@@ -1,3 +1,4 @@
+import { useConfirm } from '../components/Confirm';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { BarChart3, Check, Crown, Lock, LockOpen, Maximize, Play, SkipForward, Trophy, Users, X } from 'lucide-react';
 import QRCode from 'qrcode';
@@ -5,7 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { api } from '../api/client';
 import { AuthImage, TILE_COLORS } from '../components/quiz';
-import { cx } from '../components/ui';
+import { Button, cx, Modal } from '../components/ui';
 import { Logo } from '../layouts/AppShell';
 import { SCORING_LABEL, useServerClock, type BoardRow, type HostView } from './api';
 
@@ -26,6 +27,16 @@ export default function LiveHostPage() {
     mutationFn: (playerId: string) => api(`/live/games/${gameId}/players/${playerId}`, { method: 'DELETE' }),
     onSuccess: () => void game.refetch(),
   });
+  const [ask, confirmDialog] = useConfirm();
+  const [showPlayers, setShowPlayers] = useState(false);
+  /** Signed-in players are shut out for good; a guest could come back under another nickname. */
+  const kick = (id: string, nick: string, guest: boolean) =>
+    void ask({
+      title: `Remove ${nick} from the game?`,
+      body: guest ? 'They are out of this game. A guest could join again with a new nickname: stop new joins to prevent that.' : 'They are out of this game and cannot join it again.',
+      action: 'Remove player',
+      danger: true,
+    }).then((ok) => ok && remove.mutate(id));
   const now = useServerClock(g?.server_now, g?.status === 'question');
 
   // Time up, or everyone answered: show the answer automatically (once per question).
@@ -34,9 +45,15 @@ export default function LiveHostPage() {
     if (!g || g.status !== 'question' || !g.question || revealedFor.current === g.index) return;
     const timeUp = now() >= new Date(g.question.ends_at).getTime();
     const allIn = g.players.length > 0 && g.answered >= g.players.length;
-    if (timeUp || allIn) {
-      revealedFor.current = g.index;
-      act.mutate('reveal');
+    if ((timeUp || allIn) && !act.isPending) {
+      const index = g.index;
+      revealedFor.current = index;
+      act.mutate('reveal', {
+        // Failed (weak Wi-Fi): forget it, so the next tick tries again and phones are not left on "Time's up".
+        onError: () => {
+          if (revealedFor.current === index) revealedFor.current = -1;
+        },
+      });
     }
   });
 
@@ -45,7 +62,7 @@ export default function LiveHostPage() {
 
   const last = g.index >= g.total - 1;
   return (
-    <div className="flex min-h-dvh flex-col bg-gradient-to-br from-[#1a1240] via-[#2a1b6e] to-[#4a2bb0] text-white">
+    <div className="flex min-h-dvh flex-col stage text-white">
       <header className="flex items-center justify-between gap-3 px-4 py-3 sm:px-6">
         <div className="flex min-w-0 items-center gap-3">
           <Logo light />
@@ -63,8 +80,13 @@ export default function LiveHostPage() {
           <button className="rounded-lg bg-white/10 p-2 hover:bg-white/20" aria-label="Full screen" title="Full screen" onClick={() => void document.documentElement.requestFullscreen?.().catch(() => {})}>
             <Maximize className="h-4 w-4" />
           </button>
+          {g.status !== 'lobby' && g.status !== 'ended' && (
+            <button className="flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-1.5 text-sm font-bold hover:bg-white/20" onClick={() => setShowPlayers(true)}>
+              <Users className="h-4 w-4" aria-hidden /> Players ({g.players.length})
+            </button>
+          )}
           {g.status !== 'ended' && (
-            <button className="rounded-lg bg-white/10 px-3 py-1.5 text-sm font-bold hover:bg-white/20" onClick={() => confirm('End the game for everyone?') && act.mutate('end')}>
+            <button className="rounded-lg bg-white/10 px-3 py-1.5 text-sm font-bold hover:bg-white/20" onClick={() => void ask({ title: 'End the game for everyone?', body: 'Players see the final podium and nobody can answer any more.', action: 'End game', danger: true }).then((ok) => ok && act.mutate('end'))}>
               End
             </button>
           )}
@@ -72,11 +94,37 @@ export default function LiveHostPage() {
       </header>
 
       <main className="flex flex-1 flex-col px-4 pb-6 sm:px-8">
-        {g.status === 'lobby' && <Lobby g={g} onStart={() => act.mutate('start')} onLock={() => act.mutate(g.accepting_joins ? 'lock' : 'unlock')} onRemove={(id, nick) => confirm(`Remove ${nick} from the game?`) && remove.mutate(id)} busy={act.isPending} />}
+        {g.status === 'lobby' && <Lobby g={g} onStart={() => act.mutate('start')} onLock={() => act.mutate(g.accepting_joins ? 'lock' : 'unlock')} onRemove={kick} busy={act.isPending} />}
         {(g.status === 'question' || g.status === 'reveal') && g.question && <QuestionView g={g} now={now} onSkip={() => act.mutate('reveal')} onBoard={() => act.mutate('leaderboard')} onNext={() => act.mutate('next')} last={last} />}
         {g.status === 'leaderboard' && <Leaderboard g={g} onNext={() => act.mutate('next')} last={last} />}
         {g.status === 'ended' && <Podium g={g} />}
         {act.error && <p className="mt-3 text-center text-sm text-amber-200">{(act.error as Error).message}</p>}
+        <Modal open={showPlayers && g.status !== 'lobby'} onClose={() => setShowPlayers(false)} title="Players">
+          <p className="text-sm text-muted">
+            {g.players.length} {g.players.length === 1 ? 'player' : 'players'} | {g.accepting_joins ? 'new players can still join' : 'closed to new players'}
+          </p>
+          <ul className="mt-3 max-h-[50vh] divide-y divide-line overflow-y-auto rounded-lg border border-line" aria-label="Players in the game">
+            {g.players.map((p) => (
+              <li key={p.id} className="flex items-center justify-between gap-3 px-3 py-2">
+                <span className="min-w-0 truncate font-semibold">
+                  {p.nickname}
+                  {p.guest && <span className="ml-2 text-xs font-medium text-muted">guest</span>}
+                </span>
+                <Button variant="ghost" aria-label={`Remove ${p.nickname}`} onClick={() => kick(p.id, p.nickname, p.guest)}>
+                  <X className="h-4 w-4" aria-hidden /> Remove
+                </Button>
+              </li>
+            ))}
+            {!g.players.length && <li className="px-3 py-4 text-sm text-muted">Nobody is playing.</li>}
+          </ul>
+          <div className="mt-4 flex justify-between gap-2">
+            <Button variant="secondary" loading={act.isPending} onClick={() => act.mutate(g.accepting_joins ? 'lock' : 'unlock')}>
+              {g.accepting_joins ? <Lock className="h-4 w-4" aria-hidden /> : <LockOpen className="h-4 w-4" aria-hidden />} {g.accepting_joins ? 'Stop new joins' : 'Allow joins'}
+            </Button>
+            <Button onClick={() => setShowPlayers(false)}>Done</Button>
+          </div>
+        </Modal>
+        {confirmDialog}
       </main>
     </div>
   );
@@ -86,11 +134,11 @@ function Screen({ children }: { children: React.ReactNode }) {
   return <div className="grid min-h-dvh place-items-center bg-[#1a1240] p-6 text-center text-white">{children}</div>;
 }
 
-function Lobby({ g, onStart, onLock, onRemove, busy }: { g: HostView; onStart: () => void; onLock: () => void; onRemove: (id: string, nick: string) => void; busy: boolean }) {
+function Lobby({ g, onStart, onLock, onRemove, busy }: { g: HostView; onStart: () => void; onLock: () => void; onRemove: (id: string, nick: string, guest: boolean) => void; busy: boolean }) {
   const link = `${window.location.origin}/live/${g.code}`;
   const [qr, setQr] = useState<string | null>(null);
   useEffect(() => {
-    QRCode.toDataURL(link, { margin: 1, width: 260, color: { dark: '#1d1b2c', light: '#ffffff' } })
+    QRCode.toDataURL(link, { margin: 1, width: 260, color: { dark: '#3b142a', light: '#ffffff' } })
       .then(setQr)
       .catch(() => setQr(null));
   }, [link]);
@@ -102,7 +150,7 @@ function Lobby({ g, onStart, onLock, onRemove, busy }: { g: HostView; onStart: (
           <div className="mt-1 whitespace-nowrap text-xl font-extrabold lg:text-2xl">{window.location.host}/live</div>
           <div className="mt-2 text-sm text-white/85">{g.allow_guests ? 'Anyone can join with a nickname, or sign in.' : 'Players sign in with their college account.'}</div>
         </div>
-        <div className="rounded-3xl bg-white p-5 text-[#1d1b2c]">
+        <div className="rounded-3xl bg-white p-5 text-[#3b142a]">
           <div className="text-xs font-bold uppercase tracking-wide text-[#6b6880]">2. Enter the code</div>
           <div className="mt-1 text-5xl font-extrabold tracking-[0.15em] lg:text-6xl" aria-label={`Join code ${g.code.split('').join(' ')}`}>
             {g.code.slice(0, 3)} {g.code.slice(3)}
@@ -138,7 +186,7 @@ function Lobby({ g, onStart, onLock, onRemove, busy }: { g: HostView; onStart: (
               <button
                 className="group flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 font-bold hover:bg-red-500/80"
                 title="Remove this player"
-                onClick={() => onRemove(p.id, p.nickname)}
+                onClick={() => onRemove(p.id, p.nickname, p.guest)}
               >
                 <span className="sr-only">Remove </span>
                 {p.nickname}
@@ -170,7 +218,7 @@ function QuestionView({ g, now, onSkip, onBoard, onNext, last }: { g: HostView; 
   const total = Math.max(1, Object.values(g.counts ?? {}).reduce((a, b) => a + b, 0));
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-4">
-      <div className="relative flex min-h-[30vh] flex-1 flex-col items-center justify-center rounded-3xl bg-white p-6 text-center text-[#1d1b2c] shadow-xl">
+      <div className="relative flex min-h-[30vh] flex-1 flex-col items-center justify-center rounded-3xl bg-white p-6 text-center text-[#3b142a] shadow-xl">
         {q.stem_image_id && <AuthImage id={q.stem_image_id} className="mb-4 max-h-56 rounded-xl" />}
         <h1 className="whitespace-pre-wrap text-2xl font-extrabold leading-snug sm:text-4xl 2xl:text-5xl">{q.stem}</h1>
         {ready && (

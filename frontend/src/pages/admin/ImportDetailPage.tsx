@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { api, downloadFile } from '../../api/client';
 import type { ImportFields, ImportJob } from '../../api/types';
-import { Button, Card, ErrorText, PageHeader, Select, Spinner, Table, Td } from '../../components/ui';
+import { ConfirmDelete } from '../../components/ConfirmDelete';
+import { Button, Card, ErrorText, Loading, PageHeader, Select, Spinner, Table, Td } from '../../components/ui';
 import { KIND_LABEL, StatusBadge } from './ImportsPage';
 
 const BUSY: ImportJob['status'][] = ['uploaded', 'parsing', 'committing'];
@@ -45,13 +46,13 @@ export default function ImportDetailPage() {
     onSuccess: refresh,
   });
   const commit = useMutation({ mutationFn: () => api(`/imports/${id}/commit`, { method: 'POST' }), onSuccess: refresh });
-  const purge = useMutation({ mutationFn: () => api(`/imports/${id}/credentials`, { method: 'DELETE' }), onSuccess: refresh });
+  const [purging, setPurging] = useState(false);
   const download = useMutation({
     mutationFn: () => downloadFile(`/imports/${id}/credentials.pdf`, `openqz-credentials-${j?.kind}-${id?.slice(0, 8)}.pdf`),
   });
 
   const j = job.data;
-  if (job.isLoading || !j) return job.error ? <ErrorText error={job.error} /> : <Spinner />;
+  if (job.isLoading || !j) return job.error ? <ErrorText error={job.error} /> : <Loading kind="page" />;
   const spec = fields.data?.find((f) => f.kind === j.kind);
   const busy = BUSY.includes(j.status);
   const previewCols = j.preview_rows?.[0] ? Object.keys(j.preview_rows[0]).filter((k) => !['row', 'exists'].includes(k)) : [];
@@ -86,19 +87,14 @@ export default function ImportDetailPage() {
               <Button onClick={() => download.mutate()} loading={download.isPending}>
                 <Download className="h-4 w-4" /> Credential slips (PDF)
               </Button>
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  if (confirm('Delete the credential PDF from the server? Do this after printing.')) purge.mutate();
-                }}
-              >
+              <Button variant="secondary" onClick={() => setPurging(true)}>
                 <Trash2 className="h-4 w-4" /> Delete PDF from server
               </Button>
             </div>
           ) : (
             <p className="mt-3 text-sm text-muted">No new accounts, or the credential sheet was already deleted.</p>
           )}
-          <ErrorText error={download.error || purge.error} />
+          <ErrorText error={download.error} />
         </Card>
       )}
 
@@ -180,6 +176,20 @@ export default function ImportDetailPage() {
             ))}
           </Table>
         </>
+      )}
+      {purging && (
+        <ConfirmDelete
+          title="Delete credential PDF"
+          what="the credential PDF"
+          run={() => api(`/imports/${id}/credentials`, { method: 'DELETE' })}
+          onClose={() => setPurging(false)}
+          onDone={() => {
+            setPurging(false);
+            refresh();
+          }}
+        >
+          <p className="mt-1">The slips with the temporary passwords are removed from the server. Do this after printing; they cannot be made again.</p>
+        </ConfirmDelete>
       )}
     </>
   );

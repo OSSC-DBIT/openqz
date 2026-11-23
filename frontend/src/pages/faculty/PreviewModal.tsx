@@ -63,11 +63,11 @@ export function PreviewModal({ activity, onClose }: { activity: Activity; onClos
         )}
         {q.type === 'fill_blank' &&
           Array.from({ length: blanks }, (_, j) => (
-            <div key={j} className="mb-2 rounded-2xl bg-white px-4 py-3 text-ink">
+            <div key={j} className="mb-2 rounded-2xl bg-white px-4 py-3 text-[#3b142a]">
               {showKey ? (q.answer.blanks as string[][])[j].join(' / ') : `Blank ${j + 1}`}
             </div>
           ))}
-        {(q.type === 'open_ended' || q.type === 'justify') && <div className="mt-3 h-32 rounded-2xl bg-white/90 p-4 text-muted">Student types here</div>}
+        {(q.type === 'open_ended' || q.type === 'justify') && <div className="mt-3 h-32 rounded-2xl bg-white/90 p-4 text-[#5d5870]">Student types here</div>}
         {showKey && q.explanation && <p className="mt-4 rounded-2xl bg-white/10 p-3 text-sm">{q.explanation}</p>}
       </main>
       <footer className="flex justify-between px-4 py-3">

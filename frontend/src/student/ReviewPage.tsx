@@ -4,7 +4,7 @@ import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-r
 import { ApiError, api } from '../api/client';
 import type { AttemptState, Review } from '../api/types';
 import { ResponseView } from '../components/ResponseView';
-import { Badge, Button, Card, ErrorText, Spinner } from '../components/ui';
+import { Badge, Button, Card, ErrorText, Loading } from '../components/ui';
 import { AuthImage } from '../components/quiz';
 
 const REASON: Record<string, string> = {
@@ -83,7 +83,7 @@ export default function ReviewPage() {
   const d = r.data;
   // Reopened by the teacher (unblocked): go back to the quiz.
   if (r.error instanceof ApiError && r.error.status === 409) return <Navigate to={`/play/${attemptId}`} replace />;
-  if (r.isLoading || !d) return r.error ? <ErrorText error={r.error} /> : <Spinner />;
+  if (r.isLoading || !d) return r.error ? <ErrorText error={r.error} /> : <Loading kind="page" />;
   const reason = params.get('reason') ?? (d.submit_reason !== 'manual' ? d.submit_reason : null);
   const pct = d.score !== null && Number(d.max_score) > 0 ? Math.round((Number(d.score) / Number(d.max_score)) * 100) : null;
   const correct = d.items.filter((i) => i.correct === true).length;
@@ -91,7 +91,7 @@ export default function ReviewPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <section className="mb-6 overflow-hidden rounded-3xl bg-[#15122b] p-6 text-center text-white shadow-lg sm:p-8">
+      <section className="mb-6 overflow-hidden rounded-3xl bg-[#2b0e1e] p-6 text-center text-white shadow-lg sm:p-8">
         <h1 className="text-2xl font-extrabold">Submitted</h1>
         <p className="text-sm text-white/70">{d.items.length} questions</p>
         {reason && REASON[reason] && <p className="mt-2 text-sm font-semibold text-amber-200">{REASON[reason]}</p>}
@@ -112,7 +112,7 @@ export default function ReviewPage() {
         )}
         {d.scores_visible && d.needs_manual && <p className="mt-4 text-sm text-white/70">Marks so far: some answers are still being graded.</p>}
         <Link to="/student">
-          <span className="mt-6 inline-block rounded-xl bg-white px-5 py-2.5 font-extrabold text-[#15122b] shadow-[inset_0_-4px_0_rgba(0,0,0,0.15)] hover:bg-white/90">Back to my activities</span>
+          <span className="mt-6 inline-block rounded-xl bg-white px-5 py-2.5 font-extrabold text-[#2b0e1e] shadow-[inset_0_-4px_0_rgba(0,0,0,0.15)] hover:bg-white/90">Back to my activities</span>
         </Link>
       </section>
 

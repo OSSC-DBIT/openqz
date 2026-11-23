@@ -7,7 +7,7 @@ import type { AuthConfig, Me } from '../api/types';
 import { homeFor, useAuth } from '../auth/AuthProvider';
 import { GoogleButton } from '../auth/GoogleButton';
 import { isSupportedBrowser } from '../browser';
-import { Button, ErrorText, Field, Input, PasswordInput } from '../components/ui';
+import { Button, cx, ErrorText, Field, Input, PasswordInput } from '../components/ui';
 import { Logo } from '../layouts/AppShell';
 
 // The camera code loads only when someone presses "Scan QR code".
@@ -60,7 +60,7 @@ function GuestJoin({ onRoom }: { onRoom: (code: string) => void }) {
   }
 
   return (
-    <section aria-labelledby="guest-title" className="mt-4 space-y-3 rounded-2xl border border-line bg-card p-6 shadow-sm">
+    <section aria-labelledby="guest-title" className="mt-4 space-y-3 sticker rounded-xl bg-card p-6">
       <div>
         <h2 id="guest-title" className="text-lg font-bold">
           Have a join code?
@@ -121,12 +121,12 @@ function UnsupportedBrowser({ from }: { from?: string }) {
     }
   };
   return (
-    <div className="grid min-h-dvh place-items-center bg-gradient-to-br from-brand-50 via-surface to-surface px-4 py-8">
+    <div className="grid min-h-dvh place-items-center paper px-4 py-8">
       <div className="w-full max-w-sm">
         <div className="mb-8 flex justify-center">
           <Logo />
         </div>
-        <div role="alert" className="space-y-3 rounded-2xl border border-line bg-card p-6 shadow-sm">
+        <div role="alert" className="space-y-3 sticker rounded-xl bg-card p-6">
           <h1 className="text-xl font-bold">Open OpenQZ in Chrome, Safari or Edge</h1>
           <p className="text-sm text-muted">
             This browser is not supported, so quizzes may not work properly here (timers, full screen, saving answers). Please open OpenQZ in <b>Google Chrome</b>, <b>Safari</b> or <b>Microsoft Edge</b>.
@@ -156,6 +156,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
+  // "I agree to the privacy policy": needed for every sign-in, saved on the account
+  const [agreed, setAgreed] = useState(false);
   // A room code entered before signing in: students go straight to it after sign-in.
   const [room, setRoom] = useState<string | null>(null);
   const config = useQuery({
@@ -184,7 +186,7 @@ export default function LoginPage() {
     setBusy(true);
     setError(null);
     try {
-      go(await login(email.trim(), password));
+      go(await login(email.trim(), password, agreed));
     } catch (err) {
       setError(err);
     } finally {
@@ -196,7 +198,7 @@ export default function LoginPage() {
     setBusy(true);
     setError(null);
     try {
-      go(await loginWithGoogle(credential));
+      go(await loginWithGoogle(credential, agreed));
     } catch (err) {
       setError(err);
     } finally {
@@ -207,12 +209,12 @@ export default function LoginPage() {
   const clientId = config.data?.google_client_id;
 
   return (
-    <div className="grid min-h-dvh place-items-center bg-gradient-to-br from-brand-50 via-surface to-surface px-4 py-8">
+    <div className="grid min-h-dvh place-items-center paper px-4 py-8">
       <div className="w-full max-w-sm">
         <div className="mb-8 flex justify-center">
           <Logo />
         </div>
-        <div className="space-y-4 rounded-2xl border border-line bg-card p-6 shadow-sm">
+        <div className="space-y-4 sticker rounded-xl bg-card p-6">
           <div>
             <h1 className="text-xl font-bold">Sign in</h1>
             <p className="text-sm text-muted">Use the email your college registered for you.</p>
@@ -223,9 +225,22 @@ export default function LoginPage() {
             </p>
           )}
 
+          <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-line bg-surface px-3 py-2.5 text-sm">
+            <input type="checkbox" className="mt-0.5 h-4 w-4 shrink-0 accent-[#d6177f]" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
+            <span>
+              I have read and agree to the{' '}
+              <Link to="/privacy" target="_blank" className="font-semibold text-brand-ink underline">
+                Privacy Policy
+              </Link>
+              .
+            </span>
+          </label>
+
           {clientId && (
             <>
-              <GoogleButton clientId={clientId} onCredential={(c) => void google(c)} onError={(m) => setError(new Error(m))} />
+              <div aria-disabled={!agreed} title={agreed ? undefined : 'Tick the privacy policy first'} className={cx(!agreed && 'pointer-events-none opacity-50')}>
+                <GoogleButton clientId={clientId} onCredential={(c) => void google(c)} onError={(m) => setError(new Error(m))} />
+              </div>
               <div className="flex items-center gap-3 text-xs uppercase tracking-wide text-muted">
                 <span className="h-px flex-1 bg-line" /> or <span className="h-px flex-1 bg-line" />
               </div>
@@ -250,9 +265,10 @@ export default function LoginPage() {
               <PasswordInput label="Password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
             </Field>
             <ErrorText error={error} />
-            <Button type="submit" loading={busy} className="w-full">
+            <Button type="submit" loading={busy} disabled={!agreed} className="w-full">
               Sign in
             </Button>
+            {!agreed && <p className="text-center text-xs text-muted">Tick the privacy policy above to sign in.</p>}
           </form>
           {config.data?.password_reset_email ? (
             <Link to="/forgot-password" className="block text-center text-sm text-brand-ink hover:underline">
@@ -270,7 +286,10 @@ export default function LoginPage() {
             <a className="underline" href="/guides/faculty.html" target="_blank" rel="noreferrer">
               faculty guide
             </a>
-            .
+            .{' '}
+            <Link className="underline" to="/privacy">
+              Privacy Policy
+            </Link>
           </p>
         </div>
         <GuestJoin onRoom={setRoom} />

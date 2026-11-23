@@ -1,12 +1,15 @@
 import enum
 import uuid
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Index, Integer, String, func
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
+from app.core.crypto import Encrypted, email_index, phone_index
 from app.core.db import Base
-from app.models.base import Timestamped, UUIDPk
+from app.models.base import Timestamped, UUIDPk, utcnow
 
 
 class Role(enum.StrEnum):
@@ -23,9 +26,11 @@ class User(UUIDPk, Timestamped, Base):
 
     username: Mapped[str] = mapped_column(String(64), unique=True, index=True)
     full_name: Mapped[str] = mapped_column(String(200))
-    # Login identifier. Stored lower-case, unique. Nullable only for legacy rows: every
-    # write path (API, importer, CLI) requires it.
-    email: Mapped[str | None] = mapped_column(String(254), nullable=True)
+    # Login identifier, stored encrypted (app/core/crypto.py). Lower-case; unique through
+    # email_hash, which is what every lookup uses. Nullable only for legacy rows: every write path
+    # (API, importer, CLI) requires it.
+    email: Mapped[str | None] = mapped_column(Encrypted, nullable=True)
+    email_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     # Google account subject id, linked on first Google sign-in.
     google_sub: Mapped[str | None] = mapped_column(String(64), nullable=True, unique=True)
     role: Mapped[Role] = mapped_column(Enum(Role, name="user_role"), index=True)
@@ -33,14 +38,37 @@ class User(UUIDPk, Timestamped, Base):
         ForeignKey("departments.id", ondelete="SET NULL"), nullable=True, index=True
     )
     # Optional contact and role details, filled in by the admin.
-    phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    phone: Mapped[str | None] = mapped_column(Encrypted, nullable=True)  # encrypted
+    phone_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     designation: Mapped[str | None] = mapped_column(String(120), nullable=True)
     password_hash: Mapped[str] = mapped_column(String(255))
     must_change_password: Mapped[bool] = mapped_column(Boolean, default=True)
     failed_logins: Mapped[int] = mapped_column(Integer, default=0)
     locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Admins only. A super admin has every power; a plain admin runs the day-to-day (people,
+    # classes, imports, statistics) but cannot touch other admins, read the audit log or
+    # delete anything for good.
+    is_superadmin: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Agreement to the privacy policy, ticked at sign-in (app/core/privacy.py): when, and which
+    # version. A newer policy version asks everyone again.
+    privacy_accepted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    privacy_version: Mapped[str | None] = mapped_column(String(20), nullable=True)
+
+    @validates("email")
+    def _set_email(self, _key: str, value: str | None) -> str | None:
+        value = value.strip().lower() if value else None
+        self.email_hash = email_index(value)
+        return value
+
+    @validates("phone")
+    def _set_phone(self, _key: str, value: str | None) -> str | None:
+        value = value.strip() if value else None
+        self.phone_hash = phone_index(value)
+        return value
 
     department = relationship("Department", lazy="joined")
     # Every department the user belongs to. Faculty may have several (a maths teacher in CSE
@@ -79,8 +107,8 @@ class UserDepartment(Base):
 
 # Usernames are unique regardless of case (login is case-insensitive).
 Index("uq_users_username_upper", func.upper(User.username), unique=True)
-# Emails are the login id: unique regardless of case.
-Index("uq_users_email_lower", func.lower(User.email), unique=True)
+# Emails are the login id: unique regardless of case (the hash is of the lower-case address).
+Index("uq_users_email_hash", User.email_hash, unique=True)
 
 
 class RefreshToken(UUIDPk, Timestamped, Base):
@@ -106,3 +134,13 @@ class PasswordResetToken(UUIDPk, Timestamped, Base):
     token_hash: Mapped[str] = mapped_column(String(64), unique=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class SiteCache(Base):
+    """Small things fetched from outside and kept (the contributor list for the landing page)."""
+
+    __tablename__ = "site_cache"
+
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    value: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

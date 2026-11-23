@@ -10,7 +10,7 @@ export async function ok<T>(r: Awaited<ReturnType<APIRequestContext['get']>>): P
 }
 
 export async function adminHeaders(request: APIRequestContext) {
-  const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { email: ADMIN, password: ADMIN_PW } }));
+  const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { privacy_accepted: true, email: ADMIN, password: ADMIN_PW } }));
   return { Authorization: `Bearer ${t.access_token}` };
 }
 
@@ -19,7 +19,7 @@ export async function makeUser(request: APIRequestContext, H: Record<string, str
   const r = await ok<{ user: { id: string }; temporary_password: string }>(
     await request.post('/api/v1/users', { headers: H, data: { username, full_name: name, email, role } }),
   );
-  const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { email, password: r.temporary_password } }));
+  const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { privacy_accepted: true, email, password: r.temporary_password } }));
   await ok(
     await request.post('/api/v1/auth/change-password', {
       headers: { Authorization: `Bearer ${t.access_token}` },
@@ -54,6 +54,7 @@ export async function login(page: Page, email: string, password = PW) {
   await page.goto('/login');
   await page.getByLabel('Email').fill(email);
   await page.getByRole('textbox', { name: 'Password', exact: true }).fill(password);
+  await page.getByRole('checkbox', { name: /agree to the privacy policy/i }).check();
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page).not.toHaveURL(/\/login$/);
 }

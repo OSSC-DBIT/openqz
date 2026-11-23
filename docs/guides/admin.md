@@ -48,17 +48,22 @@ Re-importing the same sheet is safe: existing people are updated, nobody is dupl
 | Task | Where |
 | --- | --- |
 | Add one person | **Users**, then **Add user** (gives a temporary password to hand over). Fill in the ID, role, name and email; optionally phone and designation. For a **student** choose the department and **section** (needed to receive class assignments). For **faculty** tap every **department** they work in: the first one is the main department. |
-| Edit a person | **Users**, pencil icon: name, email, phone, designation, departments, section. |
+| Edit a person | **Users**, pencil icon: name, email, phone, designation, departments, section. The dialog also shows when the person agreed to the privacy policy (and which version), or that they have not yet. |
 | Reset a password | **Users**, key icon. Gives a new temporary password; they must change it at next sign-in. |
 | Unlock an account | **Users**, lock icon (accounts lock for 15 minutes after 5 wrong passwords). |
 | Change someone's sign-in email | **Users**, pencil icon. Their old Google link is removed. |
-| Find people | Search by name, email, phone or ID; filter by role and by department (faculty appear under every department they belong to). |
+| Find people | Search by name or ID (any part), or by the **whole** email address or phone number (they are stored encrypted, so part of one does not match); filter by role and by department (faculty appear under every department they belong to). |
 | Delete a person for good | **Users**, bin icon. OpenQZ first shows what goes with them (their attempts; for a teacher, the activities they made and all student work on those). Type their ID and **your own password** to confirm. This cannot be undone: to keep the work, **Disable** instead. You cannot delete yourself or the last admin. |
 | Disable / enable an account | **Users**, **Disable**. Disabled people cannot sign in; their work is kept. |
 | Departments and sections | **Sections**. Sections belong to an academic year (for example 2026-27). |
 | Subjects | **Subjects**. |
+| Delete a section | **Sections**, bin icon. Students keep their accounts and only leave the section; its teacher mappings go. Refused while work assigned to the section has student attempts: delete those results first. |
+| Delete a subject | **Subjects**, bin icon. Teacher mappings through this subject go; activities keep their questions and results. |
+| Delete a department | **Sections**, bin icon next to the department. Only an empty department can go: delete its sections and move its people first. |
 | Who teaches what | **Faculty mapping**. Faculty only see and assign to sections mapped here. Map a teacher to sections of several branches (for example first-year maths for CSE and ECE) and they can pick any of them. |
 | Club accounts | **Users**, then **Add user**, role **Club organiser**. Use the club's shared email (for example `techclub@...`). |
+
+Every delete asks twice: first it shows what will go, then **Are you sure?**. Press **No, keep it** to back out.
 
 On a phone the lists stay narrow: a person's role and status show under their name, and department and last sign-in appear on wider screens.
 
@@ -90,6 +95,9 @@ Both deletes ask you to type the activity's title and your own password. After 5
 
 ## 6. Privacy
 
+- The **Privacy Policy** is at `/privacy` (linked from the sign-in page and the landing page footer). Everyone ticks **I agree** before signing in; OpenQZ saves the date and the policy version on the account and in the audit log (`privacy_accepted`). Live-game guests are told by the join screen. Questions and data requests go to **osscdbit@gmail.com**.
+- When the policy changes in a way people should agree to again, a developer updates the page and `PRIVACY_VERSION` (`backend/app/core/privacy.py`): everyone is asked once more at their next sign-in.
+- Emails and phone numbers are stored encrypted. Search finds them only by the whole address or number.
 - Credential slips contain passwords: print, hand out, then delete the PDF from the server.
 - Passwords are stored as one-way hashes; nobody, including the admin, can see them.
 - Export only what you need, and keep downloaded files on college devices.

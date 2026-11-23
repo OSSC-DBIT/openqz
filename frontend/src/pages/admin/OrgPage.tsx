@@ -3,7 +3,8 @@ import { Trash2 } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { api } from '../../api/client';
 import type { Department, Section, Subject } from '../../api/types';
-import { Button, Card, EmptyState, ErrorText, Field, Input, PageHeader, Select, Spinner, Table, Td } from '../../components/ui';
+import { ConfirmDelete } from '../../components/ConfirmDelete';
+import { Button, Card, EmptyState, ErrorText, Field, Input, Loading, PageHeader, Select, Table, Td } from '../../components/ui';
 
 export function currentAcademicYear(d = new Date()): string {
   const start = d.getMonth() >= 6 ? d.getFullYear() : d.getFullYear() - 1;
@@ -21,6 +22,7 @@ function DepartmentsCard() {
       void qc.invalidateQueries({ queryKey: ['departments'] });
     },
   });
+  const [gone, setGone] = useState<Department | null>(null);
   return (
     <Card>
       <h2 className="mb-3 font-bold">Departments</h2>
@@ -31,8 +33,8 @@ function DepartmentsCard() {
           add.mutate();
         }}
       >
-        <Input className="sm:w-28" placeholder="Code" required value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} />
-        <Input placeholder="Name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+        <Input className="sm:w-28" placeholder="Code" aria-label="Department code" required value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} />
+        <Input placeholder="Name" aria-label="Department name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
         <Button type="submit" loading={add.isPending}>
           Add
         </Button>
@@ -40,12 +42,31 @@ function DepartmentsCard() {
       <ErrorText error={add.error} />
       <div className="flex flex-wrap gap-2">
         {depts.data?.map((d) => (
-          <span key={d.id} className="rounded-xl border border-line px-3 py-1.5 text-sm">
+          <span key={d.id} className="inline-flex items-center gap-1 rounded-xl border border-line py-0.5 pl-3 pr-1 text-sm">
             <b>{d.code}</b> <span className="text-muted">{d.name}</span>
+            <button type="button" onClick={() => setGone(d)} aria-label={`Delete department ${d.code}`} title="Delete department" className="rounded-lg p-1.5 text-muted hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950">
+              <Trash2 className="h-4 w-4" />
+            </button>
           </span>
         ))}
         {depts.data?.length === 0 && <p className="text-sm text-muted">No departments yet. Imports create them automatically.</p>}
       </div>
+      {gone && (
+        <ConfirmDelete
+          title="Delete department"
+          what={`${gone.code} ${gone.name}`}
+          impactUrl={`/departments/${gone.id}/delete-impact`}
+          run={() => api(`/departments/${gone.id}`, { method: 'DELETE' })}
+          onClose={() => setGone(null)}
+          onDone={() => {
+            setGone(null);
+            void qc.invalidateQueries({ queryKey: ['departments'] });
+            void qc.invalidateQueries({ queryKey: ['subjects'] });
+          }}
+        >
+          <p className="mt-1">Only an empty department can be deleted: no sections and no people in it.</p>
+        </ConfirmDelete>
+      )}
     </Card>
   );
 }
@@ -70,10 +91,7 @@ export function SectionsPage() {
       void qc.invalidateQueries({ queryKey: ['sections'] });
     },
   });
-  const del = useMutation({
-    mutationFn: (id: number) => api(`/sections/${id}`, { method: 'DELETE' }),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ['sections'] }),
-  });
+  const [gone, setGone] = useState<Section | null>(null);
 
   return (
     <>
@@ -114,9 +132,9 @@ export function SectionsPage() {
               Add section
             </Button>
           </form>
-          <ErrorText error={add.error || del.error} />
+          <ErrorText error={add.error} />
           {sections.isLoading ? (
-            <Spinner />
+            <Loading />
           ) : sections.data?.length ? (
             <Table head={['Dept', 'Section', 'Students', '']} cols={[undefined, undefined, 'hidden sm:table-cell', 'w-px']} compact>
               {sections.data.map((s) => (
@@ -128,13 +146,7 @@ export function SectionsPage() {
                   </Td>
                   <Td className="hidden sm:table-cell">{s.student_count}</Td>
                   <Td className="text-right">
-                    <Button
-                      variant="ghost"
-                      title="Delete section"
-                      onClick={() => {
-                        if (confirm(`Delete ${s.department_code} Sem ${s.semester} ${s.name}? Students stay, membership is removed.`)) del.mutate(s.id);
-                      }}
-                    >
+                    <Button variant="ghost" title="Delete section" aria-label={`Delete section ${s.department_code} Sem ${s.semester} ${s.name}`} onClick={() => setGone(s)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </Td>
@@ -146,6 +158,22 @@ export function SectionsPage() {
           )}
         </Card>
       </div>
+      {gone && (
+        <ConfirmDelete
+          title="Delete section"
+          what={`${gone.department_code} Sem ${gone.semester} ${gone.name}`}
+          impactUrl={`/sections/${gone.id}/delete-impact`}
+          run={() => api(`/sections/${gone.id}`, { method: 'DELETE' })}
+          onClose={() => setGone(null)}
+          onDone={() => {
+            setGone(null);
+            void qc.invalidateQueries({ queryKey: ['sections'] });
+            void qc.invalidateQueries({ queryKey: ['assignments'] });
+          }}
+        >
+          <p className="mt-1">The students keep their accounts; they only leave this section.</p>
+        </ConfirmDelete>
+      )}
     </>
   );
 }
@@ -172,6 +200,7 @@ export function SubjectsPage() {
     },
   });
   const deptCode = (id: number | null) => depts.data?.find((d) => d.id === id)?.code ?? '';
+  const [gone, setGone] = useState<Subject | null>(null);
 
   return (
     <>
@@ -211,9 +240,9 @@ export function SubjectsPage() {
         </div>
       </Card>
       {subjects.isLoading ? (
-        <Spinner />
+        <Loading />
       ) : subjects.data?.length ? (
-        <Table head={['Code', 'Name', 'Dept', 'Sem']} cols={[undefined, undefined, 'hidden sm:table-cell', 'hidden sm:table-cell']} compact>
+        <Table head={['Code', 'Name', 'Dept', 'Sem', '']} cols={[undefined, undefined, 'hidden sm:table-cell', 'hidden sm:table-cell', 'w-px']} compact>
           {subjects.data.map((s) => (
             <tr key={s.id}>
               <Td className="break-all font-mono font-semibold">{s.code}</Td>
@@ -226,11 +255,32 @@ export function SubjectsPage() {
               </Td>
               <Td className="hidden sm:table-cell">{deptCode(s.department_id)}</Td>
               <Td className="hidden sm:table-cell">{s.semester ?? ''}</Td>
+              <Td className="text-right">
+                <Button variant="ghost" title="Delete subject" aria-label={`Delete subject ${s.code}`} onClick={() => setGone(s)}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </Td>
             </tr>
           ))}
         </Table>
       ) : (
         <EmptyState title="No subjects yet">Add one above or import a faculty mapping sheet.</EmptyState>
+      )}
+      {gone && (
+        <ConfirmDelete
+          title="Delete subject"
+          what={`${gone.code} ${gone.name}`}
+          impactUrl={`/subjects/${gone.id}/delete-impact`}
+          run={() => api(`/subjects/${gone.id}`, { method: 'DELETE' })}
+          onClose={() => setGone(null)}
+          onDone={() => {
+            setGone(null);
+            void qc.invalidateQueries({ queryKey: ['subjects'] });
+            void qc.invalidateQueries({ queryKey: ['assignments'] });
+          }}
+        >
+          <p className="mt-1">Teachers mapped to a section through this subject lose that mapping. Activities keep their questions and results.</p>
+        </ConfirmDelete>
       )}
     </>
   );

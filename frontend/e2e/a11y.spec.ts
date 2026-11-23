@@ -9,6 +9,9 @@ const FACULTY = process.env.E2E_FACULTY_EMAIL ?? 'faculty@openqz.dev';
 const FACULTY_PW = process.env.E2E_FACULTY_PASSWORD ?? 'Faculty@2026';
 
 async function audit(page: Page) {
+  // Measure colours on the settled page: during an entrance fade text is part transparent and
+  // axe would report low contrast that no one ever sees.
+  await page.evaluate(() => Promise.all(document.getAnimations().filter((x) => x.effect?.getComputedTiming().iterations !== Infinity).map((x) => x.finished.catch(() => undefined))));
   const r = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
   const serious = r.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
   expect(serious.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
@@ -18,18 +21,26 @@ async function signIn(page: Page, email: string, pw: string) {
   await page.goto('/login');
   await page.getByLabel('Email').fill(email);
   await page.getByRole('textbox', { name: 'Password', exact: true }).fill(pw);
+  await page.getByRole('checkbox', { name: /agree to the privacy policy/i }).check();
   await page.getByRole('button', { name: 'Sign in' }).click();
 }
 
 test('landing page', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: /Discover a/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Quizzes that play like a game/i })).toBeVisible();
   await audit(page);
 });
 
 test('login page', async ({ page }) => {
   await page.goto('/login');
   await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+  await audit(page);
+});
+
+test('privacy policy page', async ({ page }) => {
+  await page.goto('/privacy');
+  await expect(page.getByRole('heading', { name: 'Privacy Policy', level: 1 })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'osscdbit@gmail.com' }).first()).toHaveAttribute('href', 'mailto:osscdbit@gmail.com');
   await audit(page);
 });
 
@@ -79,7 +90,7 @@ test.describe('dark mode', () => {
 
   test('landing page', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: /Discover a/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Quizzes that play like a game/i })).toBeVisible();
     await audit(page);
   });
 

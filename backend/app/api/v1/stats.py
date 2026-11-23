@@ -29,6 +29,7 @@ from app.models import (
     User,
     UserDepartment,
 )
+from app.services.export_safe import safe_cell
 
 router = APIRouter(prefix="/admin/stats", tags=["admin statistics"])
 
@@ -512,11 +513,7 @@ def summary_table(s: StatsOut) -> list[list[Any]]:
     ]
 
 
-def _safe(v: Any) -> Any:
-    """Names come from people: never let a spreadsheet read one as a formula."""
-    if isinstance(v, str) and v[:1] in ("=", "+", "-", "@"):
-        return "'" + v
-    return v
+_safe = safe_cell
 
 
 @router.get(".csv")
@@ -576,7 +573,7 @@ async def stats_xlsx(
         sh.append(head)
         for cell in sh[1]:
             cell.font = Font(bold=True, color="FFFFFF")
-            cell.fill = PatternFill("solid", fgColor="5B3FD6")
+            cell.fill = PatternFill("solid", fgColor="3B142A")
         for row in table:
             sh.append([_safe(v) for v in row])
         sh.freeze_panes = "A2"

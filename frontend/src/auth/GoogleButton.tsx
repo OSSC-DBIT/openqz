@@ -1,53 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 
-interface CredentialResponse {
-  credential: string;
-}
-
-interface GoogleId {
-  initialize: (cfg: {
-    client_id: string;
-    callback: (r: CredentialResponse) => void;
-    ux_mode?: 'popup' | 'redirect';
-    auto_select?: boolean;
-    itp_support?: boolean;
-    use_fedcm_for_prompt?: boolean;
-  }) => void;
-  renderButton: (el: HTMLElement, opts: Record<string, unknown>) => void;
-  disableAutoSelect: () => void;
-}
-
-declare global {
-  interface Window {
-    google?: { accounts: { id: GoogleId } };
-  }
-}
-
-const SRC = 'https://accounts.google.com/gsi/client';
-let loading: Promise<void> | null = null;
-
-function loadScript(): Promise<void> {
-  if (window.google?.accounts?.id) return Promise.resolve();
-  if (!loading) {
-    loading = new Promise((resolve, reject) => {
-      const s = document.createElement('script');
-      s.src = SRC;
-      s.async = true;
-      s.defer = true;
-      s.onload = () => resolve();
-      s.onerror = () => {
-        loading = null;
-        reject(new Error('Could not load Google sign-in. Check your connection.'));
-      };
-      document.head.appendChild(s);
-    });
-  }
-  return loading;
-}
-
 /**
- * Official "Sign in with Google" button (Google Identity Services). Google gives us a signed
- * ID token; the backend verifies it and matches the email to an imported user.
+ * The official "Sign in with Google" button (Google Identity Services), shown in a frame
+ * (public/google-signin.html). Google's library adds inline styles, which the app's content
+ * security policy does not allow; the frame page is the only page that does, so Google's script
+ * never runs in the app itself. Google gives the frame a signed ID token; the frame passes it here
+ * by postMessage (same origin only), and the backend verifies it and matches the email to an
+ * imported user.
  */
 export function GoogleButton({
   clientId,
@@ -58,46 +17,43 @@ export function GoogleButton({
   onCredential: (credential: string) => void;
   onError: (message: string) => void;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
+  const frame = useRef<HTMLIFrameElement>(null);
+  const box = useRef<HTMLDivElement>(null);
   const [ready, setReady] = useState(false);
+  const [width, setWidth] = useState<number | null>(null);
   const cb = useRef({ onCredential, onError });
   cb.current = { onCredential, onError };
 
   useEffect(() => {
-    let alive = true;
-    loadScript()
-      .then(() => {
-        if (!alive || !ref.current || !window.google) return;
-        const id = window.google.accounts.id;
-        id.initialize({
-          client_id: clientId,
-          callback: (r) => cb.current.onCredential(r.credential),
-          ux_mode: 'popup',
-          auto_select: false,
-          itp_support: true,
-        });
-        const width = Math.min(400, ref.current.parentElement?.clientWidth ?? 320);
-        id.renderButton(ref.current, {
-          type: 'standard',
-          theme: 'outline',
-          size: 'large',
-          text: 'continue_with',
-          shape: 'pill',
-          logo_alignment: 'left',
-          width,
-        });
-        setReady(true);
-      })
-      .catch((e: Error) => cb.current.onError(e.message));
-    return () => {
-      alive = false;
+    setWidth(Math.round(Math.min(400, box.current?.clientWidth ?? 320)));
+  }, []);
+
+  useEffect(() => {
+    const listen = (e: MessageEvent) => {
+      // only our own frame, on our own origin
+      if (e.origin !== window.location.origin || e.source !== frame.current?.contentWindow) return;
+      const d = e.data as { source?: string; credential?: string; error?: string; ready?: boolean } | null;
+      if (!d || d.source !== 'openqz-google') return;
+      if (d.ready) setReady(true);
+      if (typeof d.credential === 'string' && d.credential) cb.current.onCredential(d.credential);
+      if (typeof d.error === 'string') cb.current.onError(d.error);
     };
-  }, [clientId]);
+    window.addEventListener('message', listen);
+    return () => window.removeEventListener('message', listen);
+  }, []);
 
   return (
-    <div className="flex min-h-11 justify-center">
-      <div ref={ref} role="group" aria-label="Continue with Google" />
-      {!ready && <span className="self-center text-xs text-muted">Loading Google sign-in...</span>}
+    <div ref={box} className="relative flex min-h-11 justify-center">
+      {width !== null && (
+        <iframe
+          ref={frame}
+          title="Continue with Google"
+          src={`/google-signin.html?client_id=${encodeURIComponent(clientId)}&width=${width}`}
+          className="h-11 w-full max-w-[400px] border-0"
+          loading="eager"
+        />
+      )}
+      {!ready && <span className="absolute inset-0 grid place-items-center text-xs text-muted">Loading Google sign-in...</span>}
     </div>
   );
 }

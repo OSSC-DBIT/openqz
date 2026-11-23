@@ -1,0 +1,5 @@
+node_modules
+out/*
+!out/openqz-film*.mp4
+!out/openqz-film-soundtrack.wav
+public/music.wav

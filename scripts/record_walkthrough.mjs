@@ -51,7 +51,7 @@ async function api(p, token, body, method) {
   if (!r.ok) throw new Error(`${p} ${r.status} ${await r.text()}`);
   return r.status === 204 ? null : r.json();
 }
-const token = async (email, password) => (await api('/auth/login', null, { email, password })).access_token;
+const token = async (email, password) => (await api('/auth/login', null, { email, password, privacy_accepted: true })).access_token;
 async function tempPassword(email) {
   const A = await token(ADMIN.email, ADMIN.password);
   const list = await api(`/users?q=${encodeURIComponent(email)}`, A);
@@ -154,6 +154,7 @@ async function signIn(page, say, type, email, password, who) {
   await say(`${who} opens OpenQZ and signs in with their college email`, 1500);
   await type(page.getByLabel('Email'), email);
   await type(page.getByLabel('Password'), password);
+  await page.getByRole('checkbox', { name: /agree to the privacy policy/i }).check();
   await page.getByRole('button', { name: 'Sign in' }).click();
   await page.waitForURL((u) => !u.pathname.endsWith('/login'));
 }

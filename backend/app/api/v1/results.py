@@ -19,15 +19,19 @@ from app.core.jobs import enqueue
 from app.models import (
     ActivityAssignment,
     ActivityKind,
+    AssignmentTarget,
     Attempt,
     AttemptStatus,
     Role,
+    RoomRemoval,
+    SubmitReason,
     User,
 )
 from app.schemas.activities import AssignmentOut, AssignUpdate
 from app.services import attempt_service as svc
 from app.services import audit
 from app.services.assignment_view import assignment_out
+from app.services.export_safe import attachment, safe_row
 from app.services.grading import MANUAL_TYPES, grade, strip_key
 
 router = APIRouter(prefix="/activity-assignments", tags=["results"])
@@ -68,7 +72,12 @@ async def update_assignment(
     assignment_id: uuid.UUID, body: AssignUpdate, session: SessionDep, user: CreatorUser
 ) -> AssignmentOut:
     a = await owned(session, assignment_id, user)
-    data = body.model_dump(exclude_unset=True)
+    # A null means "clear it" only where that makes sense; elsewhere it is "leave as it is".
+    data = {
+        k: v
+        for k, v in body.model_dump(exclude_unset=True).items()
+        if v is not None or k in ("due_at", "instructions")
+    }
     for k, v in data.items():
         setattr(a, k, v)
     if a.due_at and a.due_at <= a.start_at:
@@ -111,6 +120,150 @@ async def regenerate_code(
     audit.record(session, "room_code_changed", actor_id=user.id, target=str(a.id))
     await session.commit()
     return await assignment_out(session, a)
+
+
+# ---------------------------------------------------------------- rooms: who is in, take someone out
+
+
+class RoomPlayer(BaseModel):
+    student_id: uuid.UUID
+    name: str
+    usn: str
+    status: str  # joined | in_progress | finished | removed
+
+
+class RoomPlayers(BaseModel):
+    joined: list[RoomPlayer]
+    removed: list[RoomPlayer]
+
+
+async def owned_room(
+    session: AsyncSession, assignment_id: uuid.UUID, user: User
+) -> ActivityAssignment:
+    a = await owned(session, assignment_id, user)
+    if not a.is_room:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "This is not a room")
+    return a
+
+
+@router.get("/{assignment_id}/room/players", response_model=RoomPlayers)
+async def room_players(
+    assignment_id: uuid.UUID, session: SessionDep, user: CreatorUser
+) -> RoomPlayers:
+    """Everyone who joined the room with the code, and the ones the host took out."""
+    a = await owned_room(session, assignment_id, user)
+    joined_ids = [t.student_id for t in a.targets if t.student_id]
+    removed_ids = list(
+        (
+            await session.scalars(
+                select(RoomRemoval.student_id).where(RoomRemoval.assignment_id == a.id)
+            )
+        ).all()
+    )
+    ids = set(joined_ids) | set(removed_ids)
+    users = (
+        {u.id: u for u in (await session.scalars(select(User).where(User.id.in_(ids)))).unique()}
+        if ids
+        else {}
+    )
+    attempts = {
+        att.student_id: att
+        for att in (
+            await session.scalars(select(Attempt).where(Attempt.assignment_id == a.id))
+        ).unique()
+    }
+
+    def row(sid: uuid.UUID, removed: bool) -> RoomPlayer | None:
+        u = users.get(sid)
+        if u is None:
+            return None
+        att = attempts.get(sid)
+        state = (
+            "removed"
+            if removed
+            else "joined"
+            if att is None
+            else "in_progress"
+            if att.status == AttemptStatus.in_progress
+            else "finished"
+        )
+        return RoomPlayer(student_id=sid, name=u.full_name, usn=u.username, status=state)
+
+    joined = [r for sid in joined_ids if (r := row(sid, False))]
+    removed = [r for sid in removed_ids if (r := row(sid, True))]
+    return RoomPlayers(
+        joined=sorted(joined, key=lambda r: r.name.lower()),
+        removed=sorted(removed, key=lambda r: r.name.lower()),
+    )
+
+
+@router.post("/{assignment_id}/room/players/{student_id}/remove", status_code=204)
+async def remove_room_player(
+    assignment_id: uuid.UUID, student_id: uuid.UUID, session: SessionDep, user: CreatorUser
+) -> Response:
+    """Take a student out of a room: it leaves their list, the code no longer lets them back in,
+    and an attempt they are in the middle of is submitted with what they answered."""
+    a = await owned_room(session, assignment_id, user)
+    mine = [t for t in a.targets if t.student_id == student_id]
+    if not mine:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "That student is not in this room")
+    for t in mine:
+        a.targets.remove(t)
+    exists = await session.scalar(
+        select(RoomRemoval.id).where(
+            RoomRemoval.assignment_id == a.id, RoomRemoval.student_id == student_id
+        )
+    )
+    if exists is None:
+        session.add(RoomRemoval(assignment_id=a.id, student_id=student_id, removed_by=user.id))
+    audit.record(
+        session,
+        "room_player_removed",
+        actor_id=user.id,
+        target=str(a.id),
+        meta={"student_id": str(student_id)},
+    )
+    running = await session.scalar(
+        select(Attempt)
+        .where(
+            Attempt.assignment_id == a.id,
+            Attempt.student_id == student_id,
+            Attempt.status == AttemptStatus.in_progress,
+        )
+        .with_for_update(of=Attempt)
+    )
+    if running is not None:
+        await svc.finalize(session, running, SubmitReason.removed)  # commits
+    else:
+        await session.commit()
+    return Response(status_code=204)
+
+
+@router.post("/{assignment_id}/room/players/{student_id}/readmit", status_code=204)
+async def readmit_room_player(
+    assignment_id: uuid.UUID, student_id: uuid.UUID, session: SessionDep, user: CreatorUser
+) -> Response:
+    """Let a removed student back in. One attempt still means one attempt: a submitted one stays."""
+    a = await owned_room(session, assignment_id, user)
+    removal = await session.scalar(
+        select(RoomRemoval).where(
+            RoomRemoval.assignment_id == a.id, RoomRemoval.student_id == student_id
+        )
+    )
+    if removal is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "That student was not removed")
+    await session.delete(removal)
+    if not any(t.student_id == student_id for t in a.targets):
+        a.targets.append(AssignmentTarget(student_id=student_id))
+    audit.record(
+        session,
+        "room_player_readmitted",
+        actor_id=user.id,
+        target=str(a.id),
+        meta={"student_id": str(student_id)},
+    )
+    await session.commit()
+    return Response(status_code=204)
 
 
 @router.post("/{assignment_id}/release", response_model=AssignmentOut)
@@ -349,35 +502,48 @@ async def results_csv(
     )
     for s in report["students"]:
         w.writerow(
-            [
-                s["usn"],
-                s["name"],
-                s["email"] or "",
-                s["status"],
-                s["attempts"],
-                s["score"] if s["score"] is not None else "",
-                s["max_score"] or "",
-                s["accuracy"] if s["accuracy"] is not None else "",
-                "yes" if s["needs_manual"] else "",
-                s["violations"],
-                s["submit_reason"] or "",
-                "yes" if s["late"] else "",
-                s["submitted_at"].isoformat() if s["submitted_at"] else "",
-            ]
+            safe_row(
+                [
+                    s["usn"],
+                    s["name"],
+                    s["email"] or "",
+                    s["status"],
+                    s["attempts"],
+                    s["score"] if s["score"] is not None else "",
+                    s["max_score"] or "",
+                    s["accuracy"] if s["accuracy"] is not None else "",
+                    "yes" if s["needs_manual"] else "",
+                    s["violations"],
+                    s["submit_reason"] or "",
+                    "yes" if s["late"] else "",
+                    s["submitted_at"].isoformat() if s["submitted_at"] else "",
+                ]
+            )
         )
-    name = "".join(c if c.isalnum() else "-" for c in a.activity.title)[:50]
     return StreamingResponse(
         iter(["﻿" + buf.getvalue()]),  # BOM so Excel opens UTF-8 correctly
         media_type="text/csv; charset=utf-8",
-        headers={"Content-Disposition": f'attachment; filename="openqz-{name}-results.csv"'},
+        headers=attachment(a.activity.title, "-results.csv"),
     )
 
 
 # ---------------------------------------------------------------- teacher view of an attempt
 
 
-async def owned_attempt(session: AsyncSession, attempt_id: uuid.UUID, user: User) -> Attempt:
-    att = await session.get(Attempt, attempt_id)
+async def owned_attempt(
+    session: AsyncSession, attempt_id: uuid.UUID, user: User, lock: bool = False
+) -> Attempt:
+    """`lock=True` for anything that writes (grading, unblock): two saves on one attempt, or a
+    save and the student's own request, then run one after the other on fresh rows."""
+    if lock:
+        att = await session.scalar(
+            select(Attempt)
+            .where(Attempt.id == attempt_id)
+            .with_for_update(of=Attempt)
+            .execution_options(populate_existing=True)
+        )
+    else:
+        att = await session.get(Attempt, attempt_id)
     if att is None or (user.role != Role.admin and att.assignment.activity.owner_id != user.id):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Attempt not found")
     return att
@@ -446,7 +612,7 @@ async def unblock_attempt(
     attempt_id: uuid.UUID, body: UnblockIn, session: SessionDep, user: CreatorUser
 ) -> dict[str, Any]:
     """Let a student back into an attempt auto-submitted for too many warnings."""
-    att = await owned_attempt(session, attempt_id, user)
+    att = await owned_attempt(session, attempt_id, user, lock=True)
     previous = att.violations
     try:
         await svc.unblock(session, att, body.extra_minutes)
@@ -483,7 +649,7 @@ async def grade_answer(
     session: SessionDep,
     user: CreatorUser,
 ) -> dict[str, Any]:
-    att = await owned_attempt(session, attempt_id, user)
+    att = await owned_attempt(session, attempt_id, user, lock=True)
     if att.status != AttemptStatus.submitted:
         raise HTTPException(status.HTTP_409_CONFLICT, "The student has not submitted yet")
     if att.assignment.activity.kind not in (ActivityKind.quiz, ActivityKind.assignment):
@@ -510,10 +676,10 @@ async def grade_answer(
         ans.rubric_scores = {r["id"]: str(given[r["id"]]) for r in rubric}
     else:
         if body.score is None:
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Give a score")
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Enter the marks")
         score = body.score
     if score > Decimal(q["marks"]):
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Score cannot exceed {q['marks']}")
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Marks cannot be more than {q['marks']}")
     ans.manual_score = score
     ans.feedback = body.feedback
     ans.graded_by = user.id
@@ -580,7 +746,7 @@ def _xlsx(
     from openpyxl.utils import get_column_letter
 
     head_font = Font(bold=True, color="FFFFFF")
-    head_fill = PatternFill("solid", fgColor="5B3FD6")
+    head_fill = PatternFill("solid", fgColor="3B142A")
 
     def table(ws: Any, headers: list[str], rows: list[list[Any]], widths: list[int]) -> None:
         ws.append(headers)
@@ -588,7 +754,7 @@ def _xlsx(
             c.font, c.fill = head_font, head_fill
             c.alignment = Alignment(vertical="center", wrap_text=True)
         for r in rows:
-            ws.append(r)
+            ws.append(safe_row(r))
         for i, w in enumerate(widths, start=1):
             ws.column_dimensions[get_column_letter(i)].width = w
         ws.freeze_panes = "A2"
@@ -616,7 +782,7 @@ def _xlsx(
         ("Exported", datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")),
     ]
     for k, v in info:
-        ws.append([k, v])
+        ws.append(safe_row([k, v]))
         ws.cell(ws.max_row, 1).font = Font(bold=True)
     ws.column_dimensions["A"].width = 22
     ws.column_dimensions["B"].width = 60
@@ -731,9 +897,8 @@ async def results_xlsx(
         row.append(float(s["score"]) if s["score"] is not None else None)
         marks_rows.append(row)
     data = _xlsx(a, report, marks_rows, len(qids))
-    name = "".join(c if c.isalnum() else "-" for c in a.activity.title)[:50]
     return Response(
         content=data,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f'attachment; filename="openqz-{name}-results.xlsx"'},
+        headers=attachment(a.activity.title, "-results.xlsx"),
     )

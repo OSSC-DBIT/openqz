@@ -148,7 +148,9 @@ async def test_club_role_builds_and_hosts_rooms_only(client: AsyncClient) -> Non
     # no academic data for clubs
     assert (await client.get(f"{A}/sections/{c['sec']}/students", headers=club)).status_code == 403
     assert (await client.get(f"{A}/users", headers=club)).status_code == 403
-    assert (await client.get(f"{A}/integrity/events", headers=club)).status_code == 403
+    # a club organiser reads the integrity log of their own rooms (nothing else is in it)
+    own = await client.get(f"{A}/integrity/events", headers=club)
+    assert own.status_code == 200 and all(e["attempt_id"] for e in own.json())
     # and they cannot see faculty activities
     fac_act = await make_quiz(client, c["fac"])
     assert (await client.get(f"{A}/activities/{fac_act['id']}", headers=club)).status_code == 404

@@ -1,16 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowDown, ArrowLeft, ArrowUp, CheckCircle2, Copy, Eye, GripVertical, Pencil, Plus, Send, Trash2, Users, X } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowUp, CheckCircle2, Copy, Download, Eye, GripVertical, Pencil, Plus, Send, Trash2, Users, X } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { api } from '../../api/client';
 import { useAuth } from '../../auth/AuthProvider';
 import { DeleteForever } from '../../components/DeleteForever';
+import { ConfirmDelete } from '../../components/ConfirmDelete';
 import type { Activity, AssignmentInfo, Question, QuestionData, QuestionType } from '../../api/types';
 import { ClassPicker, KindCover, Pill, TYPE_ICON, TypePicker } from '../../components/pieces';
-import { Badge, Button, ErrorText, Modal, Select, Spinner, cx } from '../../components/ui';
+import { Badge, Button, cx, ErrorText, Loading, Modal, Select } from '../../components/ui';
 import { AuthImage, KIND_LABEL, MARK_PRESETS, TILE_COLORS, TYPES_FOR, TYPE_LABEL } from '../../components/quiz';
 import { TimerSelect } from '../../components/TimerSelect';
 import { AssignDrawer } from './AssignDrawer';
+import { ImportQuestions } from './ImportQuestions';
 import { useClassOptions } from './LibraryPage';
 import { PreviewModal } from './PreviewModal';
 import { QuestionEditor, QuestionToolbar, blankQuestion } from './QuestionEditor';
@@ -46,6 +48,7 @@ export default function ActivityEditorPage() {
   const a = act.data;
   const { user } = useAuth();
   const [forever, setForever] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   const refresh = (data?: Activity) => {
     if (data) qc.setQueryData(['activity', id], data);
@@ -64,10 +67,18 @@ export default function ActivityEditorPage() {
     },
   });
   const quick = useMutation({
-    mutationFn: ({ q, patch }: { q: Question; patch: Partial<QuestionData> }) => api<Question>(`/activities/${id}/questions/${q.id}`, { method: 'PUT', json: asBody({ ...toData(q), ...patch }) }),
-    onSuccess: () => refresh(),
+    // Built on the newest copy in the cache, not the one on screen when the menu opened: changing
+    // the timer and then the marks before the first save returns must not undo the timer.
+    mutationFn: ({ q, patch }: { q: Question; patch: Partial<QuestionData> }) => {
+      const latest = qc.getQueryData<Activity>(['activity', id])?.questions.find((x) => x.id === q.id) ?? q;
+      const next = { ...latest, ...patch };
+      qc.setQueryData<Activity>(['activity', id], (cur) => (cur ? { ...cur, questions: cur.questions.map((x) => (x.id === q.id ? next : x)) } : cur));
+      return api<Question>(`/activities/${id}/questions/${q.id}`, { method: 'PUT', json: asBody(toData(next)) });
+    },
+    onSettled: () => refresh(),
   });
-  const del = useMutation({ mutationFn: (qid: string) => api(`/activities/${id}/questions/${qid}`, { method: 'DELETE' }), onSuccess: () => refresh() });
+  const [delQ, setDelQ] = useState<{ id: string; n: number } | null>(null);
+  const [removing, setRemoving] = useState(false);
   const dupQ = useMutation({ mutationFn: (q: Question) => api(`/activities/${id}/questions`, { method: 'POST', json: asBody(toData(q)) }), onSuccess: () => refresh() });
   const reorder = useMutation({ mutationFn: (ids: string[]) => api<Activity>(`/activities/${id}/order`, { method: 'PUT', json: { question_ids: ids } }), onSuccess: (d) => refresh(d) });
   const patch = useMutation({ mutationFn: (body: Record<string, unknown>) => api<Activity>(`/activities/${id}`, { method: 'PATCH', json: body }), onSuccess: (d) => refresh(d) });
@@ -78,15 +89,8 @@ export default function ActivityEditorPage() {
       nav(`/faculty/activities/${d.id}`);
     },
   });
-  const remove = useMutation({
-    mutationFn: () => api(`/activities/${id}`, { method: 'DELETE' }),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['activities'] });
-      nav('/faculty/library');
-    },
-  });
 
-  if (act.isLoading || !a) return <div className="grid min-h-dvh place-items-center">{act.error ? <ErrorText error={act.error} /> : <Spinner />}</div>;
+  if (act.isLoading || !a) return <div className="paper min-h-dvh"><div className="mx-auto max-w-5xl p-4 sm:p-8">{act.error ? <ErrorText error={act.error} /> : <Loading kind="page" />}</div></div>;
   const graded = a.kind === 'quiz' || a.kind === 'assignment';
   const timed = a.kind !== 'flashcards';
 
@@ -109,10 +113,10 @@ export default function ActivityEditorPage() {
     TYPES_FOR[a.kind].length === 1 ? setEditing({ id: null, index: a.questions.length, data: blankQuestion(TYPES_FOR[a.kind][0], a.kind) }) : setPicker(true);
 
   return (
-    <div className="min-h-dvh bg-surface">
+    <div className="paper min-h-dvh">
       {/* top bar */}
-      <header className="sticky top-0 z-30 border-b border-line bg-card">
-        <div className="mx-auto flex h-16 max-w-7xl items-center gap-2 px-3 sm:gap-3 sm:px-6">
+      <header className="sticky top-0 z-30 border-b border-edge bg-card">
+        <div className="mx-auto flex min-h-16 max-w-7xl flex-wrap items-center gap-2 px-3 py-2 sm:gap-3 sm:px-6">
           <Link to="/faculty/library" className="rounded-lg p-2 text-muted hover:bg-brand-50 hover:text-ink" aria-label="Back to library" title="Back to library">
             <ArrowLeft className="h-5 w-5" />
           </Link>
@@ -120,12 +124,12 @@ export default function ActivityEditorPage() {
           <input
             key={a.title}
             defaultValue={a.title}
-            className="min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-2 py-1.5 text-base font-bold outline-none hover:border-line focus:border-brand-500 sm:text-lg"
+            className="min-w-[7rem] flex-1 rounded-lg border-2 border-transparent bg-transparent px-2 py-1.5 font-display text-base font-extrabold outline-none hover:border-line focus:border-brand-500 sm:text-xl"
             onBlur={(e) => e.target.value.trim() && e.target.value !== a.title && patch.mutate({ title: e.target.value.trim() })}
             aria-label="Title"
           />
           <Badge tone={a.status === 'published' ? 'green' : 'amber'}>{a.status === 'published' ? 'Published' : 'Draft'}</Badge>
-          <div className="ml-1 flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-2">
             <Button variant="secondary" disabled={!a.questions.length} onClick={() => setPreview(true)} title="Preview as a student">
               <Eye className="h-4 w-4" />
               <span className="sr-only sm:not-sr-only">Preview</span>
@@ -141,7 +145,7 @@ export default function ActivityEditorPage() {
       <div className="mx-auto grid max-w-7xl gap-6 px-3 py-5 sm:px-6 lg:grid-cols-[300px_1fr]">
         {/* summary panel */}
         <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
-          <div className="overflow-hidden rounded-2xl border border-line bg-card shadow-sm">
+          <div className="overflow-hidden sticker rounded-xl bg-card">
             <KindCover kind={a.kind} className="h-28" />
             <div className="space-y-3 p-4">
               <div className="flex items-center gap-2">
@@ -171,12 +175,12 @@ export default function ActivityEditorPage() {
               <button
                 type="button"
                 className="flex flex-1 items-center justify-center gap-1.5 border-l border-line py-2.5 text-sm font-semibold text-muted hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950"
-                onClick={() => confirm('Delete this activity? Activities with student attempts are archived instead.') && remove.mutate()}
+                onClick={() => setRemoving(true)}
               >
                 <Trash2 className="h-4 w-4" /> Delete
               </button>
             </div>
-            {user?.role === 'admin' && (
+            {user?.role === 'admin' && user.is_superadmin && (
               <button
                 type="button"
                 className="flex w-full items-center justify-center gap-1.5 border-t border-line py-2.5 text-sm font-semibold text-red-700 hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-950"
@@ -195,16 +199,26 @@ export default function ActivityEditorPage() {
             <h1 className="text-lg font-extrabold">
               {a.question_count} {a.question_count === 1 ? 'question' : 'questions'}
             </h1>
-            <Button className="ml-auto" onClick={addQuestion}>
-              <Plus className="h-4 w-4" /> Add question
-            </Button>
+            <div className="ml-auto flex flex-wrap justify-end gap-2">
+              <Button variant="secondary" onClick={() => setImporting(true)} title="From a Google Form, a spreadsheet or pasted text">
+                <Download className="h-4 w-4" /> Import
+              </Button>
+              <Button onClick={addQuestion}>
+                <Plus className="h-4 w-4" /> Add question
+              </Button>
+            </div>
           </div>
-          <ErrorText error={patch.error || del.error || reorder.error || quick.error} />
+          <ErrorText error={patch.error || reorder.error || quick.error || dupQ.error || duplicate.error} />
 
           {a.questions.length === 0 && (
-            <div className="rounded-2xl border border-line bg-card p-10 text-center">
+            <div className="sticker rounded-xl bg-card p-10 text-center">
               <div className="text-lg font-bold">Start building your {KIND_LABEL[a.kind].toLowerCase()}</div>
-              <p className="mt-1 text-sm text-muted">Add your first question. You can reorder, time and mark each one.</p>
+              <p className="mt-1 text-sm text-muted">Add your first question, or import a set from a Google Form, a spreadsheet or pasted text.</p>
+              <div className="mt-4 flex flex-wrap justify-center gap-2">
+                <Button variant="secondary" onClick={() => setImporting(true)}>
+                  <Download className="h-4 w-4" /> Import a set
+                </Button>
+              </div>
             </div>
           )}
 
@@ -218,7 +232,7 @@ export default function ActivityEditorPage() {
                   onDragStart={() => setDragFrom(i)}
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={() => drop(i)}
-                  className={cx('group rounded-2xl border border-line bg-card shadow-sm transition hover:border-brand-200', dragFrom === i && 'opacity-50')}
+                  className={cx('group sticker rounded-xl bg-card transition hover:border-brand-200', dragFrom === i && 'opacity-50')}
                 >
                   <div className="flex flex-wrap items-center gap-2 border-b border-line px-3 py-2">
                     <GripVertical className="h-4 w-4 cursor-grab text-muted" aria-hidden />
@@ -264,7 +278,7 @@ export default function ActivityEditorPage() {
                       <IconBtn label={`Duplicate question ${i + 1}`} onClick={() => dupQ.mutate(q)}>
                         <Copy className="h-4 w-4" />
                       </IconBtn>
-                      <IconBtn label={`Delete question ${i + 1}`} onClick={() => confirm('Delete this question?') && del.mutate(q.id)}>
+                      <IconBtn label={`Delete question ${i + 1}`} onClick={() => setDelQ({ id: q.id, n: i + 1 })}>
                         <Trash2 className="h-4 w-4" />
                       </IconBtn>
                     </div>
@@ -316,7 +330,7 @@ export default function ActivityEditorPage() {
 
       {editing && (
         <div className="fixed inset-0 z-50 flex flex-col bg-surface" role="dialog" aria-modal="true" aria-label={editing.id ? 'Edit question' : 'New question'}>
-          <div className="border-b border-line bg-card px-3 py-2.5 sm:px-6">
+          <div className="border-b border-edge bg-card px-3 py-2.5 sm:px-6">
             <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3">
               <button onClick={() => setEditing(null)} className="rounded-lg p-1.5 hover:bg-brand-50" aria-label="Close editor">
                 <X className="h-5 w-5" />
@@ -355,6 +369,42 @@ export default function ActivityEditorPage() {
         }}
       />
       {preview && <PreviewModal activity={a} onClose={() => setPreview(false)} />}
+      {importing && (
+        <ImportQuestions
+          activity={a}
+          onClose={() => setImporting(false)}
+          onDone={(d) => {
+            setImporting(false);
+            refresh(d);
+          }}
+        />
+      )}
+      {delQ && (
+        <ConfirmDelete
+          title="Delete question"
+          what={`question ${delQ.n}`}
+          run={() => api(`/activities/${id}/questions/${delQ.id}`, { method: 'DELETE' })}
+          onClose={() => setDelQ(null)}
+          onDone={() => {
+            setDelQ(null);
+            refresh();
+          }}
+        />
+      )}
+      {removing && (
+        <ConfirmDelete
+          title="Delete activity"
+          what={`"${a.title}"`}
+          run={() => api(`/activities/${id}`, { method: 'DELETE' })}
+          onClose={() => setRemoving(false)}
+          onDone={() => {
+            void qc.invalidateQueries({ queryKey: ['activities'] });
+            nav('/faculty/library');
+          }}
+        >
+          <p className="mt-1">It leaves your library. If students have already attempted it, it is archived instead and their results are kept.</p>
+        </ConfirmDelete>
+      )}
       {forever && (
         <DeleteForever
           title={`Delete "${a.title}" for good`}
@@ -424,7 +474,7 @@ function BulkBar({ activity, onDone }: { activity: Activity; onDone: (a: Activit
     },
   });
   return (
-    <div className="space-y-3 rounded-2xl border border-line bg-card p-4 shadow-sm">
+    <div className="space-y-3 sticker rounded-xl bg-card p-4">
       <div className="text-sm font-extrabold">Timer / marks for all</div>
       <TimerSelect
         className="w-full rounded-xl border border-line bg-card px-3.5 py-2.5 text-sm text-ink outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200"

@@ -58,6 +58,8 @@ BACKUP_DIR="$(conf OPENQZ_BACKUP_DIR)"
 # port with staging's database password.
 envval() { grep -E "^$1=" "$ENV_FILE" | tail -n1 | cut -d= -f2- | tr -d '"'"'" || true; }
 [ "$(envval ENVIRONMENT)" = "$ENVIRONMENT" ] || die "$ENV_FILE has ENVIRONMENT=$(envval ENVIRONMENT); it must be $ENVIRONMENT"
+# Emails and phones are encrypted with DATA_KEY: without it the new version would not start.
+[ -n "$(envval DATA_KEY)" ] || die "$ENV_FILE has no DATA_KEY. Run: sudo bash deploy/server/setup-environment.sh $ENVIRONMENT (it adds one), then re-run this job"
 HTTP_PORT="$(envval HTTP_PORT)"
 health_port="$(printf '%s' "$HEALTH_URL" | sed -nE 's#^http://[^:/]+:([0-9]+)/.*#\1#p')"
 [ "$HTTP_PORT" = "$health_port" ] || die "$ENV_FILE has HTTP_PORT=${HTTP_PORT:-unset} but $CONF checks port $health_port"

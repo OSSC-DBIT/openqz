@@ -36,7 +36,7 @@ export function DeleteForever({
   });
   const matches = typed.trim().toLowerCase() === confirmWord.trim().toLowerCase();
   return (
-    <Modal open onClose={onClose} title={title}>
+    <Modal open onClose={del.isPending ? () => undefined : onClose} title={title}>
       <form
         className="space-y-3"
         autoComplete="off"
@@ -65,7 +65,7 @@ export function DeleteForever({
         )}
         <ErrorText error={del.error} />
         <div className="flex justify-end gap-2 pt-1">
-          <Button type="button" variant="secondary" onClick={onClose}>
+          <Button type="button" variant="secondary" disabled={del.isPending} onClick={onClose}>
             Cancel
           </Button>
           {!blocked && (

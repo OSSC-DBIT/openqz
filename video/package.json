@@ -1,0 +1,23 @@
+{
+  "name": "openqz-video",
+  "private": true,
+  "version": "0.1.0",
+  "description": "The landing page walkthrough video, made with Remotion.",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "render": "remotion render src/index.ts Intro out/intro.mp4 --codec h264 --crf 24 --concurrency 1",
+    "poster": "remotion still src/index.ts Intro out/intro-poster.jpg --frame 1090 --image-format jpeg"
+  },
+  "dependencies": {
+    "@fontsource-variable/dm-sans": "^5.2.0",
+    "@remotion/cli": "^4.0.0",
+    "lucide-react": "^1.77.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "remotion": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.0",
+    "typescript": "~5.9.3"
+  }
+}

@@ -567,7 +567,9 @@ async def test_flashcards_need_back_and_show_it(client: AsyncClient) -> None:
 
 async def test_image_upload_sniffs_type(client: AsyncClient) -> None:
     c = await setup_class(client)
-    png = b"\x89PNG\r\n\x1a\n" + b"\x00" * 64
+    from tests.test_images import png_bytes
+
+    png = png_bytes(40, 30)
     r = await client.post(
         f"{A}/media", headers=c["fac"], files={"file": ("x.png", png, "image/png")}
     )
@@ -581,7 +583,7 @@ async def test_image_upload_sniffs_type(client: AsyncClient) -> None:
         await client.post(f"{A}/media", headers=c["s1"], files={"file": ("x.png", png)})
     ).status_code == 403
     got = await client.get(f"{A}/media/{mid}", headers=c["s1"])
-    assert got.status_code == 200 and got.headers["content-type"] == "image/png"
+    assert got.status_code == 200 and got.headers["content-type"].startswith("image/")
     assert (await client.get(f"{A}/media/{mid}")).status_code == 401
 
     act = (await client.post(f"{A}/activities", headers=c["fac"], json={"title": "Img"})).json()

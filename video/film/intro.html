@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>OpenQZ intro</title>
+<!--
+  The long OpenQZ intro (about 99 s at 120 BPM), in the language of the 15-second film: one pink
+  tile that every scene grows out of and folds back into. Scenes are in intro.js; the parts of
+  the short film it reuses are in core.js. Music: "Gaslight (120 bpm)" by Dante Ross (CC0).
+-->
+<style>
+  @font-face { font-family: 'DMS'; src: url('dmsans.woff2') format('woff2'); font-weight: 100 1000; }
+  html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #3b142a; }
+  #frame { position: absolute; inset: 0; overflow: hidden; background: #3b142a; }
+  #stage { position: absolute; inset: 0; background: #3b142a; font-family: 'DMS', sans-serif; transform: scale(1.32); transform-origin: 960px 540px; }
+  .abs { position: absolute; left: 0; top: 0; box-sizing: border-box; transform-origin: 50% 50%; }
+  .fill { position: absolute; inset: 0; }
+  .row { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; white-space: nowrap; line-height: 1; }
+  .row span { display: inline-block; transform-origin: 50% 60%; }
+  .ctr { display: flex; align-items: center; justify-content: center; line-height: 1; }
+  .mask { position: absolute; overflow: hidden; }
+  .face { position: absolute; left: 0; top: 0; width: 420px; height: 420px; backface-visibility: hidden; overflow: hidden; }
+  .shade { position: absolute; inset: 0; background: #000; pointer-events: none; }
+  .slot { position: relative; display: inline-block; overflow: hidden; height: 1em; }
+  .strip { position: absolute; left: 0; top: 0; width: 100%; }
+  .strip div { height: 1em; line-height: 1; text-align: center; }
+  .flip { position: absolute; inset: 0; transform-style: preserve-3d; }
+  .side { position: absolute; inset: 0; backface-visibility: hidden; border-radius: 30px; display: flex; align-items: center; justify-content: center; line-height: 1; font-weight: 900; font-size: 110px; }
+</style>
+</head>
+<body>
+<div id="frame"><div id="stage"></div></div>
+<script>
+  // what the bold counter of the short film says in the long intro
+  window.CORE = {
+    states: [[-1, '    '], [9.0, ' 67%'], [9.98, '  4 '], [10.5, '  6 '], [11.0, '  1 ']],
+    labels: [['kinds of activity', 10.14], ['question types', 10.5], ['attempt per student', 11.0]],
+  };
+</script>
+<script src="core.js"></script>
+<script src="icons.js"></script>
+<script src="intro.js"></script>
+</body>
+</html>

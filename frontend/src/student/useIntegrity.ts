@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { api } from '../api/client';
+import { api, setPlayerSession } from '../api/client';
 
 export interface ViolationResult {
   violations: number;
@@ -15,6 +15,7 @@ const LABEL: Record<string, string> = {
   back_navigation: 'You pressed Back.',
   page_reloaded: 'The page was reloaded or reopened.',
   fullscreen_exit: 'You left full screen.',
+  second_device: 'This quiz is open in another tab or on another device.',
 };
 export const violationText = (kind: string) => LABEL[kind] ?? 'A quiz rule was broken.';
 
@@ -45,7 +46,17 @@ export function useIntegrity(
 
   useEffect(() => {
     if (!attemptId || !enabled) return;
-    const sessionId = `p-${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
+    // One id per browser tab, kept across reloads (sessionStorage is per tab): the server
+    // compares it between requests to notice a second tab or device on the same attempt.
+    let sessionId = `p-${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
+    try {
+      const kept = sessionStorage.getItem(`oqz-session-${attemptId}`);
+      if (kept) sessionId = kept;
+      else sessionStorage.setItem(`oqz-session-${attemptId}`, sessionId);
+    } catch {
+      /* private mode: a new id per load */
+    }
+    setPlayerSession(sessionId);
     let last = 0;
     let blurTimer: ReturnType<typeof setTimeout> | null = null;
     let paused = false;
@@ -128,6 +139,7 @@ export function useIntegrity(
     document.addEventListener('fullscreenchange', onFs);
     window.addEventListener('oqz-integrity-pause', onPauseReq);
     return () => {
+      setPlayerSession(null);
       document.removeEventListener('visibilitychange', onVis);
       window.removeEventListener('blur', onBlur);
       window.removeEventListener('focus', onFocus);

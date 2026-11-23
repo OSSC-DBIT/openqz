@@ -107,6 +107,7 @@ cd frontend && pnpm exec playwright install chromium && pnpm test:e2e
 
 ## Project docs
 
+- Privacy Policy: the `/privacy` page of the app (`frontend/src/pages/PrivacyPage.tsx`); contact **osscdbit@gmail.com**
 - [docs/README.md](docs/README.md): index of all documentation
 - [docs/architecture.md](docs/architecture.md): components, data model, auth design
 - [docs/testing.md](docs/testing.md), [docs/security.md](docs/security.md), [docs/performance.md](docs/performance.md)

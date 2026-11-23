@@ -6,6 +6,7 @@ from sqlalchemy import Enum, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.core.crypto import EncryptedJSON
 from app.core.db import Base
 from app.models.base import Timestamped, UUIDPk
 
@@ -37,8 +38,9 @@ class ImportJob(UUIDPk, Timestamped, Base):
     academic_year: Mapped[str] = mapped_column(String(9))
     header_map: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     source_headers: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
-    preview_rows: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB, nullable=True)
-    error_rows: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB, nullable=True)
+    # The sheet's rows (names, emails, phones): encrypted as a whole (app/core/crypto.py).
+    preview_rows: Mapped[list[dict[str, Any]] | None] = mapped_column(EncryptedJSON, nullable=True)
+    error_rows: Mapped[list[dict[str, Any]] | None] = mapped_column(EncryptedJSON, nullable=True)
     total_rows: Mapped[int] = mapped_column(Integer, default=0)
     valid_rows: Mapped[int] = mapped_column(Integer, default=0)
     created_count: Mapped[int] = mapped_column(Integer, default=0)

@@ -1,9 +1,9 @@
 import { expect, test } from '@playwright/test';
-import { ADMIN, ADMIN_PW, login, ok, PW, seedClass } from './helpers';
+import { ADMIN, ADMIN_PW, adminHeaders, login, ok, PW, seedClass } from './helpers';
 
 /** A one-question quiz assigned to the class through the API, with the given settings. */
 async function assignQuiz(request: Parameters<typeof seedClass>[0], c: Awaited<ReturnType<typeof seedClass>>, title: string, settings: Record<string, unknown>) {
-  const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { email: c.facEmail, password: PW } }));
+  const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { privacy_accepted: true, email: c.facEmail, password: PW } }));
   const H = { Authorization: `Bearer ${t.access_token}` };
   const act = await ok<{ id: string }>(await request.post('/api/v1/activities', { headers: H, data: { title, kind: 'quiz' } }));
   await ok(
@@ -23,7 +23,7 @@ test('a scheduled activity shows as not started; instructions are read before st
   await assignQuiz(request, c, now, { instructions: 'Keep a calculator ready.' });
 
   await login(page, c.stuEmail);
-  const scheduled = page.locator('div.rounded-2xl', { has: page.getByRole('heading', { name: later }) });
+  const scheduled = page.locator('article', { has: page.getByRole('heading', { name: later }) });
   await expect(scheduled.getByText('not started', { exact: true })).toBeVisible();
   await expect(scheduled.getByRole('button', { name: 'Not started yet' })).toBeDisabled();
   await expect(scheduled.getByRole('button', { name: 'Start', exact: true })).toHaveCount(0);
@@ -32,7 +32,7 @@ test('a scheduled activity shows as not started; instructions are read before st
   await page.getByRole('dialog').getByRole('button', { name: 'Close' }).click();
 
   // the open one: Start shows the teacher's note first, then the quiz
-  const open = page.locator('div.rounded-2xl', { has: page.getByRole('heading', { name: now }) });
+  const open = page.locator('article', { has: page.getByRole('heading', { name: now }) });
   await open.getByRole('button', { name: 'Start', exact: true }).click();
   await expect(page.getByRole('dialog').getByText('Keep a calculator ready.')).toBeVisible();
   await page.getByRole('dialog').getByRole('button', { name: 'Start now' }).click();
@@ -50,6 +50,7 @@ test('the sign-in page takes a join code: unknown live code leads a student to t
 
   await page.getByLabel('Email').fill(c.stuEmail);
   await page.getByRole('textbox', { name: 'Password', exact: true }).fill(PW);
+  await page.getByRole('checkbox', { name: /agree to the privacy policy/i }).check();
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page).toHaveURL(/\/join\/000001$/);
 });
@@ -94,7 +95,7 @@ test('admin adds a teacher in two departments and sees the statistics', async ({
 
 test('a question timer moves on by itself when time runs out', async ({ page, request }) => {
   const c = await seedClass(request);
-  const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { email: c.facEmail, password: PW } }));
+  const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { privacy_accepted: true, email: c.facEmail, password: PW } }));
   const H = { Authorization: `Bearer ${t.access_token}` };
   const title = `Timed ${c.tag}`;
   const act = await ok<{ id: string }>(await request.post('/api/v1/activities', { headers: H, data: { title, kind: 'quiz' } }));
@@ -109,7 +110,7 @@ test('a question timer moves on by itself when time runs out', async ({ page, re
   await ok(await request.post(`/api/v1/activities/${act.id}/assign`, { headers: H, data: { section_ids: [c.sectionId], require_fullscreen: false, instant_feedback: false } }));
 
   await login(page, c.stuEmail);
-  await page.locator('div.rounded-2xl', { has: page.getByRole('heading', { name: title }) }).getByRole('button', { name: 'Start', exact: true }).click();
+  await page.locator('article', { has: page.getByRole('heading', { name: title }) }).getByRole('button', { name: 'Start', exact: true }).click();
   await expect(page.getByText('First timed question?')).toBeVisible();
   // touch nothing: after 5 seconds the player must show the next question on its own
   await expect(page.getByText('Second timed question?')).toBeVisible({ timeout: 15_000 });
@@ -134,7 +135,7 @@ test('the sign-in page asks other browsers to switch to Chrome, Safari or Edge',
 
 test('a custom question time is set on the clock; the answer box stays readable in dark mode', async ({ page, request }) => {
   const c = await seedClass(request);
-  const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { email: c.facEmail, password: PW } }));
+  const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { privacy_accepted: true, email: c.facEmail, password: PW } }));
   const H = { Authorization: `Bearer ${t.access_token}` };
   const title = `Clock ${c.tag}`;
   const act = await ok<{ id: string }>(await request.post('/api/v1/activities', { headers: H, data: { title, kind: 'quiz' } }));
@@ -159,14 +160,15 @@ test('a custom question time is set on the clock; the answer box stays readable 
   await page.context().clearCookies();
   await page.emulateMedia({ colorScheme: 'dark' });
   await login(page, c.stuEmail);
-  await page.locator('div.rounded-2xl', { has: page.getByRole('heading', { name: title }) }).getByRole('button', { name: 'Start', exact: true }).click();
+  await page.locator('article', { has: page.getByRole('heading', { name: title }) }).getByRole('button', { name: 'Start', exact: true }).click();
   const box = page.getByLabel('Your answer');
   await box.fill('A function that calls itself');
   const seen = await box.evaluate((el) => {
     const s = getComputedStyle(el);
     return { color: s.color, background: s.backgroundColor };
   });
-  expect(seen).toEqual({ color: 'rgb(29, 27, 44)', background: 'rgb(255, 255, 255)' });
+  // fixed plum text on white, whatever the theme
+  expect(seen).toEqual({ color: 'rgb(59, 20, 42)', background: 'rgb(255, 255, 255)' });
   if (process.env.E2E_SHOTS_DIR) await page.screenshot({ path: `${process.env.E2E_SHOTS_DIR}/answer-box-${test.info().project.name}.png` });
 });
 
@@ -192,13 +194,13 @@ test('admin deletes a person for good: sees what goes, types the ID and their ow
   await go.click();
   await expect(dlg).toHaveCount(0);
   await expect(page.getByText('No users found')).toBeVisible();
-  const gone = await request.post('/api/v1/auth/login', { data: { email: c.stuEmail, password: PW } });
+  const gone = await request.post('/api/v1/auth/login', { data: { privacy_accepted: true, email: c.stuEmail, password: PW } });
   expect(gone.status()).toBe(401);
 });
 
 test('admin changes the correct answer with the Correct button; the report shows the correct answer', async ({ page, request }) => {
   const c = await seedClass(request);
-  const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { email: c.facEmail, password: PW } }));
+  const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { privacy_accepted: true, email: c.facEmail, password: PW } }));
   const H = { Authorization: `Bearer ${t.access_token}` };
   const act = await ok<{ id: string }>(await request.post('/api/v1/activities', { headers: H, data: { title: `Key ${c.tag}`, kind: 'quiz' } }));
   await ok(
@@ -229,4 +231,49 @@ test('admin changes the correct answer with the Correct button; the report shows
   await expect(right.getByText('Correct answer')).toBeVisible();
   await expect(page.locator('div.text-sm', { hasText: 'Mysuru' }).first().getByText('Correct answer')).toHaveCount(0);
   if (process.env.E2E_SHOTS_DIR) await page.screenshot({ path: `${process.env.E2E_SHOTS_DIR}/report-key-${test.info().project.name}.png` });
+});
+
+test('admin deletes a section, a subject and a department; every delete asks twice', async ({ page, request }) => {
+  const H = await adminHeaders(request);
+  const tag = `${Date.now().toString(36)}${Math.floor(Math.random() * 1e3).toString(36)}`.slice(-6).toUpperCase();
+  const code = `D${tag}`;
+  const dept = await ok<{ id: number }>(await request.post('/api/v1/departments', { headers: H, data: { code, name: 'Delete test' } }));
+  await ok(await request.post('/api/v1/sections', { headers: H, data: { department_id: dept.id, semester: 1, name: 'Z', academic_year: '2026-27' } }));
+  const subject = `S${tag}`;
+  await ok(await request.post('/api/v1/subjects', { headers: H, data: { code: subject, name: 'Delete test subject', department_id: dept.id } }));
+
+  await login(page, ADMIN, ADMIN_PW);
+  await page.goto('/admin/sections');
+  const dlg = page.getByRole('dialog');
+
+  // a department that still has a section is refused, with the reason
+  await page.getByRole('button', { name: `Delete department ${code}` }).click();
+  await expect(dlg.getByRole('alert')).toContainText('still has 1 sections');
+  await expect(dlg.getByRole('button', { name: 'Continue' })).toHaveCount(0);
+  await dlg.getByRole('button', { name: 'Close' }).click();
+
+  // the section: first question, then "are you sure"; saying no keeps it
+  const del = page.getByRole('button', { name: `Delete section ${code} Sem 1 Z` });
+  await del.click();
+  await dlg.getByRole('button', { name: 'Continue' }).click();
+  await expect(dlg.getByText('Are you sure?')).toBeVisible();
+  await dlg.getByRole('button', { name: 'No, keep it' }).click();
+  await expect(del).toBeVisible();
+  await del.click();
+  await dlg.getByRole('button', { name: 'Continue' }).click();
+  if (process.env.E2E_SHOTS_DIR) await page.screenshot({ path: `${process.env.E2E_SHOTS_DIR}/confirm-twice-${test.info().project.name}.png` });
+  await dlg.getByRole('button', { name: 'Yes, delete' }).click();
+  await expect(del).toHaveCount(0);
+
+  // now the empty department goes
+  await page.getByRole('button', { name: `Delete department ${code}` }).click();
+  await dlg.getByRole('button', { name: 'Continue' }).click();
+  await dlg.getByRole('button', { name: 'Yes, delete' }).click();
+  await expect(page.getByRole('button', { name: `Delete department ${code}` })).toHaveCount(0);
+
+  await page.goto('/admin/subjects');
+  await page.getByRole('button', { name: `Delete subject ${subject}` }).click();
+  await dlg.getByRole('button', { name: 'Continue' }).click();
+  await dlg.getByRole('button', { name: 'Yes, delete' }).click();
+  await expect(page.getByText(subject)).toHaveCount(0);
 });

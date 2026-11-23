@@ -5,8 +5,8 @@ import { api } from '../../api/client';
 import type { ActivityKind, Assignment, AssignmentInfo } from '../../api/types';
 import { useAuth } from '../../auth/AuthProvider';
 import { KindCover } from '../../components/pieces';
-import { KIND_LABEL } from '../../components/quiz';
-import { Card, EmptyState, ErrorText, Spinner } from '../../components/ui';
+import { KIND_LABEL, firstName } from '../../components/quiz';
+import { Card, EmptyState, ErrorText, Loading } from '../../components/ui';
 
 const KIND_HINT: Record<ActivityKind, string> = {
   quiz: 'Auto-marked, timed',
@@ -54,11 +54,11 @@ export default function FacultyHome() {
 
   return (
     <>
-      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#2a1b6e] via-brand-700 to-brand-500 p-6 text-white shadow-lg sm:p-8">
+      <section className="relative overflow-hidden rounded-3xl banner sticker shadow-glow p-6 text-white sm:p-8">
         <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/10" aria-hidden />
         <div className="absolute -bottom-20 right-24 h-40 w-40 rounded-full bg-white/5" aria-hidden />
         <div className="relative">
-          <h1 className="text-2xl font-extrabold sm:text-3xl">Hello, {user?.full_name.split(' ')[0] ?? ''}</h1>
+          <h1 className="text-2xl font-extrabold sm:text-3xl">Hello, {firstName(user?.full_name)}</h1>
           <p className="mt-1 text-white/80">What would you like to create today?</p>
           <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
             {(Object.keys(KIND_LABEL) as ActivityKind[]).map((k) => (
@@ -101,14 +101,14 @@ export default function FacultyHome() {
             </Link>
           </div>
           {recent.isLoading ? (
-            <Spinner />
+            <Loading />
           ) : list.length ? (
             <ul className="space-y-3">
               {list.slice(0, 8).map((a) => {
                 const pct = a.student_count ? Math.round((a.submitted_count / a.student_count) * 100) : 0;
                 return (
                   <li key={a.id}>
-                    <Link to={`/faculty/reports/${a.id}`} className="flex items-center gap-4 rounded-2xl border border-line bg-card p-3 shadow-sm transition hover:border-brand-500 hover:shadow-md sm:p-4">
+                    <Link to={`/faculty/reports/${a.id}`} className="flex items-center gap-4 sticker rounded-xl bg-card p-3 transition hover:border-brand-500 hover:-translate-y-0.5 hover:shadow-pop-lg sm:p-4">
                       <KindCover kind={a.activity_kind} className="hidden h-14 w-20 shrink-0 rounded-xl sm:flex [&_svg]:h-7 [&_svg]:w-7" />
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
@@ -149,7 +149,7 @@ export default function FacultyHome() {
               My classes
             </h2>
             {teaching.isLoading ? (
-              <Spinner />
+              <Loading />
             ) : teaching.data?.length ? (
               <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
                 {teaching.data.map((t) => (
