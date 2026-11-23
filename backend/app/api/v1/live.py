@@ -12,7 +12,7 @@ import jwt
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 
@@ -33,6 +33,7 @@ from app.models import (
 )
 from app.services import audit
 from app.services import live_service as live
+from app.services.export_safe import attachment, safe_row
 
 router = APIRouter(prefix="/live", tags=["live"])
 _bearer = HTTPBearer(auto_error=False)
@@ -228,11 +229,17 @@ async def my_games(session: SessionDep, user: CreatorUser) -> list[dict[str, Any
     if user.role != Role.admin:
         q = q.where(LiveGame.host_id == user.id)
     games = (await session.scalars(q)).all()
+    counts: dict[uuid.UUID, int] = {}
+    if games:
+        rows = await session.execute(
+            select(LivePlayer.game_id, func.count())
+            .where(LivePlayer.game_id.in_([g.id for g in games]))
+            .group_by(LivePlayer.game_id)
+        )
+        counts = {game_id: n for game_id, n in rows.all()}
     out = []
     for g in games:
-        n = len(
-            (await session.scalars(select(LivePlayer.id).where(LivePlayer.game_id == g.id))).all()
-        )
+        n = counts.get(g.id, 0)
         out.append(
             {
                 "id": g.id,
@@ -351,15 +358,14 @@ async def results_csv(game_id: uuid.UUID, session: SessionDep, user: CreatorUser
         ]
     )
     for r in data["players"]:
-        w.writerow(
+        w.writerow(safe_row(
             [r["rank"], r["nickname"], r["usn"] or "", "yes" if r["guest"] else "", r["points"],
              *([] if fun else [r["marks"], data["total_marks"]]), r["answered"], r["correct"]]
-        )  # fmt: skip
-    name = "".join(c if c.isalnum() else "_" for c in data["title"])[:40] or "live"
+        ))  # fmt: skip
     return Response(
         buf.getvalue(),
         media_type="text/csv",
-        headers={"Content-Disposition": f'attachment; filename="{name}_live_results.csv"'},
+        headers=attachment(data["title"], "-live-results.csv"),
     )
 
 

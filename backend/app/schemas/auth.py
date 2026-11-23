@@ -10,10 +10,13 @@ class LoginIn(BaseModel):
     # error as any other failure instead of a validation error.
     email: str = Field(min_length=3, max_length=254)
     password: str = Field(min_length=1, max_length=256)
+    # The "I agree to the privacy policy" tick on the sign-in page.
+    privacy_accepted: bool = False
 
 
 class GoogleLoginIn(BaseModel):
     credential: str = Field(min_length=20, max_length=4096)
+    privacy_accepted: bool = False
 
 
 class AuthConfigOut(BaseModel):
@@ -40,6 +43,7 @@ class MeOut(BaseModel):
     department_code: str | None = None
     must_change_password: bool
     google_linked: bool = False
+    is_superadmin: bool = False
 
 
 class TokenOut(BaseModel):

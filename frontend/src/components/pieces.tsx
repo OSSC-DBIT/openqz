@@ -17,7 +17,7 @@ import { TYPE_LABEL } from './quiz';
 import { Modal, cx } from './ui';
 
 export const KIND_STYLE: Record<ActivityKind, { icon: LucideIcon; from: string; to: string }> = {
-  quiz: { icon: ListChecks, from: '#6d4fe0', to: '#9b7bff' },
+  quiz: { icon: ListChecks, from: '#d6177f', to: '#ff6fbb' },
   assignment: { icon: ClipboardList, from: '#0e7490', to: '#22b8cf' },
   poll: { icon: BookOpenCheck, from: '#c2410c', to: '#f59e0b' },
   flashcards: { icon: Layers, from: '#15803d', to: '#4ade80' },

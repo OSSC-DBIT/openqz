@@ -12,6 +12,7 @@ from app.models.activity import (
     Question,
     QuestionType,
     ReleaseMode,
+    RoomRemoval,
     ShowAnswers,
     SubmitReason,
 )
@@ -20,7 +21,7 @@ from app.models.imports import ImportJob, ImportKind, ImportStatus
 from app.models.integrity import IntegrityEvent
 from app.models.live import LiveAnswer, LiveGame, LivePlayer, LiveScoring, LiveStatus
 from app.models.org import Department, FacultyAssignment, Section, StudentSection, Subject
-from app.models.user import PasswordResetToken, RefreshToken, Role, User, UserDepartment
+from app.models.user import PasswordResetToken, RefreshToken, Role, SiteCache, User, UserDepartment
 
 __all__ = [
     "LiveAnswer",
@@ -37,6 +38,7 @@ __all__ = [
     "Attempt",
     "AttemptAnswer",
     "AttemptStatus",
+    "RoomRemoval",
     "Media",
     "PasswordResetToken",
     "Question",
@@ -54,6 +56,7 @@ __all__ = [
     "RefreshToken",
     "Role",
     "Section",
+    "SiteCache",
     "StudentSection",
     "Subject",
     "User",

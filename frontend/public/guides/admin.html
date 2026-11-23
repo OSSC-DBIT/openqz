@@ -4,41 +4,14 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>OpenQZ admin guide | OpenQZ</title>
-<style>
-  :root { --brand:#5b3fd6; --ink:#1d1b2c; --muted:#6b6880; --bg:#f6f5fb; --card:#fff; --line:#e6e4ef; }
-  @media (prefers-color-scheme: dark) { :root { --ink:#ecebf5; --muted:#a29fb8; --bg:#12111a; --card:#1c1a27; --line:#2c2a3a; } }
-  * { box-sizing: border-box; }
-  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.65 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
-  main { max-width:760px; margin:0 auto; padding:24px 16px 64px; }
-  header { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
-  header a { color:var(--brand); font-weight:700; text-decoration:none; }
-  h1 { font-size:1.9rem; line-height:1.2; } h2 { margin-top:2rem; border-bottom:1px solid var(--line); padding-bottom:.3rem; }
-  a { color:var(--brand); } code { background:var(--card); border:1px solid var(--line); border-radius:6px; padding:1px 5px; }
-  table { border-collapse:collapse; width:100%; display:block; overflow-x:auto; }
-  th, td { border:1px solid var(--line); padding:6px 10px; text-align:left; vertical-align:top; }
-  th { background:var(--card); }
-  blockquote { margin:1rem 0; padding:.6rem 1rem; border-left:4px solid var(--brand); background:var(--card); border-radius:8px; }
-  figure.diagram { margin:1.25rem 0; padding:12px; background:var(--card); border:1px solid var(--line); border-radius:12px; overflow-x:auto; }
-  pre.mermaid { margin:0; text-align:center; background:none; }
-</style>
+<link rel="stylesheet" href="/guides/guides.css" />
 </head>
 <body><main>
 <header><a href="/login">&larr; OpenQZ</a></header>
 <h1>OpenQZ admin guide</h1>
 <p>The admin sets up departments, classes and accounts, imports the office sheets, and looks after sign-in problems. Server tasks (deploy, TLS, backups) are in the <a href="https://github.com/ossc-dbit/openqz/blob/main/docs/runbook.md">runbook</a>.</p>
 <h2>At a glance</h2>
-<figure class="diagram"><pre class="mermaid">flowchart TD
-    A([Start of term]) --&gt; B[Import faculty]
-    B --&gt; C[Import students]
-    C --&gt; D[Import faculty-section-subject mapping]
-    D --&gt; E[Download credential slips PDF]
-    E --&gt; F[Print and hand to class teachers]
-    F --&gt; G[Delete the PDF from the server]
-    G --&gt; H[Everyone signs in and sets a password]
-    H --&gt; I{During the term}
-    I --&gt; J[Users: add, reset password,&lt;br/&gt;unlock, change email, disable]
-    I --&gt; K[Sections, subjects, faculty mapping]
-    I --&gt; L[Audit and integrity logs]</pre></figure>
+<figure class="diagram"><picture><source srcset="/guides/diagrams/d93d87844865-dark.svg" media="(prefers-color-scheme: dark)" /><img src="/guides/diagrams/d93d87844865-light.svg" width="829" height="1193" loading="lazy" alt="Flow diagram: Start of term; Import faculty; Import students; Import faculty-section-subject mapping; Download credential slips PDF; Print and hand to class teachers; Delete the PDF from the server; Everyone signs in and sets a password; During the term; Users: add, reset password,, unlock, change email, disable; Sections, subjects, faculty mapping; Audit and integrity logs" /></picture></figure>
 <h2>1. First sign-in</h2>
 <p>Use the admin email and temporary password from the server setup, then choose your own password. Every page is in the left menu. Use the eye button next to a password field to show or hide what you typed; the field starts hidden.</p>
 <h2>2. Bring everyone in (start of term)</h2>
@@ -72,7 +45,7 @@
 </tr>
 <tr>
 <td>Edit a person</td>
-<td><strong>Users</strong>, pencil icon: name, email, phone, designation, departments, section.</td>
+<td><strong>Users</strong>, pencil icon: name, email, phone, designation, departments, section. The dialog also shows when the person agreed to the privacy policy (and which version), or that they have not yet.</td>
 </tr>
 <tr>
 <td>Reset a password</td>
@@ -88,7 +61,7 @@
 </tr>
 <tr>
 <td>Find people</td>
-<td>Search by name, email, phone or ID; filter by role and by department (faculty appear under every department they belong to).</td>
+<td>Search by name or ID (any part), or by the <strong>whole</strong> email address or phone number (they are stored encrypted, so part of one does not match); filter by role and by department (faculty appear under every department they belong to).</td>
 </tr>
 <tr>
 <td>Delete a person for good</td>
@@ -154,13 +127,15 @@
 <p>Both deletes ask you to type the activity&#39;s title and your own password. After 5 wrong passwords deleting is locked for 10 minutes, and every delete is recorded in the <strong>Audit log</strong>.</p>
 <h2>6. Privacy</h2>
 <ul>
+<li>The <strong>Privacy Policy</strong> is at <code>/privacy</code> (linked from the sign-in page and the landing page footer). Everyone ticks <strong>I agree</strong> before signing in; OpenQZ saves the date and the policy version on the account and in the audit log (<code>privacy_accepted</code>). Live-game guests are told by the join screen. Questions and data requests go to <strong><a href="mailto:osscdbit@gmail.com">osscdbit@gmail.com</a></strong>.</li>
+<li>When the policy changes in a way people should agree to again, a developer updates the page and <code>PRIVACY_VERSION</code> (<code>backend/app/core/privacy.py</code>): everyone is asked once more at their next sign-in.</li>
+<li>Emails and phone numbers are stored encrypted. Search finds them only by the whole address or number.</li>
 <li>Credential slips contain passwords: print, hand out, then delete the PDF from the server.</li>
 <li>Passwords are stored as one-way hashes; nobody, including the admin, can see them.</li>
 <li>Export only what you need, and keep downloaded files on college devices.</li>
 </ul>
 
+<footer><a href="/privacy">Privacy Policy</a> | <a href="mailto:osscdbit@gmail.com">osscdbit@gmail.com</a></footer>
 </main>
-<script src="/guides/vendor/mermaid.min.js"></script>
-<script src="/guides/diagrams.js"></script>
 </body>
 </html>

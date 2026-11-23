@@ -173,6 +173,25 @@ async def attempts_of(
     return list(rows.unique())
 
 
+async def attempts_by_assignment(
+    session: AsyncSession, assignment_ids: list[uuid.UUID], student_id: uuid.UUID
+) -> dict[uuid.UUID, list[Attempt]]:
+    """The same summary rows as attempts_of(), for many assignments in one query (the student
+    home page lists every assignment at once)."""
+    out: dict[uuid.UUID, list[Attempt]] = {i: [] for i in assignment_ids}
+    if not assignment_ids:
+        return out
+    rows = await session.scalars(
+        select(Attempt)
+        .where(Attempt.assignment_id.in_(assignment_ids), Attempt.student_id == student_id)
+        .options(raiseload(Attempt.answers), defer(Attempt.snapshot, raiseload=True))
+        .order_by(Attempt.attempt_no)
+    )
+    for att in rows.unique():
+        out[att.assignment_id].append(att)
+    return out
+
+
 async def full_attempt(session: AsyncSession, attempt_id: uuid.UUID) -> Attempt:
     att = await session.get(Attempt, attempt_id, populate_existing=True)
     assert att is not None
@@ -395,17 +414,21 @@ def validate_response(q: dict[str, Any], response: dict[str, Any]) -> dict[str, 
     ids = {o["id"] for o in q.get("options", [])}
     if t in ("mcq", "true_false"):
         c = response.get("choice")
-        if c not in ids:
+        if not isinstance(c, str) or c not in ids:
             raise AttemptError("bad_answer", "Pick one of the options", 422)
         return {"choice": c}
     if t == "justify":
         c = response.get("choice")
-        if c is not None and c not in ids:
+        if c is not None and (not isinstance(c, str) or c not in ids):
             raise AttemptError("bad_answer", "Pick one of the options", 422)
         return {"choice": c, "text": str(response.get("text", ""))[:10000]}
     if t == "multi_select":
         cs = response.get("choices") or []
-        if not isinstance(cs, list) or not set(cs) <= ids:
+        if (
+            not isinstance(cs, list)
+            or not all(isinstance(c, str) for c in cs)
+            or not set(cs) <= ids
+        ):
             raise AttemptError("bad_answer", "Invalid choices", 422)
         return {"choices": sorted(set(cs))}
     if t == "fill_blank":
@@ -660,17 +683,33 @@ def review(att: Attempt) -> dict[str, Any]:
 async def sweep_expired(session: AsyncSession) -> int:
     """Auto-submit every in-progress attempt whose server deadline has passed."""
     cutoff = now() - GRACE
-    rows = await session.scalars(
-        select(Attempt).where(
-            Attempt.status == AttemptStatus.in_progress,
-            Attempt.deadline_at.is_not(None),
-            Attempt.deadline_at < cutoff,
-        )
+    ids = list(
+        (
+            await session.scalars(
+                select(Attempt.id).where(
+                    Attempt.status == AttemptStatus.in_progress,
+                    Attempt.deadline_at.is_not(None),
+                    Attempt.deadline_at < cutoff,
+                )
+            )
+        ).all()
     )
     n = 0
-    for att in rows.unique():
+    for attempt_id in ids:
+        # One at a time under the row lock, like every other write to an attempt. A row the
+        # student's own request holds right now is skipped: that request submits it.
+        att = await session.scalar(
+            select(Attempt)
+            .where(Attempt.id == attempt_id)
+            .with_for_update(of=Attempt, skip_locked=True)
+            .execution_options(populate_existing=True)
+        )
+        if att is None:
+            continue
         if await expire_if_needed(session, att):
             n += 1
+        else:
+            await session.rollback()  # release the lock
     return n
 
 

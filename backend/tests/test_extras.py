@@ -146,11 +146,13 @@ async def test_forgot_password_flow(client: AsyncClient, mail: list[email.Mail])
     )
     assert again.status_code == 400  # single use
     login_ok = await client.post(
-        f"{A}/auth/login", json={"email": "asha@gmail.com", "password": "NewSecret9"}
+        f"{A}/auth/login",
+        json={"email": "asha@gmail.com", "password": "NewSecret9", "privacy_accepted": True},
     )
     assert login_ok.status_code == 200
     old = await client.post(
-        f"{A}/auth/login", json={"email": "asha@gmail.com", "password": PASSWORD}
+        f"{A}/auth/login",
+        json={"email": "asha@gmail.com", "password": PASSWORD, "privacy_accepted": True},
     )
     assert old.status_code == 401
 

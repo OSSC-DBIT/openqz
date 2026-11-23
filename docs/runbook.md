@@ -171,6 +171,8 @@ Restoring into production requires `I_KNOW_THIS_OVERWRITES_PROD=yes`.
 | Bulk import | Admin -> Imports (see docs/import-template.md) |
 | Credential slips | download after import, print, then delete from server |
 | DB shell | `docker compose -p openqz-prod exec db psql -U openqz` |
+| Encryption key for personal details | `DATA_KEY` in the environment's env file. `setup-environment.sh` adds one if missing; `deploy.sh` refuses to deploy without it. Copy it somewhere safe **apart from** the database backups; never change it once data exists |
+| Shrink images uploaded before image shrinking existed (once, after that deploy) | `docker compose -p openqz-prod exec api python -m app.cli optimize-media --dry-run`, then without `--dry-run`. Same ids, so questions keep their images; the old file is deleted after the row is saved |
 
 ## Go-live checklist
 

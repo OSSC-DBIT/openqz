@@ -36,6 +36,7 @@ from app.schemas.org import (
     SubjectOut,
 )
 from app.services import audit
+from app.services.user_org import set_section
 
 router = APIRouter(tags=["organisation"])
 
@@ -292,19 +293,12 @@ async def add_students(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Section not found")
     students = (
         await session.scalars(
-            select(User.id).where(User.id.in_(body.student_ids), User.role == Role.student)
+            select(User).where(User.id.in_(body.student_ids), User.role == Role.student)
         )
-    ).all()
-    existing = set(
-        (
-            await session.scalars(
-                select(StudentSection.student_id).where(StudentSection.section_id == section_id)
-            )
-        ).all()
-    )
-    for sid in students:
-        if sid not in existing:
-            session.add(StudentSection(student_id=sid, section_id=section_id))
+    ).unique()
+    for student in students:
+        # One section per academic year: joining this one leaves the other.
+        await set_section(session, student, section_id)
     audit.record(session, "section_students_added", actor_id=admin.id, target=str(section_id))
     await session.commit()
     return Response(status_code=204)

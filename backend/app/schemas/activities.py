@@ -3,7 +3,14 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    AwareDatetime,
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 from app.models import (
     ActivityKind,
@@ -186,8 +193,8 @@ class BulkApplyIn(BaseModel):
 class AssignIn(BaseModel):
     section_ids: list[int] = Field(default_factory=list)
     student_ids: list[uuid.UUID] = Field(default_factory=list)
-    start_at: datetime | None = None
-    due_at: datetime | None = None
+    start_at: AwareDatetime | None = None
+    due_at: AwareDatetime | None = None
     allow_late: bool = False
     # One attempt per student, always (no retakes). A blocked student is reopened with Unblock.
     shuffle_questions: bool = False
@@ -215,7 +222,7 @@ class AssignIn(BaseModel):
 
 
 class AssignUpdate(BaseModel):
-    due_at: datetime | None = None
+    due_at: AwareDatetime | None = None
     allow_late: bool | None = None
     shuffle_questions: bool | None = None
     shuffle_options: bool | None = None

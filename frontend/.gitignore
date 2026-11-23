@@ -1,0 +1,3 @@
+
+# pnpm package cache (when pnpm puts its store inside the project)
+.pnpm-store/

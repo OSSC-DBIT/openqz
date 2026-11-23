@@ -4,13 +4,53 @@ All notable changes to OpenQZ. Format: [Keep a Changelog](https://keepachangelog
 
 ## [Unreleased]
 
+### Fixed
+- On phones the bottom tab bar covered the buttons of every dialog (Add user, delete confirmations, the room lobby): dialogs now render on top of the page through a portal.
+
 ### Changed
+- **No inline styles anywhere: the CSP drops `'unsafe-inline'`** (`style-src 'self'`). Google's sign-in button moved into its own frame page (`/google-signin.html`, the only page allowed inline styles; it passes the credential to the sign-in page by `postMessage`, same origin only); the guides' flow diagrams are drawn beforehand as light and dark SVG pictures (`pnpm guides:diagrams`) and their styles are a file. A new e2e check tours the app on a production build and fails on any CSP violation.
+- **OWASP ZAP baseline re-run** on the production build (2026-11-22): 0 failures, 65 rules passed, 3 accepted warnings, the CSP `unsafe-inline` warning fixed (`docs/reports/zap-baseline-2026-11-22.html`); pip-audit and pnpm audit clean.
+- **Privacy Policy** page (`/privacy`, contact osscdbit@gmail.com), linked from sign-in, the landing footer and the live-game join screen. Signing in (email or Google) needs the **I agree** tick; the date and policy version are saved on the account (migration `0016`) and in the audit log, shown to admins in the user dialog, and a new policy version asks everyone again.
+- **Security hardening**: emails, phone numbers and uploaded people sheets are **encrypted in the database** (AES-256-GCM, `DATA_KEY`; migration `0015` encrypts existing rows; search by email or phone now needs the whole value); nginx **limits every API call** per user, per guest and per address, with slow-request timeouts; **Swagger and openapi.json are closed** unless `API_DOCS=true` in development; failed sign-ins are logged with a masked email. New checks: an **IDOR matrix** over all 66 id routes (`test_idor.py`), encryption tests, an **e2e security suite** (`e2e/security.spec.ts`) and `scripts/security/rate_limit_check.py`.
+- **Images load much faster on the hard-disk server**: uploads are shrunk to WebP (at most 1600 px; a 3 to 5 MB phone photo becomes a few hundred KB), turned upright and stripped of hidden photo data such as GPS; nginx sends image files after the API checks the request (`X-Accel-Redirect`, the OS keeps popular images in memory); browsers keep each image for a year; the app no longer downloads an image again after every save. Upload limit 10 MB. `python -m app.cli optimize-media` shrinks images stored before.
+- **Hosts manage players**: in a room, **Players** lists who joined (not started, answering, finished) with **Remove** (the code no longer lets them in; an attempt in progress is submitted) and **Let back in**. In a live game, **Players** works during the game too, not only in the lobby, and can stop or allow new joins. Migration `0014` adds `room_removals` and the submit reason `removed`.
+- **Narrated demo video** of the whole flow (`scripts/demo/`): super admin setup, a teacher on a laptop, a student on a phone, marking and releasing, a club's live game on the big screen with phones, and a self-paced room. Recorded on the real app, with step cards, captions before every action, an Indian English neural voice and music under it (about 10 minutes).
+- **Installable app done properly**: an **Install OpenQZ** card (one tap on Android and desktop Chrome or Edge, the Share steps on iPhone; never during a quiz, a live game or in the editor; "Not now" hides it for two weeks), new pink app icons (normal and maskable) drawn by `frontend/scripts/make-icons.mjs`, a plum splash screen, home-screen shortcuts, screenshots for the browser's install dialog, and no portrait lock (the live host screen works on landscape tablets and projectors). The installed app opens on `/login`.
+- The landing video's **sound button** hides while nothing happens and comes back on touch, mouse movement or scroll, like a video player's controls; it is smaller on phones.
+- **New look, themed after Wayground**: deep plum, cream and hot pink, the DM Sans typeface (served from the site), flat cards with small corners. The staff rail and the student top bar are plum; pages are cream. The coloured answer tiles in the question editor and the quiz player are unchanged. Dark mode follows the device as before. Components are built on shadcn/ui (`frontend/src/components/shadcn`).
+- **New landing page** in the Wayground layout: plum hero with the headline and a **intro video** that plays by itself (99 seconds of motion graphics at 120 BPM covering every part of OpenQZ, set to "Gaslight" by Dante Ross (CC0); made as a single HTML film in `video/film/` and rendered at 60 fps; it starts silent and a button turns the sound on), a **join box** right under it ("Have a code?" jumps there with the cursor in the box), the numbers, how it works, fair-exam rules, guides and the **contributors**. The footer carries the DBIT Bangalore and OSSC logos.
+- **Loading screens are skeletons** in the shape of the content instead of a spinner.
+- **Phones and tablets get a tab bar** at the bottom of the staff screens (Home, Library, Reports, More); wide screens keep the left rail. Screens fit from 240 px wide (a watch browser, split view) to 2560 px.
+- Dates read as "23 Nov, 10:58 am" instead of a full timestamp with seconds (the audit and integrity logs keep the exact time). The teacher greeting uses the first name, not the title ("Hello, Meera", not "Hello, Dr.").
+- Questions the browser used to ask in its own grey box (end a live game, remove a player, new room code, reset a password) now use OpenQZ dialogs.
+- Live game setup says **How players are ranked** instead of "Scoring".
 - **Browser tests no longer run on pull requests in GitHub Actions**; they are run locally before a pull request and can be started by hand (Actions, CI, Run workflow).
 
 ### Fixed
+- **Buttons could be pressed twice while saving** (Assign, Host room, Create, import commit, Release marks, Delete for good): a second click made a second assignment or room.
+- **Shared computers**: after one person signed out, the next person on the same tab could see the previous person's activities and marks for up to 30 seconds. Cached data is now emptied whenever the signed-in user changes.
+- **Deleting an activity that was played as a live game deleted the game results.** It is now archived, like an activity with student attempts.
+- **Fill in the blanks**: accepted answers with a space ("New York") could not be typed, only pasted.
+- **Results downloads failed for titles in Kannada, Hindi or other non-Latin scripts** (CSV and Excel).
+- **Two teachers marking the same attempt at once** could store a wrong total; marking, unblocking, opening a question and the deadline sweep now all wait their turn on the attempt.
+- A student is no longer signed out in the middle of a quiz when the server is restarting or busy for a moment.
+- A user typed in by hand in lower case (`1db23cs001`) no longer makes an import of the same USN fail.
+- The room lobby on the projector no longer drops out of full screen each time a student joins.
+- Changing a question's timer and then its marks straight away no longer undoes the timer.
+- The student home page and the live games list read their data in one query each instead of one per row.
+- The report says "1 warning", not "1 violations".
+- Lists refresh after every save (a newly assigned activity shows on the home page at once, a started one leaves "pending").
+- Adding a student to a section moves them out of their other section of the same year instead of leaving them in two.
+- Requests with a time without a zone, an unknown subject or section, or an answer in the wrong shape are refused with a message instead of an error page.
+- Marking messages say **marks**, not "score". The answer preview and the blank boxes are readable in dark mode. Several fields and icon buttons gained names for screen readers, and every dialog closes with Escape.
 - **Users and Statistics tables on Linux**: with wider system fonts the Users table was a few pixels too wide for its box, and wide tables could not be reached with the keyboard to scroll them.
 
 ### Added
+- **Contributors on the landing page**: names and pictures from the GitHub repository (`GITHUB_REPO`), fetched by the worker twice a day and kept in the database (pictures included, so visitors never contact GitHub). Bots and AI assistants are left out. An empty or old list refills itself on the next visit.
+- **Super admin and admin**: every admin so far becomes a **super admin**. A plain admin runs the day-to-day (people, classes, imports, statistics, library and reports) but cannot create or change admin accounts, read the audit log or delete anything for good. A super admin promotes or demotes admins from **Users**.
+- **Participants** (staff menu): everyone who attempted your activities across all of them, with attempts, marks obtained, warnings and last activity; pick a person to see each attempt and jump to its report. Teachers and club organisers see their own activities, admins see all.
+- **Club organisers get the integrity log** of their own rooms and games.
+- **Import questions** (activity editor, **Import**): from a **Google Form** link (the form must be open to anyone with the link), a **spreadsheet** (.csv or .xlsx, one question per row, sample sheet to download) or **pasted text**. A review screen shows every question with its coloured tiles; tap the correct answers (Google never shares a form's answer key), untick what you do not want, then add them all at once. No AI is involved.
 - **Admin deletes departments, sections and subjects** (bin icon on *Sections* and *Subjects*). Before deleting, OpenQZ shows what goes with it. A department goes only when it has no sections and no people; a section is refused while work assigned to it has student attempts; a subject takes its teacher mappings with it. Every delete is in the audit log.
 - **Every delete asks twice**: what will go, then "Are you sure?" with the buttons the other way round. This covers departments, sections, subjects, faculty mappings, the credential PDF, activities and questions. (Deletes for good already ask for the name and the admin's password.)
 - **Admin statistics** (`/admin/stats`, *Statistics* in the admin menu): totals for the college, a table per department (students, faculty, sections, class assignments, completion, average marks) and a table per teacher and club organiser (activities, class assignments, rooms, live games, completion, average marks, answers waiting for grading). Filter by day range and department; export as Excel (3 sheets) or CSV.
@@ -23,6 +63,11 @@ All notable changes to OpenQZ. Format: [Keep a Changelog](https://keepachangelog
 - `robots.txt`, `sitemap.xml` and `/.well-known/security.txt` (RFC 9116), served by the web server with the site's own address.
 
 ### Security
+- **One attempt, one screen**: when the same attempt is worked on from a second tab or device within two minutes, the server counts a warning (*second_device* in the integrity log), at most one a minute. Changing device after a longer pause (a dead battery) is not flagged.
+- A teacher can assign work directly only to students of the sections mapped to them (other students still join with a room code).
+- Results downloads (CSV and Excel, also for live games) can no longer carry a spreadsheet formula in a name, title or answer.
+- Integrity events can name only the sender's own attempts.
+- The Google Form import fetches only `https://docs.google.com/forms/...` and `https://forms.gle/...`, follows redirects only between those two, reads at most 3 MB and is limited to 12 a minute per person.
 - **Password reset is rate limited**: using a reset link (`/auth/reset`) had no limit; it and "forgot password" now allow 20 requests per client address per minute, in the API and in nginx. Reset emails to one address are limited to one a minute, 3 an hour and 6 a day (before: 3 per clock hour, so 6 could go out within minutes around the hour).
 - **API reference closed on staging and production**: `/api/docs` and `/api/openapi.json` answer 404 there (still open in development).
 - A teacher sees only the integrity events from attempts at **their own** activities; before, any faculty member could list every student's events.

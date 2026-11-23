@@ -4,7 +4,7 @@ import { useState, type FormEvent } from 'react';
 import { api } from '../../api/client';
 import type { Assignment, Page, Section, Subject, User } from '../../api/types';
 import { ConfirmDelete } from '../../components/ConfirmDelete';
-import { Button, Card, EmptyState, ErrorText, PageHeader, Select, Spinner, Table, Td } from '../../components/ui';
+import { Button, Card, EmptyState, ErrorText, Loading, PageHeader, Select, Table, Td } from '../../components/ui';
 
 export default function AssignmentsPage() {
   const qc = useQueryClient();
@@ -69,7 +69,7 @@ export default function AssignmentsPage() {
       </Card>
 
       {rows.isLoading ? (
-        <Spinner />
+        <Loading />
       ) : rows.data?.length ? (
         <Table head={['Faculty', 'Section', 'Subject', '']} cols={[undefined, 'hidden sm:table-cell', 'hidden md:table-cell', 'w-px']} compact>
           {rows.data.map((r) => (

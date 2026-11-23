@@ -137,10 +137,13 @@ describe('routing and auth', () => {
     const user = userEvent.setup();
     await user.type(await screen.findByLabelText('Email'), 'Asha@Example.com ');
     await user.type(screen.getByLabelText('Password', { selector: 'input' }), 'Secret123');
+    // signing in needs the privacy policy tick
+    expect(screen.getByRole('button', { name: 'Sign in' })).toBeDisabled();
+    await user.click(screen.getByRole('checkbox', { name: /agree to the privacy policy/i }));
     await user.click(screen.getByRole('button', { name: 'Sign in' }));
     expect(await screen.findByText('student home')).toBeInTheDocument();
     const loginCall = fetchMock.mock.calls.find(([u]) => String(u).endsWith('/auth/login'))!;
-    expect(JSON.parse(String(loginCall[1]!.body))).toEqual({ email: 'Asha@Example.com', password: 'Secret123' });
+    expect(JSON.parse(String(loginCall[1]!.body))).toEqual({ email: 'Asha@Example.com', password: 'Secret123', privacy_accepted: true });
   });
 
   it('hides the Google button when not configured', async () => {
@@ -155,7 +158,27 @@ describe('routing and auth', () => {
       url.endsWith('/auth/config') ? json({ google_client_id: 'abc.apps.googleusercontent.com', password_login: true }) : undefined,
     );
     renderApp('/login');
-    expect(await screen.findByLabelText('Continue with Google')).toBeInTheDocument();
+    const frame = (await screen.findByTitle('Continue with Google')) as HTMLIFrameElement;
+    expect(frame.getAttribute('src')).toContain('/google-signin.html?client_id=abc.apps.googleusercontent.com');
+  });
+
+  it('takes a Google credential only from its own frame', async () => {
+    const fetchMock = mockApi((url) =>
+      url.endsWith('/auth/config') ? json({ google_client_id: 'abc.apps.googleusercontent.com', password_login: true }) : url.endsWith('/auth/google') ? token() : undefined,
+    );
+    renderApp('/login');
+    const frame = (await screen.findByTitle('Continue with Google')) as HTMLIFrameElement;
+    await userEvent.setup().click(screen.getByRole('checkbox', { name: /agree to the privacy policy/i }));
+    const google = () => fetchMock.mock.calls.filter(([u]) => String(u).endsWith('/auth/google'));
+    // a message from anywhere else is ignored
+    window.dispatchEvent(new MessageEvent('message', { data: { source: 'openqz-google', credential: 'forged' }, origin: window.location.origin, source: window }));
+    window.dispatchEvent(new MessageEvent('message', { data: { source: 'openqz-google', credential: 'forged' }, origin: 'https://evil.example', source: frame.contentWindow }));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(google()).toHaveLength(0);
+    // the frame's credential signs in, with the privacy tick
+    window.dispatchEvent(new MessageEvent('message', { data: { source: 'openqz-google', credential: 'signed-id-token' }, origin: window.location.origin, source: frame.contentWindow }));
+    expect(await screen.findByText('student home')).toBeInTheDocument();
+    expect(JSON.parse(String(google()[0][1]!.body))).toEqual({ credential: 'signed-id-token', privacy_accepted: true });
   });
 
   it('forces a password change first', async () => {
@@ -173,7 +196,7 @@ describe('routing and auth', () => {
   it('renders landing page at / with headline and login link', async () => {
     mockApi(() => undefined);
     renderApp('/');
-    expect(await screen.findByRole('heading', { name: /Discover a New Dimension of Learning\./i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /Quizzes that play like a game/i })).toBeInTheDocument();
     const loginLinks = screen.getAllByRole('link', { name: /^Login/i });
     expect(loginLinks.some((l) => l.getAttribute('href') === '/login')).toBe(true);
   });

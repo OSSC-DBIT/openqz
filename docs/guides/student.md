@@ -31,7 +31,7 @@ flowchart TD
 Use **Google Chrome**, **Safari** or **Microsoft Edge**. In any other browser (Firefox, Opera, Samsung Internet, or a link opened inside WhatsApp or Instagram) the sign-in page asks you to switch and shows the address to copy.
 
 1. Open the OpenQZ address your college gave you (for example `https://openqz.dbit.co.in`). Visitors see the landing page; choose **Login** in the top navigation to reach the sign-in screen.
-2. Sign in with your **email** and the **temporary password** from the slip your class teacher gave you. Or tap **Continue with Google** if your Google account uses the same email.
+2. Sign in with your **email** and the **temporary password** from the slip your class teacher gave you. Or tap **Continue with Google** if your Google account uses the same email. Before **Sign in** or **Continue with Google**, tick **I have read and agree to the Privacy Policy** (the link opens it); signing in needs it, and the date you agreed is saved with your account.
 3. The first time you use the temporary password, OpenQZ asks you to **choose your own password**: at least 8 characters, with upper and lower case letters and a digit.
 4. Use the eye button next to a password field to show or hide what you typed; the field starts hidden.
 
@@ -45,8 +45,13 @@ After 5 wrong passwords your account locks for 15 minutes.
 
 ## 2. Install it like an app (optional)
 
-- **Android (Chrome):** menu, then **Install app** or **Add to Home screen**.
-- **iPhone (Safari):** Share, then **Add to Home Screen**.
+A few seconds after you open OpenQZ, an **Install OpenQZ** card may appear at the bottom of the screen (never during a quiz or a live game).
+
+- **Android, or Chrome and Edge on a computer:** tap **Install** on the card. No card? Browser menu, then **Install app** or **Add to Home screen**.
+- **iPhone and iPad (Safari):** the card shows the two steps: tap **Share**, then **Add to Home Screen**.
+- **Not now** hides the card on that device for two weeks.
+
+The installed app opens on the sign-in page, full screen, with the OpenQZ icon. Press and hold the icon for shortcuts to **Join with a code** and **Join a live game**.
 
 ## 3. Your activities
 
@@ -108,7 +113,8 @@ While a quiz is open, OpenQZ notices if you:
 - switch to another tab or app, or lock your screen,
 - press **Back**,
 - reload or close the page,
-- leave full screen.
+- leave full screen,
+- open the same quiz in a second tab or on a second device.
 
 Each time, you get a **warning** (for example "Warning 1 of 3"). After the number of warnings your teacher allows, **your quiz is submitted automatically** with the answers you have so far. Your teacher sees every warning.
 

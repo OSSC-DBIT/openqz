@@ -3,7 +3,7 @@ import { Download, FileSpreadsheet } from 'lucide-react';
 import { useState } from 'react';
 import { api, downloadFile } from '../../api/client';
 import type { AdminStats, Department } from '../../api/types';
-import { Badge, Button, Card, EmptyState, ErrorText, Field, Input, PageHeader, Select, Spinner, Table, Td } from '../../components/ui';
+import { Badge, Button, Card, EmptyState, ErrorText, Field, Input, Loading, PageHeader, Select, Table, Td } from '../../components/ui';
 
 const pct = (v: number | null) => (v === null ? '-' : `${v}%`);
 
@@ -105,7 +105,7 @@ export default function StatsPage() {
       <ErrorText error={stats.error || exportFile.error} />
 
       {!s || !t ? (
-        stats.isLoading && <Spinner />
+        stats.isLoading && <Loading kind="page" />
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">

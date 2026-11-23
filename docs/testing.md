@@ -4,9 +4,9 @@ OpenQZ is tested at five layers. CI runs all of them on every pull request; a re
 
 | Layer | Tool | Where | Count (2026-11-08) |
 | --- | --- | --- | --- |
-| Backend unit + API | pytest, httpx | `backend/tests/` | 119 tests, 91% line coverage (CI gate: 85%), about 5 minutes |
-| Frontend unit | Vitest, Testing Library, happy-dom | `frontend/src/test/` | 24 tests |
-| Browser journeys | Playwright (desktop Chrome + Pixel 7) | `frontend/e2e/` | Run locally before every pull request; GitHub Actions runs them only by hand (Actions, CI, Run workflow). 37 tests in 11 spec files (19 journeys and feature checks, 11 axe checks including dark mode, 3 guide tests, 4 screen-size tests) x 2 devices: 74 runs, 5 skipped by design (the screen-size tests and one live-game test run on the desktop project only). The password-reset journey also skips locally without Mailpit or email, but fails in CI. |
+| Backend unit + API | pytest, httpx | `backend/tests/` | 180 tests, 91% line coverage (CI gate: 85%), about 5 minutes |
+| Frontend unit | Vitest, Testing Library, happy-dom | `frontend/src/test/` | 36 tests |
+| Browser journeys | Playwright (desktop Chrome + Pixel 7) | `frontend/e2e/` | Run locally before every pull request; GitHub Actions runs them only by hand (Actions, CI, Run workflow). 49 tests in 13 spec files (20 journeys and feature checks, 10 security checks, 12 axe checks including dark mode, 3 guide tests, 4 screen-size tests) x 2 devices: 98 runs, 9 skipped by design (the screen-size tests and one live-game test run on the desktop project only; the security-headers and CSP checks run only against a production build). The password-reset journey also skips locally without Mailpit or email, but fails in CI. |
 | Accessibility | axe-core in Playwright (WCAG 2.1 AA) | `frontend/e2e/a11y.spec.ts` | landing page, login, student home, join page, create dialog with class picker, faculty library, faculty home (and its quick-create tile); in **dark mode** again: landing page, login, student home, join, faculty home, library, reports, an assignment report, the editor, and the admin dashboard, users, sections, imports and audit log |
 | Load | k6 | `tests/load/student-exam.js` | see [performance.md](performance.md) |
 | Security | OWASP ZAP baseline, pip-audit, pnpm audit | CI + `docs/reports/` | see [security.md](security.md) |
@@ -43,9 +43,16 @@ Browser journeys read `E2E_BASE_URL` (default `http://localhost:8088`), `E2E_ADM
 | `test_extras.py` | rubrics, forgot / reset password, throttling, email notifications, audit log, class context (department locked, sections taught only), Excel export contents |
 | `test_integrity.py` | integrity event ingest and listing |
 | `test_unblock.py` | unblock reopens only submit-closed answers, gives blocked time back, resets warnings, audit entry, report flags; refused for manual submits, newer attempts, students and other teachers |
+| `test_idor.py` | every route that takes an id, tried as the wrong person: another teacher, another student, students and clubs on staff routes, faculty on admin routes, a plain admin on super-admin powers, a live-game token on another game, missing and malformed ids; nothing changes |
+| `test_privacy.py` | sign-in needs the privacy tick (after the password check), saves when and which version with an audit row, no tick needed again, a new policy version asks again, admins see it |
+| `test_encryption.py` | emails and phones stored as ciphertext with keyed hashes, sign-in and search still work, uniqueness ignores case, tampering and a wrong key are detected, production needs `DATA_KEY`, masked failed sign-ins, import rows encrypted |
+| `test_images.py` | a phone photo becomes a small upright WebP without EXIF, small graphics and animations kept, giant or broken images refused, uploads store the small file, nginx hand-off header with `MEDIA_ACCEL`, `optimize-media` shrinks older images |
+| `test_room_removal.py` | the host takes a student out of a room (running attempt submitted, report keeps it, code refuses them), lets them back in (one attempt still one), only the host may, class assignments are not rooms |
 | `test_rooms.py` | hosting a room, preview and join by code, wrong / closed / rotated codes, start window, join rate limit (429), club rules (rooms only, no classes), admin creates club accounts |
 | `test_admin_data.py` | admin deletes for good (person, activity, assignment results): impact preview, name typed out, password again, wrong-password lock (429), no self-delete, cascades, audit entries, other roles refused |
 | `test_org_delete.py` | admin deletes departments, sections and subjects: admin only, impact preview, section refused while its work has attempts, department only when empty, subject takes its teacher mappings, audit entries |
+| `test_question_import.py` | Google Form page parsing (types, no key, left-out items), only Google Forms addresses are ever fetched, spreadsheet rows (CSV and Excel: types, keys, marks, timers), pasted text blocks, preview endpoints (roles, size limit), bulk add (all or nothing, ownership, locked once attempted) |
+| `test_review_fixes.py` | activity with live games is archived on delete; spreadsheet-safe cells and download names for non-Latin titles; a teacher assigns only to students of their sections; one section per year; odd input refused cleanly (time without a zone, nulls, unknown subject, wrong answer shape); marking messages say marks; integrity events only for own attempts; import matches usernames whatever their case; the sweeper submits once under the row lock; an attempt open on a second device counts one warning |
 | `test_features.py` | user details, several departments, student section; scheduled start (not started, emails once); instructions; admin statistics and CSV / Excel export; API docs closed in production; reset rate limit; questions locked after a start; integrity events per teacher; new deadline reaches running attempts; key hidden while a blocked student may be let back in; resume after unpublish; same-name live players; cross-origin headers and strict CORS |
 
 **Browser** (`frontend/e2e/`)
@@ -62,7 +69,21 @@ Browser journeys read `E2E_BASE_URL` (default `http://localhost:8088`), `E2E_ADM
 | `live.spec.ts` | a live game across three browsers: the teacher starts it from the share dialog (guests allowed), a signed-in student enters the code in the normal join box (forwarded to the live game), a guest joins from `/live` with a nickname; the phones show only the answer tiles; automatic reveal when everyone answered; Correct / Not this time on the phones; leaderboard, next question, podium (1st and 2nd place), results page; axe on the lobby, the guest join page and the tiles |
 | `responsive.spec.ts` | 18 screens (landing page, sign-in, every admin page, faculty home, library, reports, editor, report, student home, join, quiz player, review) at 320, 375, 768, 1024, 1366, 1920 and 2560 px: no page may be wider than the window; failures name the elements that stick out. On the admin pages and the Reports list, tables must also fit without scrolling inside their own box. The player is loaded once and resized, because reloads count as warnings. |
 | `guides.spec.ts` | the student, faculty and admin guides open without signing in, draw their Mermaid flow diagrams under the site CSP with no console errors, and do not scroll sideways |
+| `import-questions.spec.ts` | teacher opens Import, a link that is not a Google Form is refused, pastes three questions, taps the answers one of them lacked, adds all three and sees them in the editor; the review screen passes axe and fits 320 px |
 | `a11y.spec.ts` | no serious or critical WCAG 2.1 AA violations |
+
+## Design review screenshots (no backend needed)
+
+`frontend/e2e/shots.mjs` and `shots-flows.mjs` take screenshots of the main screens at watch (240 px), phone, tablet, desktop and wide sizes, in light or dark mode. With `MOCK=1` they answer the API from `e2e/mock-api.mjs`, so only the Vite server has to run:
+
+```bash
+cd frontend && pnpm exec vite --port 5199 &
+MOCK=1 SIZES=watch,phone,tablet,desktop node e2e/shots.mjs http://localhost:5199 /tmp/shots faculty /faculty /faculty/library
+SIZES=phone,desktop DARK=1 node e2e/shots-flows.mjs http://localhost:5199 /tmp/shots   # editor, import, assign, player, join
+node e2e/overflow.mjs http://localhost:5199 student 240 /student                       # names what sticks out
+```
+
+They print `OVERFLOW` for any screen wider than its window. They are a review aid, not part of the test suite.
 
 ## Walkthrough recordings
 

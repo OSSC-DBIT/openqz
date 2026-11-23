@@ -30,9 +30,11 @@ def create_app(*, with_worker_pool: bool = True) -> FastAPI:
             await app.state.arq.aclose()
         await close_redis()
 
-    # Swagger and the OpenAPI document are a development tool: on staging and production
-    # both URLs answer 404, so the API surface is not advertised to visitors.
-    api_docs = not settings.is_production
+    # Swagger and the OpenAPI document are a development tool, closed unless a developer turns
+    # them on (API_DOCS=true), and never on staging or production: the API surface is not
+    # advertised, also not through a dev stack shared with a tunnel. scripts/export_openapi.py
+    # builds docs/api/openapi.json without them.
+    api_docs = settings.api_docs and not settings.is_production
     app = FastAPI(
         title="OpenQZ API",
         version="0.1.0",
@@ -48,7 +50,7 @@ def create_app(*, with_worker_pool: bool = True) -> FastAPI:
         allow_origins=settings.cors_origins,
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
-        allow_headers=["Authorization", "Content-Type", "X-Live-Player"],
+        allow_headers=["Authorization", "Content-Type", "X-Live-Player", "X-Player-Session"],
         max_age=600,
     )
 

@@ -38,6 +38,13 @@ export function AssignDrawer({
   const graded = activity.kind === 'quiz' || activity.kind === 'assignment';
   // Pre-select the classes the activity was created for.
   const [secIds, setSecIds] = useState<number[]>(activity.section_ids);
+  // The drawer stays mounted while the editor is open: when it opens, start from the classes
+  // the activity has now (they may have been changed with "Edit classes" since the page loaded).
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) setSecIds(activity.section_ids);
+  }
   const [pickStudentsFrom, setPickStudentsFrom] = useState<number | ''>('');
   const [studentIds, setStudentIds] = useState<string[]>([]);
   const [startAt, setStartAt] = useState('');
@@ -132,7 +139,7 @@ export function AssignDrawer({
               Your screen (the projector) shows each question; students and guests answer on their phones, which show only the coloured answers. You move everyone to the next question. Uses the multiple choice, true / false and multi-select questions.
             </p>
             {activity.kind === 'quiz' && (
-              <Field label="Scoring">
+              <Field label="How players are ranked">
                 <Select value={scoring} onChange={(e) => setScoring(e.target.value as LiveScoring)}>
                   {(Object.keys(SCORING_LABEL) as LiveScoring[]).map((k) => (
                     <option key={k} value={k}>

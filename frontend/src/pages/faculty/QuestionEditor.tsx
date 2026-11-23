@@ -117,6 +117,28 @@ export function QuestionToolbar({ kind, value, onChange }: { kind: ActivityKind;
   );
 }
 
+/** Accepted answers for one blank. The box keeps what was typed (spaces included) while the
+ * saved value is trimmed, so "New York" can be typed letter by letter. */
+function BlankInput({ value, label, onChange }: { value: string; label: string; onChange: (text: string) => void }) {
+  const [text, setText] = useState(value);
+  const [focused, setFocused] = useState(false);
+  return (
+    <Input
+      value={focused ? text : value}
+      onFocus={() => {
+        setText(value);
+        setFocused(true);
+      }}
+      onBlur={() => setFocused(false)}
+      onChange={(e) => {
+        setText(e.target.value);
+        onChange(e.target.value);
+      }}
+      aria-label={label}
+    />
+  );
+}
+
 export function QuestionEditor({
   kind,
   value,
@@ -183,7 +205,7 @@ export function QuestionEditor({
                     <button
                       type="button"
                       onClick={() => setOption(i, { correct: !o.correct })}
-                      className={`inline-flex items-center gap-1.5 rounded-full border-2 border-white px-3 py-1.5 text-sm font-bold ${o.correct ? 'bg-emerald-700 text-white' : 'bg-white text-[#1d1b2c] hover:bg-emerald-50'}`}
+                      className={`inline-flex items-center gap-1.5 rounded-full border-2 border-white px-3 py-1.5 text-sm font-bold ${o.correct ? 'bg-emerald-700 text-white' : 'bg-white text-[#3b142a] hover:bg-emerald-50'}`}
                       aria-label={`Mark option ${i + 1} correct`}
                       aria-pressed={!!o.correct}
                       title={o.correct ? 'This is the correct answer' : 'Mark as the correct answer'}
@@ -252,19 +274,21 @@ export function QuestionEditor({
           {blanks.map((b, i) => (
             <div key={i} className="flex gap-2">
               <span className="mt-2.5 w-16 shrink-0 text-sm font-semibold">Blank {i + 1}</span>
-              <Input
+              <BlankInput
                 value={b}
-                onChange={(e) => {
+                label={`Blank ${i + 1} answers`}
+                onChange={(text) => {
                   const next = [...blanks];
-                  next[i] = e.target.value;
+                  next[i] = text;
                   set({ answer: { ...q.answer, blanks: next.map((x) => x.split('|').map((s) => s.trim())) } });
                 }}
-                aria-label={`Blank ${i + 1} answers`}
               />
               {blanks.length > 1 && (
                 <Button
                   variant="ghost"
                   type="button"
+                  aria-label={`Remove blank ${i + 1}`}
+                  title="Remove this blank"
                   onClick={() => set({ answer: { ...q.answer, blanks: blanks.filter((_, j) => j !== i).map((x) => x.split('|').map((s) => s.trim())) } })}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -302,7 +326,7 @@ export function QuestionEditor({
       {graded && (q.type === 'open_ended' || q.type === 'justify') && <RubricEditor q={q} set={set} />}
 
       {/* explanation / back of card, tags */}
-      <div className="space-y-3 rounded-2xl border border-line bg-card p-4">
+      <div className="space-y-3 sticker rounded-xl bg-card p-4">
         <label htmlFor="q-explanation" className="text-sm font-semibold">
           {kind === 'flashcards' ? 'Back of the card' : 'Answer explanation (shown after answering)'}
         </label>
@@ -351,7 +375,7 @@ function RubricEditor({ q, set }: { q: QuestionData; set: (patch: Partial<Questi
           <div key={i} className="flex gap-2">
             <Input placeholder="Criterion, e.g. Correct concept" value={r.criterion} onChange={(e) => update(i, { criterion: e.target.value })} aria-label={`Criterion ${i + 1}`} />
             <Input className="!w-24" type="number" min={0.5} step={0.5} value={r.max} onChange={(e) => update(i, { max: e.target.value })} aria-label={`Criterion ${i + 1} marks`} />
-            <Button variant="ghost" type="button" title="Remove criterion" onClick={() => set({ rubric: rows.filter((_, j) => j !== i) })}>
+            <Button variant="ghost" type="button" title="Remove criterion" aria-label={`Remove criterion ${i + 1}`} onClick={() => set({ rubric: rows.filter((_, j) => j !== i) })}>
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>

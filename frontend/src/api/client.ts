@@ -13,6 +13,15 @@ export class ApiError extends Error {
 let accessToken: string | null = null;
 let refreshing: Promise<TokenResponse | null> | null = null;
 const listeners = new Set<(me: Me | null) => void>();
+let playerSession: string | null = null;
+
+/**
+ * The quiz player names its browser tab while an attempt is open; the server uses it to notice
+ * the same attempt being worked on from a second tab or device. Null when no attempt is open.
+ */
+export function setPlayerSession(id: string | null): void {
+  playerSession = id;
+}
 
 export function setAccessToken(token: string | null): void {
   accessToken = token;
@@ -54,14 +63,21 @@ export async function refreshSession(): Promise<TokenResponse | null> {
       try {
         const res = await fetch('/api/v1/auth/refresh', { method: 'POST', credentials: 'same-origin' });
         if (!res.ok) {
-          accessToken = null;
-          listeners.forEach((l) => l(null));
+          // Only "your session is over" signs the user out. A busy or restarting server (502
+          // during a deploy, 429) must not throw a student out of a quiz: keep the session and
+          // let the next request try again.
+          if (res.status === 401 || res.status === 403) {
+            accessToken = null;
+            listeners.forEach((l) => l(null));
+          }
           return null;
         }
         const body = (await res.json()) as TokenResponse;
         accessToken = body.access_token;
         listeners.forEach((l) => l(body.user));
         return body;
+      } catch {
+        return null; // offline for a moment
       } finally {
         setTimeout(() => (refreshing = null), 0);
       }
@@ -79,6 +95,7 @@ export interface RequestOptions extends Omit<RequestInit, 'body'> {
 export async function api<T = unknown>(path: string, opts: RequestOptions = {}, retry = true): Promise<T> {
   const headers = new Headers(opts.headers);
   if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
+  if (playerSession && path.startsWith('/attempts/')) headers.set('X-Player-Session', playerSession);
   let body = opts.body;
   if (opts.json !== undefined) {
     headers.set('Content-Type', 'application/json');

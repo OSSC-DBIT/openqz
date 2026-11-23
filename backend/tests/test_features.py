@@ -70,7 +70,8 @@ async def test_user_details_and_several_departments(
     for d in (o["cse"], o["ece"]):
         page = (await client.get(f"{A}/users?department_id={d}", headers=admin_headers)).json()
         assert [x["username"] for x in page["items"]] == ["EMP7"]
-    found = (await client.get(f"{A}/users?q=98765", headers=admin_headers)).json()
+    # phones are encrypted: the whole number finds the person (any formatting)
+    found = (await client.get(f"{A}/users?q=98765 43210", headers=admin_headers)).json()
     assert found["total"] == 1
 
     # edit: drop one department, clear the phone
@@ -333,11 +334,20 @@ async def test_admin_stats_exports(client: AsyncClient) -> None:
 # ---------------------------------------------------------------- API docs
 
 
-@pytest.mark.parametrize(("environment", "code"), [("development", 200), ("production", 404)])
-async def test_api_docs_are_closed_outside_development(
-    monkeypatch: pytest.MonkeyPatch, environment: str, code: int
+@pytest.mark.parametrize(
+    ("environment", "asked", "code"),
+    [
+        ("development", False, 404),  # closed by default, also on a dev stack behind a tunnel
+        ("development", True, 200),
+        ("staging", True, 404),  # never outside development, even when asked for
+        ("production", True, 404),
+    ],
+)
+async def test_api_docs_are_closed_unless_a_developer_opens_them(
+    monkeypatch: pytest.MonkeyPatch, environment: str, asked: bool, code: int
 ) -> None:
     monkeypatch.setattr(get_settings(), "environment", environment)
+    monkeypatch.setattr(get_settings(), "api_docs", asked)
     app = create_app(with_worker_pool=False)
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         assert (await c.get("/api/docs")).status_code == code
@@ -497,7 +507,11 @@ async def test_api_answers_cannot_be_framed_or_loaded_cross_origin(client: Async
 def test_production_refuses_open_cors() -> None:
     from app.core.config import Settings
 
-    base: dict[str, Any] = {"jwt_secret": "x" * 32, "environment": "production"}
+    base: dict[str, Any] = {
+        "jwt_secret": "x" * 32,
+        "environment": "production",
+        "data_key": "a" * 44,
+    }
     for bad in ("*", "http://openqz.example.org", "https://openqz.example.org/"):
         with pytest.raises(ValueError, match="CORS_ORIGINS"):
             Settings(**base, cors_origins=[bad])

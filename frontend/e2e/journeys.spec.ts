@@ -6,7 +6,7 @@ const ADMIN_PW = process.env.E2E_ADMIN_PASSWORD ?? 'Admin2026Secure';
 const SHOTS = process.env.E2E_SHOTS_DIR;
 
 async function adminToken(request: APIRequestContext): Promise<string> {
-  const r = await request.post('/api/v1/auth/login', { data: { email: ADMIN, password: ADMIN_PW } });
+  const r = await request.post('/api/v1/auth/login', { data: { privacy_accepted: true, email: ADMIN, password: ADMIN_PW } });
   expect(r.ok(), await r.text()).toBeTruthy();
   return (await r.json()).access_token;
 }
@@ -15,6 +15,7 @@ test('admin signs in and sees the dashboard, users and imports', async ({ page }
   await page.goto('/login');
   await page.getByLabel('Email').fill(ADMIN);
   await page.getByRole('textbox', { name: 'Password', exact: true }).fill(ADMIN_PW);
+  await page.getByRole('checkbox', { name: /agree to the privacy policy/i }).check();
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page.getByRole('heading', { name: 'Admin dashboard' })).toBeVisible();
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/${info.project.name}-dashboard.png`, fullPage: true });
@@ -46,6 +47,7 @@ test('student first login forces a password change, then shows their section', a
   await page.goto('/login');
   await page.getByLabel('Email').fill('ASHA@example.com'); // case does not matter
   await page.getByRole('textbox', { name: 'Password', exact: true }).fill(temp);
+  await page.getByRole('checkbox', { name: /agree to the privacy policy/i }).check();
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page.getByRole('heading', { name: 'Set your password' })).toBeVisible();
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/${info.project.name}-set-password.png` });
@@ -70,6 +72,7 @@ test('wrong password shows a clear error', async ({ page }) => {
   // An unknown user: never trips the lockout, and the error must match a real user's.
   await page.getByLabel('Email').fill(`nouser${Date.now() % 100000}@example.com`);
   await page.getByRole('textbox', { name: 'Password', exact: true }).fill('definitely-wrong');
+  await page.getByRole('checkbox', { name: /agree to the privacy policy/i }).check();
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page.getByRole('alert')).toHaveText('Incorrect email or password');
 });

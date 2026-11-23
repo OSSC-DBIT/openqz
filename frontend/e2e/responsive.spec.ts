@@ -63,13 +63,14 @@ test.describe('fits every screen size', () => {
   test.beforeEach(({}, info) => test.skip(info.project.name !== 'desktop', 'runs once, on the desktop project'));
 
   test('landing page', async ({ page }) => {
-    await fits(page, '/', heading(/Discover a/i));
+    await fits(page, '/', heading(/Quizzes that play like a game/i));
   });
 
   test('sign-in pages', async ({ page }) => {
     await fits(page, '/login', heading('Sign in'));
     await fits(page, '/forgot-password', (p) => expect(p.getByRole('button').first()).toBeVisible());
     await fits(page, '/live', heading('Join a live game'));
+    await fits(page, '/privacy', heading('Privacy Policy'));
   });
 
   test('admin screens', async ({ page }) => {
@@ -91,7 +92,7 @@ test.describe('fits every screen size', () => {
 
   test('faculty and student screens, including the player', async ({ page, browser, request }) => {
     const c = await seedClass(request);
-    const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { email: c.facEmail, password: PW } }));
+    const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { privacy_accepted: true, email: c.facEmail, password: PW } }));
     const H = { Authorization: `Bearer ${t.access_token}` };
     const act = await ok<{ id: string }>(await request.post('/api/v1/activities', { headers: H, data: { title: 'Responsive quiz with a fairly long title to test wrapping', kind: 'quiz', section_ids: [c.sectionId] } }));
     await ok(
@@ -118,7 +119,7 @@ test.describe('fits every screen size', () => {
     await login(s, c.stuEmail);
     await fits(s, '/student', heading(/Hi,/));
     await fits(s, '/join', heading('Join an activity'));
-    const st = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { email: c.stuEmail, password: PW } }));
+    const st = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { privacy_accepted: true, email: c.stuEmail, password: PW } }));
     const SH = { Authorization: `Bearer ${st.access_token}` };
     const att = await ok<{ attempt_id?: string; id?: string }>(await request.post(`/api/v1/me/assignments/${asg.id}/start`, { headers: SH }));
     const attemptId = att.attempt_id ?? att.id;

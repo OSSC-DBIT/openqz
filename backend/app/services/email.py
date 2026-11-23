@@ -65,13 +65,13 @@ def _layout(title: str, body_html: str, button: tuple[str, str] | None = None) -
         label, url = button
         btn = (
             f'<p style="margin:24px 0"><a href="{html.escape(url)}" '
-            'style="background:#5b3fd6;color:#fff;padding:12px 20px;border-radius:10px;'
+            'style="background:#d6177f;color:#fff;padding:12px 20px;border-radius:10px;'
             f'text-decoration:none;font-weight:600">{html.escape(label)}</a></p>'
         )
     return (
         '<div style="font-family:system-ui,Segoe UI,Roboto,sans-serif;max-width:520px;'
-        'margin:auto;color:#1d1b2c">'
-        f'<h2 style="color:#5b3fd6">OpenQZ</h2><h3>{html.escape(title)}</h3>{body_html}{btn}'
+        'margin:auto;color:#3b142a">'
+        f'<h2 style="color:#d6177f">OpenQZ</h2><h3>{html.escape(title)}</h3>{body_html}{btn}'
         '<p style="color:#6b6880;font-size:12px">You received this because you have an '
         "OpenQZ account at your college.</p></div>"
     )

@@ -42,7 +42,8 @@ async def test_create_user_and_reset_password(
     assert dup.status_code == 409
 
     fac = await client.post(
-        "/api/v1/auth/login", json={"email": "rao@college.edu", "password": temp}
+        "/api/v1/auth/login",
+        json={"email": "rao@college.edu", "password": temp, "privacy_accepted": True},
     )
     assert fac.json()["user"]["must_change_password"] is True
 

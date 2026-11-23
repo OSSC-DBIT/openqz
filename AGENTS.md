@@ -17,9 +17,13 @@ Roles: `admin`, `faculty`, `student`, `club` (club organisers host rooms only).
 | Live games | Host-paced: the host screen shows the question, phones only the options (`/live`, `/live/play/:id`, `/live/host/:id`). Never send the question text or the key to phones before the reveal. Host chooses scoring (`marks_speed`, `marks`, `fun`) and `allow_guests`; guests use the `X-Live-Player` token, never an account. |
 | Classes | Teachers pick **Branch, then semesters and sections**, only from sections mapped to them (`faculty_assignments`). Picks may span branches. Clubs pick no classes. |
 | Full screen | Assignments have `require_fullscreen` (default on). The player hides questions until full screen, except where the browser has no full screen (iPhone). Leaving full screen is a warning. |
-| Integrity | Tab or app switch, Back, reload and full-screen exit are counted on the server; auto-submit at the assignment's limit. Browsers cannot block screenshots; do not add watermark or "screenshot blocking" code (decided against). |
+| Integrity | Tab or app switch, Back, reload, full-screen exit and the same attempt open in a second tab or device (`X-Player-Session`, `play.note_player_session`) are counted on the server; auto-submit at the assignment's limit. Browsers cannot block screenshots; do not add watermark or "screenshot blocking" code (decided against). |
 | Sign-in | Email + password, and Google for imported users only (`GOOGLE_CLIENT_ID`). The sign-in page works only in Chrome, Safari and Edge (`src/browser.ts`); other browsers see a note to switch. Only the sign-in page checks. On phones a Chromium browser must carry the "Google Chrome" or "Microsoft Edge" brand (`navigator.userAgentData`); browser tests pass because `navigator.webdriver` is set. |
 | Answer keys | Never send keys or rubrics to students before review rules allow it (`grading.strip_key`). |
+| Importing questions | Editor, **Import**: a public Google Form link, a spreadsheet or pasted text (`services/question_import.py`). Plain parsers, no AI. The server fetches only `docs.google.com/forms` and `forms.gle`; never widen that to an address a user types. A form never gives its answer key, so the review screen makes the teacher mark it. |
+| Admins | `users.is_superadmin`: a super admin has every power; a plain admin cannot manage admin accounts, read the audit log or use `admin_data` (permanent deletes). Guard those with `SuperAdminUser`, everything else with `AdminUser`. |
+| Contributors | The landing page list comes from `GITHUB_REPO` through `services/contributors.py`: fetched twice a day by the worker, stored in `site_cache` with the avatars inside, bots and AI assistants excluded. The browser never calls GitHub. |
+| Privacy | `/privacy` is the policy (`PrivacyPage.tsx`, contact **osscdbit@gmail.com**). Sign-in needs the tick (`privacy_accepted`), saved per user with `PRIVACY_VERSION` (`app/core/privacy.py`); keep the page's `VERSION` equal to it, and bump both when the policy changes so everyone agrees again. API clients and tests that sign in send `privacy_accepted: true`. |
 | Writing style | No en dash or em dash characters anywhere (code, UI, docs). Use a hyphen, "to", a comma or "|". Keep emojis out. |
 
 ## Repository map
@@ -75,6 +79,9 @@ node scripts/record_walkthrough.mjs
 python scripts/walkthrough_voice_online.py recordings/<date-time>   # needs: pip install edge-tts
 node scripts/make_walkthrough_video.mjs recordings/<date-time>      # one narrated video
 
+# narrated demo video of the whole flow (clean stack on :8094, see scripts/demo/README.md)
+python scripts/demo/voice.py && node scripts/demo/record.mjs http://localhost:8094 && node scripts/demo/edit.mjs recordings/demo-<date-time>
+
 # generated docs (CI fails if stale)
 docker compose exec -T api python scripts/export_openapi.py > docs/api/openapi.json
 cd frontend && pnpm guides
@@ -99,6 +106,8 @@ cd frontend && pnpm guides
 - Python: async SQLAlchemy; never lazy-load relationships in async code (use `selectinload`, `joinedload`, `raiseload`). Business errors: `{"detail": {"code", "message"}}`. Marks are `Decimal` / `NUMERIC`.
 - Migrations: hand-write when autogenerate cannot (enum values, data moves). Name constraints. Give NOT NULL columns a `server_default`. Test `upgrade`, `downgrade -1`, `upgrade`.
 - TypeScript: strict, no `any`. Server state through TanStack Query. Use the `ui.tsx` components and Tailwind tokens (`bg-card`, `text-muted`, `border-line`, `brand-*`).
+- Look (themed after Wayground): plum `#3b142a`, cream `#f3efda`, pink `brand-600`, DM Sans. Build from the tokens in `src/index.css` and the shadcn/ui components in `src/components/shadcn` (wrapped by `components/ui.tsx`: `Button`, `Card`, `Badge`, `Input`, `Loading`). Raised surfaces are `sticker` / `sticker-sm` (hairline border), panels inside a page use `banner`, full-screen game surfaces and the landing hero use `stage`. Corners are small (the radius scale is overridden in the theme). Lists that load show `<Loading />` skeletons, not a spinner. The coloured answer tiles (`TILE_COLORS`) stay as they are.
+- Questions to the user go through `useConfirm()` (`components/Confirm.tsx`) or `ConfirmDelete`; never the browser's `confirm()`.
 - Accessibility: every control has a visible label or `aria-label`; the accessible name must contain the visible text (axe `label-content-name-mismatch`); keep contrast AA (white text on tiles is bold 20px or larger).
 - Tests make their own data with unique names (`seedClass()` in e2e); never depend on order or on the size of shared lists (search instead of scrolling paginated lists).
 
@@ -106,6 +115,13 @@ cd frontend && pnpm guides
 
 - **New frontend dependency:** the Vite dev container keeps `node_modules` in a volume. After `pnpm add`, run `docker compose -f compose.yaml -f compose.dev.yaml build vite` and `up -d --force-recreate --renew-anon-volumes vite`, or the page goes blank (500 on the import).
 - **Full screen needs a fresh click.** Call `enterFullscreen()` (`src/student/fullscreen.ts`) synchronously in the click handler, before any `await` or API call; browsers refuse it a few seconds after the click.
+- **`Button` props order:** `disabled={loading || rest.disabled}` must come after `{...rest}` in `ui.tsx`, or a caller's `disabled` re-enables the button while it is loading (double submits).
+- **Cached data belongs to one user.** `AuthProvider` clears the query cache when the signed-in user changes; do not keep per-user data anywhere that outlives that (module variables, `localStorage`).
+- **After a mutation every query is invalidated** (the `MutationCache` in `main.tsx`), so pages need no hand-written invalidation lists. Use `useMutation`, not a bare `api()` call, for anything that saves.
+- **Downloads:** file names go through `export_safe.attachment()` (headers are latin-1; titles may be Kannada) and cells through `safe_row()` (no spreadsheet formulas from names or answers).
+- **Design review without a backend:** `MOCK=1 node e2e/shots.mjs ...` ([docs/testing.md](docs/testing.md)). Git Bash rewrites arguments that start with `/`: run it with `MSYS_NO_PATHCONV=1`.
+- **Landing video:** the one on the site (`intro-v6.mp4`) is the HTML film in `video/film/` (`intro.html` + `core.js` + `intro.js`, every frame from `window.seek(t)`; render steps in `video/film/README.md`). The older `video/` Remotion project (scenes in `video/src/Intro.tsx`, every scene a whole number of beats; the soundtrack is composed in code by `video/music.py`, which must list the same scene lengths). `cd video && pnpm install && python music.py && pnpm render && pnpm poster` writes `video/out/intro.mp4` and its poster. Copy them to `frontend/public/landing/` under a NEW name (`intro-v4.mp4`, ...) and point `INTRO_VIDEO_URL` and the poster in `LandingPage.tsx` at it: Windows will not overwrite a file a browser is playing, and a new name stops browsers showing a cached copy. The video autoplays muted (browsers allow nothing else); the button on it turns the music on. The DBIT and OSSC logos in the footer live in the same folder.
+- **Never run `alembic downgrade` against the development database** to test a migration unless you mean to lose what the dropped tables held (the contributor list refills itself; other data would not).
 - **No Prettier.** The code uses long lines (ESLint only). Running Prettier with defaults rewrites whole files; do not.
 - **Backend tests start with SMTP and Google off** (`tests/conftest.py` blanks them). Turn them on per test with `monkeypatch`.
 - **E2E tests that are not about full screen** assign with `require_fullscreen: false`, so the gate cannot get in the way.
@@ -115,7 +131,9 @@ cd frontend && pnpm guides
 - **Do not leave test data on the demo accounts.** Scripts that create activities for `faculty@` / `student@openqz.dev` must delete them afterwards; e2e tests use `seedClass()` instead.
 - **Never gzip `/api`** in nginx (tokens in responses; BREACH). Static files only.
 - **GitHub Actions tags:** most actions publish a major tag (`actions/checkout@v7`), but `astral-sh/setup-uv` only has exact tags: pin it like `@v10.3.3`. Check with `gh api repos/<owner>/<action>/git/ref/tags/<tag>` before bumping.
-- **pnpm skips `pre*` / `post*` scripts.** Put setup steps inside the script itself (`dev` and `build` run `scripts/copy-mermaid.mjs` first).
+- **pnpm skips `pre*` / `post*` scripts.** Put setup steps inside the script itself.
+- **No inline styles or scripts anywhere** (the CSP has no `'unsafe-inline'`; `e2e/security.spec.ts` tours the app on a production build and fails on any violation). React `style={...}` props are fine (set through the DOM); `style="..."` in static HTML, `<style>` tags and libraries that inject them are not. Google's sign-in library injects styles, so its button lives in its own frame page (`public/google-signin.html` + `.js`, the only page with a relaxed CSP, chosen by `map $uri $csp` in `frontend/nginx.conf`) and hands the credential to `GoogleButton.tsx` by `postMessage` (same origin and that frame only).
+- **Guide diagrams are pictures:** after changing a ```mermaid block in `docs/guides/`, run `pnpm guides:diagrams` (draws `public/guides/diagrams/<hash>-light|dark.svg`, commit them), then `pnpm guides`. `pnpm guides` draws nothing, so CI gets the same pages; it stops if a diagram was not drawn.
 - **Layout:** a `Card` (or any grid or flex child) holding a wide table needs `min-w-0`, or the whole page grows sideways on phones. `Card` has it built in; wide tables scroll inside `Table`.
 - **Tables on phones:** list tables use `<Table cols={[...]} compact>` with `hidden sm:table-cell` (and the same class on the `<Td>`) to drop secondary columns, and repeat that detail under the main cell with `sm:hidden`. `e2e/responsive.spec.ts` (`tablesFit`) fails if such a table scrolls. Only true data grids (import preview, report participants) may scroll inside their box.
 - **`.env` changes** reach containers only when they are recreated: `up -d --force-recreate api worker`.
@@ -128,9 +146,15 @@ cd frontend && pnpm guides
 - **Questions lock once an attempt exists** (`activities._editable`, 409 `has_attempts`). Tests and scripts that need to edit must do it before the first `start`, or work on a duplicate.
 - **Writes to an attempt take a row lock** (`play.my_attempt(..., lock=True)`): answer saves, submit, violations and the deadline check run one after the other. Keep new write endpoints on it.
 - **Scheduled start:** `start_notified_at` is set at once when an assignment is already open; the worker cron `notify_started` sends the "open now" email for the rest and marks them. New rows made by scripts must set it, or students get a late email.
+- **Dialogs and full-screen overlays render through `createPortal(..., document.body)`** (`Modal` in `ui.tsx`, `RoomBanner`). Inside the page they sit in the entrance animation's stacking context and the phone tab bar covers their buttons. New overlays inside the shell must do the same.
+- **Install card** (`components/InstallPrompt.tsx`, `src/pwa.ts`): hidden when `navigator.webdriver` is set, so browser tests never see it. Icons come from `node scripts/make-icons.mjs` (add `--shots` for the install screenshots, stack running); do not hand-edit the PNGs.
+- **Images:** uploads are shrunk in `services/images.py` (WebP, 1600 px, EXIF removed) and served by nginx: the API answers `GET /media/{id}` with `X-Accel-Redirect: /_media/...` when `MEDIA_ACCEL` is on (set in `compose.yaml`), so every web nginx (`frontend/nginx.conf`, `deploy/nginx/dev.conf`) needs the internal `/_media/` location and the media folder mounted read-only at `/data/media`. Images are cached as `immutable`: a changed image must be a new upload (new id), never an overwrite. The query cache keeps them under `['media', id]`, left out of the invalidate-everything rule.
+- **Emails and phones are encrypted** (`app/core/crypto.py`, key `DATA_KEY`): never filter SQL by `User.email` or `User.phone` (it compares ciphertext). Use `User.email_hash == email_index(x)` / `phone_index`; the model validators fill the hashes. New personal-data columns use the `Encrypted` type. Changing or losing `DATA_KEY` makes the data unreadable.
+- **API docs** are off unless `API_DOCS=true` (development only).
+- **Rate limits** for every API call live in `frontend/nginx.conf` (per token, per guest, per address); the dev nginx has none, so check them on a production build (`scripts/security/rate_limit_check.py`).
 - **Every delete button asks twice** through `components/ConfirmDelete.tsx` (what goes, then "Are you sure?"); never `confirm()` or a bare click. Departments, sections and subjects have a `/delete-impact` endpoint in `api/v1/org.py` that the dialog shows, and the delete itself refuses (409 `in_use`) while people or student attempts hang on it.
 - **Permanent deletes live in `api/v1/admin_data.py` only** (admin role, `_step_up` password check, typed name, audit). Do not add other hard-delete endpoints for people, activities or attempts; ordinary deletes archive or refuse once student work exists.
-- **API docs are development only:** `/api/docs` and `/api/openapi.json` are 404 when `ENVIRONMENT` is `staging` or `production`. `scripts/export_openapi.py` still works everywhere.
+- **API docs are development only and off by default:** `/api/docs` and `/api/openapi.json` are 404 unless `API_DOCS=true` in development, and always 404 on `staging` and `production`. `scripts/export_openapi.py` still works everywhere.
 - **Run Playwright from `frontend/`**, not the repo root (it writes `test-results/` where it runs).
 
 ## Commits

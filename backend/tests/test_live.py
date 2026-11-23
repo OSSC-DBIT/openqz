@@ -211,3 +211,36 @@ def test_points_and_nicknames() -> None:
     for bad in ("a", "x" * 25, "<script>", "Bhenchod99", "fuck you"):
         with pytest.raises(Exception):  # noqa: B017 - HTTPException with a 422
             live.clean_nickname(bad)
+
+
+async def test_host_removes_a_player_in_the_middle_of_a_question(client: AsyncClient) -> None:
+    c = await setup_class(client)
+    g = await new_game(client, c["fac"])
+    await client.post(f"{A}/live/join", headers=c["s1"], json={"code": g["code"]})
+    p2 = (await client.post(f"{A}/live/join", headers=c["s2"], json={"code": g["code"]})).json()
+    await client.post(f"{A}/live/games/{g['id']}/start", headers=c["fac"])
+    await open_now(g["id"])
+    view = (await client.get(f"{A}/live/games/{g['id']}", headers=c["fac"])).json()
+    assert view["status"] == "question" and len(view["players"]) == 2
+
+    r = await client.delete(f"{A}/live/games/{g['id']}/players/{p2['player_id']}", headers=c["fac"])
+    assert r.status_code == 204
+    # the removed phone can neither see nor answer; the host counts one player now
+    assert (await client.get(f"{A}/live/play/{g['id']}", headers=c["s2"])).status_code == 403
+    q = (await client.get(f"{A}/live/play/{g['id']}", headers=c["s1"])).json()["question"]
+    blocked = await client.post(
+        f"{A}/live/play/{g['id']}/answer",
+        headers=c["s2"],
+        json={"index": 0, "response": {"choice": q["options"][0]["id"]}},
+    )
+    assert blocked.status_code == 403 and blocked.json()["detail"]["code"] == "removed"
+    await client.post(
+        f"{A}/live/play/{g['id']}/answer",
+        headers=c["s1"],
+        json={"index": 0, "response": {"choice": q["options"][0]["id"]}},
+    )
+    view = (await client.get(f"{A}/live/games/{g['id']}", headers=c["fac"])).json()
+    assert [p["nickname"] for p in view["players"]] == ["Asha"] and view["answered"] == 1
+    # a removed student cannot join again with the code
+    again = await client.post(f"{A}/live/join", headers=c["s2"], json={"code": g["code"]})
+    assert again.status_code == 403 and again.json()["detail"]["code"] == "removed"

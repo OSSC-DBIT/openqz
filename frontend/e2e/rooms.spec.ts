@@ -8,7 +8,7 @@ const shot = async (p: Page, name: string) => {
 
 /** Build a one-question quiz through the API as the given user. */
 async function quickQuiz(request: APIRequestContext, email: string, title: string) {
-  const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { email, password: PW } }));
+  const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { privacy_accepted: true, email, password: PW } }));
   const H = { Authorization: `Bearer ${t.access_token}` };
   const act = await ok<{ id: string }>(await request.post('/api/v1/activities', { headers: H, data: { title, kind: 'quiz' } }));
   await ok(
@@ -76,6 +76,19 @@ test('faculty hosts a room; a student from another class joins with the code', a
   await joinAndPlay(s, code);
 
   await expect(h.getByText(/1 joined \| 1 finished/)).toBeVisible({ timeout: 15_000 });
+
+  // the host takes the student out of the room, then lets them back in
+  await h.getByRole('button', { name: 'Players', exact: true }).click();
+  const box = h.getByRole('dialog', { name: 'Players in this room' });
+  await expect(box.getByRole('list', { name: 'Joined' })).toContainText('finished');
+  await box.getByRole('button', { name: /^Remove / }).click();
+  await h.getByRole('dialog', { name: /^Remove .* from this room\?$/ }).getByRole('button', { name: 'Remove', exact: true }).click();
+  const removed = box.getByRole('list', { name: 'Removed' });
+  await expect(removed).toBeVisible();
+  await shot(h, 'players');
+  await removed.getByRole('button', { name: /^Let .* back in$/ }).click();
+  await expect(removed).toHaveCount(0);
+  await box.getByRole('button', { name: 'Done' }).click();
 
   // the host stops new joins: another student is turned away
   await h.getByRole('button', { name: 'Stop new joins' }).click();

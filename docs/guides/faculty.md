@@ -24,7 +24,7 @@ flowchart LR
 
 ## 1. Sign in
 
-Sign in with your **email** and the temporary password from your slip, or with **Continue with Google** if your Google account uses the same email. Choose your own password on first sign-in. Use the eye button next to a password field to show or hide what you typed; the field starts hidden.
+Sign in with your **email** and the temporary password from your slip, or with **Continue with Google** if your Google account uses the same email. Before **Sign in** or **Continue with Google**, tick **I have read and agree to the Privacy Policy** (the link opens it); signing in needs it, and the date you agreed is saved with your account. Choose your own password on first sign-in. Use the eye button next to a password field to show or hide what you typed; the field starts hidden.
 
 Your **Home** page has:
 
@@ -63,6 +63,24 @@ Every question is a card showing its type and answers. Change its **timer** and 
 
 **Add question** opens the list of question types; pick one and the full-screen question editor opens. Press **Save question** to add it, or **Cancel** to discard.
 
+### Import questions
+
+**Import** (next to **Add question**) brings in a whole set at once. Pick where it comes from:
+
+| From | How |
+| --- | --- |
+| **Google Form** | Paste the form's link. The form must be open to **anyone with the link** (in Google Forms: Settings, Responses, turn off the sign-in limit). Multiple choice, dropdown, checkbox, scale, short answer and paragraph questions come across. |
+| **Spreadsheet** | Upload a `.csv` or `.xlsx` with one question per row. Columns: **Question** (required), Type, Option A to Option J, Correct, Marks, Time, Explanation. **Download a sample sheet** shows the layout. In **Correct** write the letter (`B`), several letters (`A, C`), `TRUE` / `FALSE`, or the accepted answers of a blank (`colour | color`). |
+| **Paste text** | Type or paste questions with an empty line between them. Put a star before the correct option (`*B) Paris`) or add a line `Answer: B`. |
+
+Press **Read questions**. The review screen lists every question with its coloured answer tiles:
+
+- **Tap a tile to mark it correct.** Google does not share a form's answer key, so questions from a form always wait for this step. A question shows **Ready** when it has what it needs.
+- **Untick** a question to leave it out. **Left out** at the bottom lists what could not be read, and why (for example grid questions).
+- **Add N questions** puts all the ready ones at the end of your activity. You can then edit, time and mark them like any other question.
+
+Importing reads the questions as they are: nothing is written or changed for you.
+
 For each question:
 
 | Setting | What it does |
@@ -70,7 +88,7 @@ For each question:
 | **Type** | Multiple choice, True / False, Multi-select, Fill in the blanks, Justify your answer, Open ended. |
 | **Timer** | No timer, or 5 seconds to 10 minutes. For any other time choose **Custom...** in the list: a clock opens where you set minutes and seconds (5 seconds to 60 minutes). |
 | **Marks** | How many marks the question is worth. |
-| **Image** | Add an image to the question and to any answer tile (PNG, JPEG, GIF or WebP, up to 5 MB). |
+| **Image** | Add an image to the question and to any answer tile (PNG, JPEG, GIF or WebP, up to 10 MB). OpenQZ makes it small before saving it (a phone photo of a few MB becomes a few hundred KB), turns it the right way up and removes hidden photo data such as the location, so it loads fast on every student's phone. |
 | **Answer explanation** | Shown to students after they answer (if you allow it). |
 | **Tags** | Your own labels, for example `unit2, recursion`. |
 
@@ -122,6 +140,7 @@ After **Host room**, the report page opens with a large banner:
 - **New code**: the old code stops working (use it if the code leaked); students who joined keep access,
 - a live count: *joined*, *finished*, and whether the room is open,
 - **Present**: a full-screen lobby for the projector with the address, the big code, the QR code and the names of players as they join (Esc or **Close** to leave).
+- **Players**: everyone who joined, with *not started*, *answering* or *finished*. **Remove** takes a student out: the room leaves their list and the code no longer lets them back in. If they are answering, what they have answered so far is submitted (the report shows it). **Let back in** undoes it; one attempt is still one attempt.
 
 The participant list updates every few seconds while you have the page open. All the other settings (deadline, attempts, timers, warnings, scores) work exactly as for a class assignment.
 
@@ -146,8 +165,8 @@ flowchart LR
    - **Marks only**: ranked by marks, ties by total answer time.
    - **Just for fun**: points only, nothing counted as marks. Polls are always "just for fun".
 3. **Let guests join with a nickname**: tick it for open events (no account needed). Leave it off for class games, so only signed-in students with real names can play. Nicknames are checked for rude words and must be unique in the game.
-4. Press **Start live game**. The lobby shows `.../live`, the 6-digit code and a QR code. Players appear as they join; click a name to remove someone. **Stop new joins** closes the door.
-5. Press **Start**. Each question gets a 3-second "get ready", then its timer (the question's own timer, or 20 seconds). The answer is shown automatically when time is up or everyone has answered; **Show answer** ends it early.
+4. Press **Start live game**. The lobby shows `.../live`, the 6-digit code and a QR code. Players appear as they join; click a name to remove someone. **Stop new joins** closes the door. A removed student cannot join again; a guest could come back with a new nickname, so stop new joins first if that matters.
+5. Press **Start**. Each question gets a 3-second "get ready", then its timer (the question's own timer, or 20 seconds). The answer is shown automatically when time is up or everyone has answered; **Show answer** ends it early. During the game, **Players** (top right) lists everyone, removes a player at any time and stops or allows new joins.
 6. After each question: **Leaderboard** (top 5) or straight to **Next**. After the last one, **Finish** shows the podium.
 7. **View results** (also under **Reports, Live games**): every player's rank, points, **marks obtained**, correct answers, per-question stats and a CSV export.
 

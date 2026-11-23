@@ -47,7 +47,7 @@ export default function ChangePasswordPage() {
         <div className="mb-8 flex justify-center">
           <Logo />
         </div>
-        <form onSubmit={submit} className="space-y-4 rounded-2xl border border-line bg-card p-6 shadow-sm">
+        <form onSubmit={submit} className="space-y-4 sticker rounded-xl bg-card p-6">
           <div>
             <h1 className="text-xl font-bold">{user.must_change_password ? 'Set your password' : 'Change password'}</h1>
             <p className="text-sm text-muted">

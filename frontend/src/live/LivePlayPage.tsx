@@ -151,12 +151,12 @@ export default function LivePlayPage() {
   };
   const left = Math.max(0, Math.ceil((ends - t) / 1000));
   return (
-    <div className="flex min-h-dvh flex-col bg-[#15122b] text-white">
+    <div className="flex min-h-dvh flex-col bg-[#2b0e1e] text-white">
       <div className="flex items-center justify-between px-4 py-3 text-sm font-bold">
         <span>
           {q.index + 1} / {s.total}
         </span>
-        <span className="grid h-10 w-10 place-items-center rounded-full bg-white text-lg font-extrabold text-[#15122b]" aria-label={`${left} seconds left`}>
+        <span className="grid h-10 w-10 place-items-center rounded-full bg-white text-lg font-extrabold text-[#2b0e1e]" aria-label={`${left} seconds left`}>
           {left}
         </span>
         <span className="tabular-nums">{s.me.points} pts</span>
@@ -191,7 +191,7 @@ export default function LivePlayPage() {
       {multi && (
         <div className="p-3 pt-0">
           <button
-            className="w-full rounded-2xl bg-white py-4 text-lg font-extrabold text-[#15122b] disabled:opacity-50"
+            className="w-full rounded-2xl bg-white py-4 text-lg font-extrabold text-[#2b0e1e] disabled:opacity-50"
             disabled={!sel.length || send.isPending}
             onClick={() => send.mutate({ index: q.index, response: { choices: sel } })}
           >
@@ -206,7 +206,7 @@ export default function LivePlayPage() {
 
 function Full({ children, header, tone = 'none' }: { children: React.ReactNode; header?: React.ReactNode; tone?: 'good' | 'bad' | 'none' }) {
   return (
-    <div className={cx('flex min-h-dvh flex-col text-white', tone === 'good' ? 'bg-emerald-600' : tone === 'bad' ? 'bg-rose-600' : 'bg-gradient-to-br from-[#2a1a6e] via-[#46239e] to-[#7b3fe4]')}>
+    <div className={cx('flex min-h-dvh flex-col text-white', tone === 'good' ? 'bg-emerald-600' : tone === 'bad' ? 'bg-rose-600' : 'stage')}>
       {header}
       <div className="grid flex-1 place-items-center p-6 text-center" aria-live="polite">
         <div>{children}</div>

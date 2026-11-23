@@ -3,7 +3,7 @@ import { ADMIN, ADMIN_PW, adminHeaders, login, ok, PW, seedClass } from './helpe
 
 /** A one-question quiz assigned to the class through the API, with the given settings. */
 async function assignQuiz(request: Parameters<typeof seedClass>[0], c: Awaited<ReturnType<typeof seedClass>>, title: string, settings: Record<string, unknown>) {
-  const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { email: c.facEmail, password: PW } }));
+  const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { privacy_accepted: true, email: c.facEmail, password: PW } }));
   const H = { Authorization: `Bearer ${t.access_token}` };
   const act = await ok<{ id: string }>(await request.post('/api/v1/activities', { headers: H, data: { title, kind: 'quiz' } }));
   await ok(
@@ -23,7 +23,7 @@ test('a scheduled activity shows as not started; instructions are read before st
   await assignQuiz(request, c, now, { instructions: 'Keep a calculator ready.' });
 
   await login(page, c.stuEmail);
-  const scheduled = page.locator('div.rounded-2xl', { has: page.getByRole('heading', { name: later }) });
+  const scheduled = page.locator('article', { has: page.getByRole('heading', { name: later }) });
   await expect(scheduled.getByText('not started', { exact: true })).toBeVisible();
   await expect(scheduled.getByRole('button', { name: 'Not started yet' })).toBeDisabled();
   await expect(scheduled.getByRole('button', { name: 'Start', exact: true })).toHaveCount(0);
@@ -32,7 +32,7 @@ test('a scheduled activity shows as not started; instructions are read before st
   await page.getByRole('dialog').getByRole('button', { name: 'Close' }).click();
 
   // the open one: Start shows the teacher's note first, then the quiz
-  const open = page.locator('div.rounded-2xl', { has: page.getByRole('heading', { name: now }) });
+  const open = page.locator('article', { has: page.getByRole('heading', { name: now }) });
   await open.getByRole('button', { name: 'Start', exact: true }).click();
   await expect(page.getByRole('dialog').getByText('Keep a calculator ready.')).toBeVisible();
   await page.getByRole('dialog').getByRole('button', { name: 'Start now' }).click();
@@ -50,6 +50,7 @@ test('the sign-in page takes a join code: unknown live code leads a student to t
 
   await page.getByLabel('Email').fill(c.stuEmail);
   await page.getByRole('textbox', { name: 'Password', exact: true }).fill(PW);
+  await page.getByRole('checkbox', { name: /agree to the privacy policy/i }).check();
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page).toHaveURL(/\/join\/000001$/);
 });
@@ -94,7 +95,7 @@ test('admin adds a teacher in two departments and sees the statistics', async ({
 
 test('a question timer moves on by itself when time runs out', async ({ page, request }) => {
   const c = await seedClass(request);
-  const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { email: c.facEmail, password: PW } }));
+  const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { privacy_accepted: true, email: c.facEmail, password: PW } }));
   const H = { Authorization: `Bearer ${t.access_token}` };
   const title = `Timed ${c.tag}`;
   const act = await ok<{ id: string }>(await request.post('/api/v1/activities', { headers: H, data: { title, kind: 'quiz' } }));
@@ -109,7 +110,7 @@ test('a question timer moves on by itself when time runs out', async ({ page, re
   await ok(await request.post(`/api/v1/activities/${act.id}/assign`, { headers: H, data: { section_ids: [c.sectionId], require_fullscreen: false, instant_feedback: false } }));
 
   await login(page, c.stuEmail);
-  await page.locator('div.rounded-2xl', { has: page.getByRole('heading', { name: title }) }).getByRole('button', { name: 'Start', exact: true }).click();
+  await page.locator('article', { has: page.getByRole('heading', { name: title }) }).getByRole('button', { name: 'Start', exact: true }).click();
   await expect(page.getByText('First timed question?')).toBeVisible();
   // touch nothing: after 5 seconds the player must show the next question on its own
   await expect(page.getByText('Second timed question?')).toBeVisible({ timeout: 15_000 });
@@ -134,7 +135,7 @@ test('the sign-in page asks other browsers to switch to Chrome, Safari or Edge',
 
 test('a custom question time is set on the clock; the answer box stays readable in dark mode', async ({ page, request }) => {
   const c = await seedClass(request);
-  const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { email: c.facEmail, password: PW } }));
+  const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { privacy_accepted: true, email: c.facEmail, password: PW } }));
   const H = { Authorization: `Bearer ${t.access_token}` };
   const title = `Clock ${c.tag}`;
   const act = await ok<{ id: string }>(await request.post('/api/v1/activities', { headers: H, data: { title, kind: 'quiz' } }));
@@ -159,14 +160,15 @@ test('a custom question time is set on the clock; the answer box stays readable 
   await page.context().clearCookies();
   await page.emulateMedia({ colorScheme: 'dark' });
   await login(page, c.stuEmail);
-  await page.locator('div.rounded-2xl', { has: page.getByRole('heading', { name: title }) }).getByRole('button', { name: 'Start', exact: true }).click();
+  await page.locator('article', { has: page.getByRole('heading', { name: title }) }).getByRole('button', { name: 'Start', exact: true }).click();
   const box = page.getByLabel('Your answer');
   await box.fill('A function that calls itself');
   const seen = await box.evaluate((el) => {
     const s = getComputedStyle(el);
     return { color: s.color, background: s.backgroundColor };
   });
-  expect(seen).toEqual({ color: 'rgb(29, 27, 44)', background: 'rgb(255, 255, 255)' });
+  // fixed plum text on white, whatever the theme
+  expect(seen).toEqual({ color: 'rgb(59, 20, 42)', background: 'rgb(255, 255, 255)' });
   if (process.env.E2E_SHOTS_DIR) await page.screenshot({ path: `${process.env.E2E_SHOTS_DIR}/answer-box-${test.info().project.name}.png` });
 });
 
@@ -192,13 +194,13 @@ test('admin deletes a person for good: sees what goes, types the ID and their ow
   await go.click();
   await expect(dlg).toHaveCount(0);
   await expect(page.getByText('No users found')).toBeVisible();
-  const gone = await request.post('/api/v1/auth/login', { data: { email: c.stuEmail, password: PW } });
+  const gone = await request.post('/api/v1/auth/login', { data: { privacy_accepted: true, email: c.stuEmail, password: PW } });
   expect(gone.status()).toBe(401);
 });
 
 test('admin changes the correct answer with the Correct button; the report shows the correct answer', async ({ page, request }) => {
   const c = await seedClass(request);
-  const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { email: c.facEmail, password: PW } }));
+  const t = await ok<{ access_token: string }>(await request.post('/api/v1/auth/login', { data: { privacy_accepted: true, email: c.facEmail, password: PW } }));
   const H = { Authorization: `Bearer ${t.access_token}` };
   const act = await ok<{ id: string }>(await request.post('/api/v1/activities', { headers: H, data: { title: `Key ${c.tag}`, kind: 'quiz' } }));
   await ok(
