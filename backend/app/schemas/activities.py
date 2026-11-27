@@ -169,6 +169,8 @@ class ActivitySummary(BaseModel):
     time_limit_seconds: int | None
     question_count: int = 0
     total_marks: Decimal = Decimal("0")
+    # A club's activity: the screens say "points" where they say "marks" (same values).
+    uses_points: bool = False
     assignment_count: int = 0
     created_at: datetime
     updated_at: datetime
@@ -260,6 +262,7 @@ class AssignmentOut(BaseModel):
     join_code: str | None = None
     accepting_joins: bool = True
     host_name: str | None = None
+    uses_points: bool = False
     section_ids: list[int]
     student_ids: list[uuid.UUID]
     target_labels: list[str] = []

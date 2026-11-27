@@ -118,6 +118,7 @@ async def summary(
         time_limit_seconds=act.time_limit_seconds,
         question_count=len(act.questions),
         total_marks=sum((q.marks for q in act.questions), Decimal("0")),
+        uses_points=act.uses_points,
         assignment_count=assignment_count,
         created_at=act.created_at,
         updated_at=act.updated_at,
@@ -308,6 +309,7 @@ async def create(body: ActivityIn, session: SessionDep, user: CreatorUser) -> Ac
         owner_id=user.id,
         **body.model_dump(exclude={"section_ids"}),
         department_id=dept_id,
+        uses_points=user.role == Role.club,  # clubs count in points
     )
     act.sections = [ActivitySection(section_id=x) for x in sec_ids]
     session.add(act)
@@ -388,6 +390,7 @@ async def duplicate(activity_id: uuid.UUID, session: SessionDep, user: CreatorUs
         subject_id=src.subject_id,
         department_id=src.department_id,
         time_limit_seconds=src.time_limit_seconds,
+        uses_points=user.role == Role.club,
     )
     copy.sections = [ActivitySection(section_id=x) for x in src.section_ids]
     session.add(copy)

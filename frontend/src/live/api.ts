@@ -11,6 +11,23 @@ export const SCORING_LABEL: Record<LiveScoring, string> = {
   fun: 'Just for fun (no marks)',
 };
 
+/** A club's game counts the points set per question; clubs choose with or without speed. */
+export const CLUB_SCORING_LABEL: Record<Exclude<LiveScoring, 'fun'>, string> = {
+  marks: 'Points per question',
+  marks_speed: 'Points per question, faster answers keep more',
+};
+
+export const scoringLabel = (scoring: LiveScoring, usesPoints: boolean) =>
+  usesPoints ? (scoring === 'fun' ? 'Poll (no points)' : CLUB_SCORING_LABEL[scoring]) : SCORING_LABEL[scoring];
+
+/**
+ * The number a leaderboard row shows: speed points in a teacher's game; in a club's game the
+ * points the club set per question (kept in `marks`).
+ */
+export function boardScore(row: { points: number; marks?: string }, usesPoints: boolean): number {
+  return usesPoints ? Number(row.marks ?? 0) : row.points;
+}
+
 export interface LiveOption {
   id: string;
   text: string;
@@ -31,6 +48,10 @@ export interface HostView {
   code: string;
   status: LiveStatus;
   scoring: LiveScoring;
+  /** A club's game: counted in the points set per question (with an optional speed factor). */
+  uses_points: boolean;
+  /** Rules or instructions; phones show them while they wait in the lobby. */
+  instructions: string | null;
   allow_guests: boolean;
   accepting_joins: boolean;
   index: number;
@@ -46,6 +67,8 @@ export interface HostView {
     seconds: number;
     starts_at: string;
     ends_at: string;
+    /** When this screen shows the answer by itself: time up, or 2 s after the last player answered. */
+    reveal_at: string;
     options: LiveOption[];
   } | null;
   answered: number;
@@ -62,6 +85,8 @@ export interface PlayerState {
   total: number;
   version: number;
   server_now: string;
+  uses_points: boolean;
+  instructions: string | null;
   me: { nickname: string; points: number; marks?: string; rank?: number; of?: number };
   question: {
     index: number;
@@ -73,7 +98,7 @@ export interface PlayerState {
     select_count?: number | null;
     correct_ids?: string[];
   } | null;
-  my_answer: { response: { choice?: string; choices?: string[] }; correct?: boolean; points?: number } | null;
+  my_answer: { response: { choice?: string; choices?: string[] }; correct?: boolean; points?: number; marks?: string } | null;
   podium?: BoardRow[];
 }
 
@@ -86,6 +111,10 @@ export interface LivePreview {
   open: boolean;
   allow_guests: boolean;
   signed_in: boolean;
+  /** A club's game: signed-in players pick a name or team name too. */
+  ask_name: boolean;
+  uses_points: boolean;
+  instructions: string | null;
 }
 
 export interface LiveGameRow {
@@ -94,6 +123,7 @@ export interface LiveGameRow {
   code: string;
   status: LiveStatus;
   scoring: LiveScoring;
+  uses_points: boolean;
   players: number;
   created_at: string;
 }

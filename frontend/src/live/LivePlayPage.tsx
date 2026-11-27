@@ -6,7 +6,7 @@ import { ApiError } from '../api/client';
 import { useAuth } from '../auth/AuthProvider';
 import { TILE_COLORS } from '../components/quiz';
 import { cx } from '../components/ui';
-import { ordinal, playerApi, useServerClock, type PlayerState } from './api';
+import { boardScore, ordinal, playerApi, useServerClock, type PlayerState } from './api';
 
 /** Removed by the host, not a player of this game, or no such game: retrying cannot help. */
 function isFatal(e: unknown): boolean {
@@ -48,10 +48,12 @@ export default function LivePlayPage() {
   }
   if (!s) return <Full>Loading...</Full>;
 
+  // A club's game counts the points set per question (kept as marks); a teacher's shows speed points.
+  const score = s.uses_points ? Number(s.me.marks ?? 0) : s.me.points;
   const header = (
     <div className="flex items-center justify-between px-4 py-3 text-sm font-bold">
       <span className="truncate">{s.me.nickname}</span>
-      <span className="rounded-lg bg-white/15 px-2.5 py-1 tabular-nums">{s.me.points} pts</span>
+      <span className="rounded-lg bg-white/15 px-2.5 py-1 tabular-nums">{score} pts</span>
     </div>
   );
 
@@ -61,6 +63,12 @@ export default function LivePlayPage() {
         <Check className="mx-auto h-14 w-14 rounded-full bg-emerald-500 p-3" aria-hidden />
         <h1 className="mt-4 text-2xl font-extrabold">You're in!</h1>
         <p className="mt-2 text-white/90">See your name on the screen. The game starts soon.</p>
+        {s.instructions && (
+          <div className="mx-auto mt-6 max-w-sm rounded-2xl bg-white/10 p-4 text-left">
+            <h2 className="text-xs font-bold uppercase tracking-wide text-white/85">Instructions</h2>
+            <p className="mt-1 whitespace-pre-wrap break-words font-semibold">{s.instructions}</p>
+          </div>
+        )}
       </Full>
     );
 
@@ -71,7 +79,7 @@ export default function LivePlayPage() {
         {rank === 1 && <Crown className="mx-auto h-14 w-14 text-amber-300" aria-hidden />}
         <h1 className="mt-2 text-3xl font-extrabold">{rank ? `${ordinal(rank)} place` : 'Game over'}</h1>
         <p className="mt-1 text-white/90">
-          {s.me.points} points{s.me.marks !== undefined ? ` | ${Number(s.me.marks)} marks` : ''}
+          {score} points{!s.uses_points && s.me.marks !== undefined ? ` | ${Number(s.me.marks)} marks` : ''}
           {s.me.of ? ` | ${s.me.of} players` : ''}
         </p>
         {s.podium && (
@@ -80,7 +88,7 @@ export default function LivePlayPage() {
               <li key={r.rank} className="flex items-center gap-3 rounded-xl bg-white/10 px-4 py-2">
                 <span className="font-extrabold">{r.rank}</span>
                 <span className="min-w-0 flex-1 truncate font-bold">{r.nickname}</span>
-                <span className="tabular-nums">{r.points}</span>
+                <span className="tabular-nums">{boardScore(r, s.uses_points)}</span>
               </li>
             ))}
           </ol>
@@ -109,7 +117,7 @@ export default function LivePlayPage() {
       <Full header={header} tone={a?.correct ? 'good' : a ? 'bad' : 'none'}>
         {a ? a.correct ? <Check className="mx-auto h-16 w-16" aria-hidden /> : <X className="mx-auto h-16 w-16" aria-hidden /> : <Clock className="mx-auto h-16 w-16" aria-hidden />}
         <h1 className="mt-3 text-3xl font-extrabold">{a ? (a.correct ? 'Correct!' : 'Not this time') : 'No answer'}</h1>
-        {a && <p className="mt-1 text-xl font-bold">+{a.points ?? 0} points</p>}
+        {a && <p className="mt-1 text-xl font-bold">+{s.uses_points ? Number(a.marks ?? 0) : (a.points ?? 0)} points</p>}
       </Full>
     );
   }
@@ -159,7 +167,7 @@ export default function LivePlayPage() {
         <span className="grid h-10 w-10 place-items-center rounded-full bg-white text-lg font-extrabold text-[#2b0e1e]" aria-label={`${left} seconds left`}>
           {left}
         </span>
-        <span className="tabular-nums">{s.me.points} pts</span>
+        <span className="tabular-nums">{score} pts</span>
       </div>
       {multi && <p className="px-4 pb-2 text-center text-sm font-semibold text-white/90">{q.select_count ? `Pick ${q.select_count}, then Submit` : 'Pick all that apply, then Submit'}</p>}
       <div className={cx('grid flex-1 gap-3 p-3', q.options.length > 2 ? 'grid-cols-2' : 'grid-cols-1')} role="group" aria-label={multi ? 'Choose all that apply' : 'Choose one answer'}>

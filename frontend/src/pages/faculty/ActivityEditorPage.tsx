@@ -11,6 +11,7 @@ import { ClassPicker, KindCover, Pill, TYPE_ICON, TypePicker } from '../../compo
 import { Badge, Button, cx, ErrorText, Loading, Modal, Select } from '../../components/ui';
 import { AuthImage, KIND_LABEL, MARK_PRESETS, TILE_COLORS, TYPES_FOR, TYPE_LABEL } from '../../components/quiz';
 import { TimerSelect } from '../../components/TimerSelect';
+import { amount, POINT_PRESETS, unitOf } from '../../components/units';
 import { AssignDrawer } from './AssignDrawer';
 import { ImportQuestions } from './ImportQuestions';
 import { useClassOptions } from './LibraryPage';
@@ -93,6 +94,8 @@ export default function ActivityEditorPage() {
   if (act.isLoading || !a) return <div className="paper min-h-dvh"><div className="mx-auto max-w-5xl p-4 sm:p-8">{act.error ? <ErrorText error={act.error} /> : <Loading kind="page" />}</div></div>;
   const graded = a.kind === 'quiz' || a.kind === 'assignment';
   const timed = a.kind !== 'flashcards';
+  const unit = unitOf(a.uses_points);
+  const presets = a.uses_points ? POINT_PRESETS : MARK_PRESETS;
 
   const drop = (to: number) => {
     if (dragFrom === null || dragFrom === to) return;
@@ -152,7 +155,7 @@ export default function ActivityEditorPage() {
                 <Badge tone="brand">{KIND_LABEL[a.kind]}</Badge>
               </div>
               <p className="text-sm font-semibold">
-                {a.question_count} questions{graded ? ` | ${Number(a.total_marks)} marks` : ''}
+                {a.question_count} questions{graded ? ` | ${amount(Number(a.total_marks), unit)}` : ''}
               </p>
               {classes.data?.can_use_sections !== false && (
                 <div>
@@ -253,15 +256,15 @@ export default function ActivityEditorPage() {
                       {graded && (
                         <select
                           className="rounded-lg border border-line bg-card px-2 py-1 text-xs font-semibold"
-                          aria-label={`Question ${i + 1} marks`}
+                          aria-label={`Question ${i + 1} ${unit.many}`}
                           value={String(Number(q.marks))}
                           onChange={(e) => quick.mutate({ q, patch: { marks: Number(e.target.value) } })}
                         >
-                          {[...new Set([...MARK_PRESETS, Number(q.marks)])]
+                          {[...new Set([...presets, Number(q.marks)])]
                             .sort((x, y) => x - y)
                             .map((m) => (
                               <option key={m} value={m}>
-                                {m} {m === 1 ? 'mark' : 'marks'}
+                                {amount(m, unit)}
                               </option>
                             ))}
                         </select>
@@ -336,7 +339,7 @@ export default function ActivityEditorPage() {
                 <X className="h-5 w-5" />
               </button>
               <span className="font-extrabold">Question {editing.index + 1}</span>
-              <QuestionToolbar kind={a.kind} value={editing.data} onChange={(d) => setEditing({ ...editing, data: d })} />
+              <QuestionToolbar kind={a.kind} usesPoints={a.uses_points} value={editing.data} onChange={(d) => setEditing({ ...editing, data: d })} />
               <div className="ml-auto flex gap-2">
                 <Button variant="secondary" onClick={() => setEditing(null)}>
                   Cancel
@@ -456,11 +459,13 @@ function ClassDialog({ activity, onClose, onDone }: { activity: Activity; onClos
   );
 }
 
-/** Wayground-style bulk update: one timer and/or one mark value for every question. */
+/** Wayground-style bulk update: one timer and/or one mark (or point) value for every question. */
 function BulkBar({ activity, onDone }: { activity: Activity; onDone: (a: Activity) => void }) {
   const [timer, setTimer] = useState('keep');
   const [marks, setMarks] = useState('keep');
   const graded = activity.kind === 'quiz' || activity.kind === 'assignment';
+  const unit = unitOf(activity.uses_points);
+  const presets = activity.uses_points ? POINT_PRESETS : MARK_PRESETS;
   const apply = useMutation({
     mutationFn: () =>
       api<Activity>(`/activities/${activity.id}/apply-all`, {
@@ -475,7 +480,7 @@ function BulkBar({ activity, onDone }: { activity: Activity; onDone: (a: Activit
   });
   return (
     <div className="space-y-3 sticker rounded-xl bg-card p-4">
-      <div className="text-sm font-extrabold">Timer / marks for all</div>
+      <div className="text-sm font-extrabold">Timer / {unit.many} for all</div>
       <TimerSelect
         className="w-full rounded-xl border border-line bg-card px-3.5 py-2.5 text-sm text-ink outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200"
         aria-label="Timer for all questions"
@@ -487,11 +492,11 @@ function BulkBar({ activity, onDone }: { activity: Activity; onDone: (a: Activit
         ]}
       />
       {graded && (
-        <Select value={marks} onChange={(e) => setMarks(e.target.value)} aria-label="Marks for all questions">
-          <option value="keep">Marks: keep each question's</option>
-          {MARK_PRESETS.filter((m) => m > 0).map((m) => (
+        <Select value={marks} onChange={(e) => setMarks(e.target.value)} aria-label={`${unit.Many} for all questions`}>
+          <option value="keep">{unit.Many}: keep each question's</option>
+          {presets.filter((m) => m > 0).map((m) => (
             <option key={m} value={m}>
-              {m} {m === 1 ? 'mark' : 'marks'}
+              {amount(m, unit)}
             </option>
           ))}
         </Select>

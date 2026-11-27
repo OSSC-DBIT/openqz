@@ -11,6 +11,7 @@ import {
   uploadImage,
 } from '../../components/quiz';
 import { TimerSelect } from '../../components/TimerSelect';
+import { amount, POINT_PRESETS, unitOf } from '../../components/units';
 
 export function blankQuestion(type: QuestionType, kind: ActivityKind): QuestionData {
   const options: QOption[] =
@@ -71,11 +72,12 @@ function ImageButton({ value, onChange, label }: { value?: string | null; onChan
   );
 }
 
-/** Type, timer and marks: shown in the editor's top bar, like Wayground. */
-export function QuestionToolbar({ kind, value, onChange }: { kind: ActivityKind; value: QuestionData; onChange: (q: QuestionData) => void }) {
+/** Type, timer and marks (points for a club): shown in the editor's top bar, like Wayground. */
+export function QuestionToolbar({ kind, usesPoints = false, value, onChange }: { kind: ActivityKind; usesPoints?: boolean; value: QuestionData; onChange: (q: QuestionData) => void }) {
   const q = value;
   const set = (patch: Partial<QuestionData>) => onChange({ ...q, ...patch });
   const graded = kind === 'quiz' || kind === 'assignment';
+  const unit = unitOf(usesPoints);
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Select
@@ -103,12 +105,12 @@ export function QuestionToolbar({ kind, value, onChange }: { kind: ActivityKind;
         />
       )}
       {graded && (
-        <Select className="!w-auto" aria-label="Marks" value={String(Number(q.marks))} onChange={(e) => set({ marks: Number(e.target.value) })}>
-          {[...new Set([...MARK_PRESETS, Number(q.marks)])]
+        <Select className="!w-auto" aria-label={unit.Many} value={String(Number(q.marks))} onChange={(e) => set({ marks: Number(e.target.value) })}>
+          {[...new Set([...(usesPoints ? POINT_PRESETS : MARK_PRESETS), Number(q.marks)])]
             .sort((a, b) => a - b)
             .map((p) => (
               <option key={p} value={p}>
-                {p} {p === 1 ? 'mark' : 'marks'}
+                {amount(p, unit)}
               </option>
             ))}
         </Select>

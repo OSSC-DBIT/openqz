@@ -676,6 +676,7 @@ def review(att: Attempt) -> dict[str, Any]:
         "max_score": att.max_score,
         "needs_manual": att.needs_manual,
         "violations": att.violations,
+        "uses_points": att.assignment.activity.uses_points,
         "items": items,
     }
 

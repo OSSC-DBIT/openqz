@@ -4,6 +4,15 @@ All notable changes to OpenQZ. Format: [Keep a Changelog](https://keepachangelog
 
 ## [Unreleased]
 
+### Changed
+- **Clubs count in points**: a club organiser's activities say **points** instead of marks everywhere (editor, reports, exports, the student's player, review and home, live screens), with a points list per question that goes up to 100. Migration `0017` switches what clubs made before; teachers keep marks.
+- **Club live games count the points set per question**, with or without speed: "Points per question" (`P x C`) or "faster answers keep more" (`P x C x (1 - 0.5 x t / T)`). The share dialog and the results page explain the chosen formula with an example.
+- **Names and team names**: joining a club's room or a club's live game with a code asks for a name or team name (it starts with your own name, must be free and friendly); the leaderboard, the players list and the exports show it.
+- **Instructions and rules for rooms and live games**: hosts add or edit them from the room banner (**Add instructions**) and in the live game lobby; players read them on the join card, while they wait, and on the projector lobby. Live games get `instructions` (migration `0017`).
+- **A club's room report is a leaderboard**: Overview and Participants list the students by points (most first) with their place (#), name or team, and the time taken from start to submit; equal points rank the quicker one higher. The CSV and Excel follow the same order. Teachers' reports stay in name order.
+- **Live games: the answer shows 2 seconds after the last player answers** (it used to show at once), so the room sees that every answer is in. The server works out the moment (`reveal_at` in the host view).
+- **The live game points formula is on screen**: the share dialog explains the ranking choice you pick, and the results page has **How the ranking works**, both with `points = 1000 x C x (1 - 0.5 x t / T)` and a worked example. The faculty guide explains it too.
+
 ### Fixed
 - On phones the bottom tab bar covered the buttons of every dialog (Add user, delete confirmations, the room lobby): dialogs now render on top of the page through a portal.
 

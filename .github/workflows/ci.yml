@@ -12,9 +12,14 @@ on:
 permissions:
   contents: read
 
+# Pull requests: a newer push replaces the run in progress. When Deploy calls this workflow
+# (push to dev or main) nothing is cancelled halfway: in a called workflow `github.workflow` and
+# `github.event_name` are the caller's ("Deploy", "push"), so deploys get their own group and
+# wait their turn. (A shared group with cancel-in-progress once let a re-run of an older main
+# deploy cancel the newest one, and production got neither.)
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   backend:
@@ -95,7 +100,9 @@ jobs:
   e2e:
     # Browser tests are run locally before a pull request (scripts/prod_smoke.sh, or
     # "npx playwright test" from frontend/). Here they run only by hand: Actions, CI, Run workflow.
-    if: github.event_name == 'workflow_dispatch'
+    # Not when Deploy is run by hand: a called workflow sees the caller's event, so without the
+    # workflow name check a manual redeploy would wait on the whole browser suite.
+    if: github.event_name == 'workflow_dispatch' && github.workflow == 'CI'
     needs: [backend, frontend]
     runs-on: ubuntu-24.04
     steps:

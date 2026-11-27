@@ -74,6 +74,9 @@ class Activity(UUIDPk, Timestamped, Base):
         DateTime(timezone=True), default=utcnow, onupdate=utcnow
     )
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Counted in points instead of marks: set for activities a club organiser makes. The value per
+    # question stays in `questions.marks`; only the word and the club's live game rules change.
+    uses_points: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
 
     # Classes it is for (any number of semesters / sections of the owner's department).
     sections: Mapped[list["ActivitySection"]] = relationship(
@@ -230,6 +233,8 @@ class AssignmentTarget(Base):
     student_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True
     )
+    # Room of a club: the name or team name the student typed when joining with the code.
+    display_name: Mapped[str | None] = mapped_column(String(40), nullable=True)
 
 
 class RoomRemoval(Base):

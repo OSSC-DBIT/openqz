@@ -15,6 +15,7 @@ from sqlalchemy import (
     Integer,
     Numeric,
     String,
+    Text,
     UniqueConstraint,
     text,
 )
@@ -58,6 +59,11 @@ class LiveGame(UUIDPk, Timestamped, Base):
     )
     allow_guests: Mapped[bool] = mapped_column(Boolean, default=False)
     accepting_joins: Mapped[bool] = mapped_column(Boolean, default=True)
+    # A club's game (copied from the activity): counted in the points set per question, with an
+    # optional speed factor (live_service.answer), and players pick a name or team name.
+    uses_points: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    # Rules or instructions the host writes; phones show them while they wait in the lobby.
+    instructions: Mapped[str | None] = mapped_column(Text, nullable=True)
     # Questions frozen when the game is created (with the answer key; never sent to players).
     snapshot: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
     current_index: Mapped[int] = mapped_column(Integer, default=-1)
