@@ -5,7 +5,7 @@ All notable changes to OpenQZ. Format: [Keep a Changelog](https://keepachangelog
 ## [Unreleased]
 
 ### Changed
-- **Clubs count in points**: a club organiser's activities say **points** instead of marks everywhere (editor, reports, exports, the student's player, review and home, live screens), with a points list per question that goes up to 100. Migration `0017` switches what clubs made before; teachers keep marks.
+- **Clubs count in points**: a club organiser's activities say **points** instead of marks everywhere (editor, reports, exports, the student's player, review and home, live screens). Each question's points come from a list up to 100, or **Custom...** for any value from 0 to 1000 (on each question and in **Timer / points for all**); teachers keep at most 100 marks. Migration `0017` switches what clubs made before.
 - **Club live games count the points set per question**, with or without speed: "Points per question" (`P x C`) or "faster answers keep more" (`P x C x (1 - 0.5 x t / T)`). The share dialog and the results page explain the chosen formula with an example.
 - **Names and team names**: joining a club's room or a club's live game with a code asks for a name or team name (it starts with your own name, must be free and friendly); the leaderboard, the players list and the exports show it.
 - **Instructions and rules for rooms and live games**: hosts add or edit them from the room banner (**Add instructions**) and in the live game lobby; players read them on the join card, while they wait, and on the projector lobby. Live games get `instructions` (migration `0017`).

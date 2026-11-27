@@ -307,3 +307,37 @@ async def test_club_rooms_count_in_points_and_ask_for_a_name_or_team(client: Asy
         f"{A}/join", headers=c["s2"], json={"code": fac_room["join_code"], "name": "Team X"}
     )
     assert j.status_code == 200 and j.json()["display_name"] is None
+
+
+async def test_a_club_gives_any_points_up_to_1000_and_teachers_up_to_100_marks(
+    client: AsyncClient,
+) -> None:
+    c = await setup_class(client)
+    club = await _club(client)
+    act = (await client.post(f"{A}/activities", headers=club, json={"title": "Final"})).json()
+    q = {**QUESTIONS[0], "marks": 250}
+    r = await client.post(f"{A}/activities/{act['id']}/questions", headers=club, json=q)
+    assert r.status_code == 201 and Decimal(str(r.json()["marks"])) == 250
+    r = await client.post(
+        f"{A}/activities/{act['id']}/apply-all", headers=club, json={"marks": 37.5}
+    )
+    assert r.status_code == 200 and Decimal(str(r.json()["questions"][0]["marks"])) == Decimal(
+        "37.5"
+    )
+    over = await client.post(
+        f"{A}/activities/{act['id']}/questions", headers=club, json={**q, "marks": 1001}
+    )
+    assert over.status_code == 422
+
+    # a teacher's question stays at 100 marks at most
+    fac = (await client.post(f"{A}/activities", headers=c["fac"], json={"title": "Unit 2"})).json()
+    refused = await client.post(f"{A}/activities/{fac['id']}/questions", headers=c["fac"], json=q)
+    assert refused.status_code == 400 and "at most 100 marks" in refused.text
+    ok = await client.post(
+        f"{A}/activities/{fac['id']}/questions", headers=c["fac"], json={**q, "marks": 100}
+    )
+    assert ok.status_code == 201
+    bulk = await client.post(
+        f"{A}/activities/{fac['id']}/apply-all", headers=c["fac"], json={"marks": 150}
+    )
+    assert bulk.status_code == 400

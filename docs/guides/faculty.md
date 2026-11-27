@@ -53,7 +53,7 @@ Then give it a **title** and choose **which classes** it is for:
 
 You can change the classes later with **Edit classes** in the editor header. In the **Library**, the sections on the left (All activities, Published, Drafts, Previously used, Archived), the search box, the type, semester and section filters and the sort help you find things. Each row has **Edit**, **Assign** and **Duplicate**.
 
-**Club organisers** do not pick classes: their activities are shared only through a room code (see section 5). A club's activities count in **points** instead of marks: give each question its points in the editor (the list goes up to 100), and the editor, reports, exports and the students' screens all say points.
+**Club organisers** do not pick classes: their activities are shared only through a room code (see section 5). A club's activities count in **points** instead of marks: give each question its points in the editor (the list goes up to 100; **Custom...** takes any value from 0 to 1000, on each question and in **Timer / points for all**), and the editor, reports, exports and the students' screens all say points.
 
 ## 3. The editor
 
