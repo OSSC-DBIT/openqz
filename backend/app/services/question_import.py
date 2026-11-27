@@ -376,7 +376,8 @@ def parse_sheet(data: bytes, filename: str) -> Preview:
             out.skip(stem, f'Row {n}: unknown type "{cell(row, type_col)}"')
             continue
         marks = _number(cell(row, marks_col), 1)
-        if not isinstance(marks, (int, float)) or not 0 <= marks <= 100:
+        # up to a club's 1000 points; adding them to a teacher's activity refuses over 100 marks
+        if not isinstance(marks, (int, float)) or not 0 <= marks <= 1000:
             marks = 1
         seconds = _number(cell(row, time_col), None)
         seconds = (

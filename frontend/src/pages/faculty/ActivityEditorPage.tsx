@@ -8,9 +8,10 @@ import { DeleteForever } from '../../components/DeleteForever';
 import { ConfirmDelete } from '../../components/ConfirmDelete';
 import type { Activity, AssignmentInfo, Question, QuestionData, QuestionType } from '../../api/types';
 import { ClassPicker, KindCover, Pill, TYPE_ICON, TypePicker } from '../../components/pieces';
-import { Badge, Button, cx, ErrorText, Loading, Modal, Select } from '../../components/ui';
+import { Badge, Button, cx, ErrorText, Loading, Modal } from '../../components/ui';
 import { AuthImage, KIND_LABEL, MARK_PRESETS, TILE_COLORS, TYPES_FOR, TYPE_LABEL } from '../../components/quiz';
 import { TimerSelect } from '../../components/TimerSelect';
+import { MARKS_MAX, POINTS_MAX, PointsSelect } from '../../components/PointsSelect';
 import { amount, POINT_PRESETS, unitOf } from '../../components/units';
 import { AssignDrawer } from './AssignDrawer';
 import { ImportQuestions } from './ImportQuestions';
@@ -254,20 +255,16 @@ export default function ActivityEditorPage() {
                         />
                       )}
                       {graded && (
-                        <select
+                        <PointsSelect
                           className="rounded-lg border border-line bg-card px-2 py-1 text-xs font-semibold"
                           aria-label={`Question ${i + 1} ${unit.many}`}
                           value={String(Number(q.marks))}
-                          onChange={(e) => quick.mutate({ q, patch: { marks: Number(e.target.value) } })}
-                        >
-                          {[...new Set([...presets, Number(q.marks)])]
-                            .sort((x, y) => x - y)
-                            .map((m) => (
-                              <option key={m} value={m}>
-                                {amount(m, unit)}
-                              </option>
-                            ))}
-                        </select>
+                          onChange={(v) => quick.mutate({ q, patch: { marks: Number(v) } })}
+                          unit={unit}
+                          presets={presets}
+                          custom={a.uses_points}
+                          max={a.uses_points ? POINTS_MAX : MARKS_MAX}
+                        />
                       )}
                       <IconBtn label={`Move question ${i + 1} up`} disabled={i === 0} onClick={() => move(i, -1)}>
                         <ArrowUp className="h-4 w-4" />
@@ -492,14 +489,17 @@ function BulkBar({ activity, onDone }: { activity: Activity; onDone: (a: Activit
         ]}
       />
       {graded && (
-        <Select value={marks} onChange={(e) => setMarks(e.target.value)} aria-label={`${unit.Many} for all questions`}>
-          <option value="keep">{unit.Many}: keep each question's</option>
-          {presets.filter((m) => m > 0).map((m) => (
-            <option key={m} value={m}>
-              {amount(m, unit)}
-            </option>
-          ))}
-        </Select>
+        <PointsSelect
+          className="w-full rounded-xl border border-line bg-card px-3.5 py-2.5 text-sm text-ink outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200"
+          aria-label={`${unit.Many} for all questions`}
+          value={marks}
+          onChange={setMarks}
+          unit={unit}
+          presets={presets.filter((m) => m > 0)}
+          custom={activity.uses_points}
+          max={activity.uses_points ? POINTS_MAX : MARKS_MAX}
+          head={[['keep', `${unit.Many}: keep each question's`]]}
+        />
       )}
       <ErrorText error={apply.error} />
       <Button variant="secondary" className="w-full" disabled={timer === 'keep' && marks === 'keep'} loading={apply.isPending} onClick={() => apply.mutate()}>

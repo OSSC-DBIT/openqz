@@ -122,6 +122,18 @@ test('a club organiser hosts a room', async ({ browser, request }) => {
   await c.getByRole('button', { name: 'Cancel' }).click();
 
   const actId = await quickQuiz(request, clubEmail, 'Tech fest round 1');
+  // any points for a question with "Custom..."
+  await c.goto(`/faculty/activities/${actId}`);
+  await c.getByLabel('Question 1 points').selectOption('custom');
+  await c.getByRole('dialog', { name: 'Custom points' }).getByRole('spinbutton').fill('250');
+  await c.getByRole('button', { name: 'Set points' }).click();
+  await expect(c.getByText(/1 questions \| 250 points/)).toBeVisible();
+  // and the same for every question from the side panel (Timer / points for all)
+  await c.getByLabel('Points for all questions').selectOption('custom');
+  await c.getByRole('dialog', { name: 'Custom points' }).getByRole('spinbutton').fill('40');
+  await c.getByRole('button', { name: 'Set points' }).click();
+  await c.getByRole('button', { name: 'Update all questions' }).click();
+  await expect(c.getByText(/1 questions \| 40 points/)).toBeVisible();
   const code = await hostRoom(c, actId);
   // rules for the room, shown to students when they enter the code
   await c.getByRole('button', { name: 'Add instructions' }).click();

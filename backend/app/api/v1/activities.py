@@ -32,6 +32,7 @@ from app.models import (
     User,
 )
 from app.schemas.activities import (
+    MARKS_MAX,
     ActivityIn,
     ActivityOut,
     ActivitySummary,
@@ -444,7 +445,16 @@ async def _check_images(session: AsyncSession, body: QuestionIn) -> None:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "Unknown image")
 
 
+def _check_worth(act: Activity, marks: Decimal) -> None:
+    """A question is worth at most 100 marks; a club's (in points) at most 1000."""
+    if not act.uses_points and marks > MARKS_MAX:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, f"A question is worth at most {MARKS_MAX} marks"
+        )
+
+
 def _validate_for_kind(act: Activity, body: QuestionIn) -> None:
+    _check_worth(act, body.marks)
     if body.type not in ALLOWED_TYPES[act.kind]:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
@@ -565,6 +575,8 @@ async def apply_all(
 ) -> ActivityOut:
     act = await get_owned(session, activity_id, user)
     await _editable(session, act)
+    if body.marks is not None:
+        _check_worth(act, body.marks)
     for q in act.questions:
         if body.clear_timer:
             q.time_limit_seconds = None
