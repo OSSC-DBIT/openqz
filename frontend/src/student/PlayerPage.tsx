@@ -5,6 +5,7 @@ import { ApiError, api } from '../api/client';
 import type { AttemptState, Feedback, PlayQuestion } from '../api/types';
 import { AuthImage, TILE_COLORS, fmtClock } from '../components/quiz';
 import { Button, Spinner, cx } from '../components/ui';
+import { amount, unitOf } from '../components/units';
 import { clearIntegrityFlag, useIntegrity, violationText } from './useIntegrity';
 
 type Resp = Record<string, unknown>;
@@ -419,7 +420,7 @@ export default function PlayerPage() {
                   {feedback.correct ? 'Correct!' : feedback.score && Number(feedback.score) > 0 ? `Partly correct (${Number(feedback.score)} / ${Number(feedback.marks)})` : 'Incorrect'}
                   {feedback.correct && Number(feedback.marks) > 0 && (
                     <span className="ml-2 text-sm font-bold text-white/90">
-                      +{Number(feedback.score ?? feedback.marks)} {Number(feedback.score ?? feedback.marks) === 1 ? 'mark' : 'marks'}
+                      +{amount(Number(feedback.score ?? feedback.marks), unitOf(state.uses_points))}
                     </span>
                   )}
                 </div>

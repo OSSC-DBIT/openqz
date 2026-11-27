@@ -75,7 +75,7 @@ export default function ParticipantsPage() {
       ) : list.length === 0 ? (
         <EmptyState title={q ? 'Nobody matches that search' : 'No participants yet'}>{q ? 'Try a shorter name or the USN.' : 'People appear here as soon as they start one of your activities.'}</EmptyState>
       ) : (
-        <Table head={['Participant', 'Attempts', 'Marks obtained', 'Warnings', 'Last active', '']} cols={[undefined, 'hidden sm:table-cell', 'hidden md:table-cell', 'hidden sm:table-cell', 'hidden lg:table-cell', 'w-px']} compact>
+        <Table head={['Participant', 'Attempts', user?.role === 'club' ? 'Points' : 'Marks obtained', 'Warnings', 'Last active', '']} cols={[undefined, 'hidden sm:table-cell', 'hidden md:table-cell', 'hidden sm:table-cell', 'hidden lg:table-cell', 'w-px']} compact>
           {list.map((p) => (
             <tr key={p.student_id} className="cursor-pointer transition-colors hover:bg-brand-50/60" onClick={() => setOpen(p)}>
               <Td>
@@ -126,6 +126,7 @@ export default function ParticipantsPage() {
 }
 
 function PersonDialog({ person, onClose }: { person: Person; onClose: () => void }) {
+  const { user } = useAuth();
   const d = useQuery({ queryKey: ['participant', person.student_id], queryFn: () => api<{ attempts: PersonAttempt[] }>(`/participants/${person.student_id}`) });
   return (
     <Modal open onClose={onClose} title={`${person.name} (${person.usn})`}>
@@ -148,7 +149,7 @@ function PersonDialog({ person, onClose }: { person: Person; onClose: () => void
                 <div className="mt-0.5 text-sm text-muted">
                   {a.max_marks !== null && (
                     <>
-                      Marks obtained {a.marks === null ? '-' : Number(a.marks)} / {Number(a.max_marks)} |{' '}
+                      {user?.role === 'club' ? 'Points' : 'Marks obtained'} {a.marks === null ? '-' : Number(a.marks)} / {Number(a.max_marks)} |{' '}
                     </>
                   )}
                   {a.warnings} {a.warnings === 1 ? 'warning' : 'warnings'}

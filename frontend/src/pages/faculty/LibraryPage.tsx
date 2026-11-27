@@ -5,6 +5,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router';
 import { api } from '../../api/client';
 import type { Activity, ActivityKind, ActivitySummary, MyClasses } from '../../api/types';
 import { ClassPicker, KindCover, Pill } from '../../components/pieces';
+import { amount, unitOf } from '../../components/units';
 import { Badge, Button, cx, EmptyState, ErrorText, Field, Input, Loading, Modal, PageHeader, Select } from '../../components/ui';
 import { KIND_LABEL, fmtSeconds } from '../../components/quiz';
 
@@ -256,7 +257,7 @@ export default function LibraryPage() {
                         </div>
                         <h3 className="truncate font-bold group-hover:text-brand-700 dark:group-hover:text-brand-200">{a.title}</h3>
                         <p className="truncate text-xs text-muted">
-                          {a.question_count} questions{graded ? ` | ${Number(a.total_marks)} marks` : ''}
+                          {a.question_count} questions{graded ? ` | ${amount(Number(a.total_marks), unitOf(a.uses_points))}` : ''}
                           {a.time_limit_seconds ? ` | ${fmtSeconds(a.time_limit_seconds)}` : ''} | updated {ago(a.updated_at)}
                           {a.assignment_count ? ` | used ${a.assignment_count}x` : ''}
                         </p>

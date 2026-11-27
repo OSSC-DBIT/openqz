@@ -9,6 +9,7 @@ import type { GradingItem, Report, ReportStudent, RubricItem } from '../../api/t
 import { Badge, Button, Card, cx, EmptyState, ErrorText, Input, Loading, Modal, PageHeader, Spinner, Table, Td } from '../../components/ui';
 import { KIND_LABEL, TYPE_LABEL, fmtWhen, fromLocalInput, toLocalInput } from '../../components/quiz';
 import { ResponseView } from '../../components/ResponseView';
+import { amount, MARKS, unitOf, type Unit } from '../../components/units';
 import { RoomBanner } from './RoomBanner';
 
 function Tile({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
@@ -22,6 +23,9 @@ function Tile({ label, value, sub }: { label: string; value: string | number; su
 }
 
 const tone = (acc: number | null) => (acc === null ? 'neutral' : acc >= 70 ? 'green' : acc >= 40 ? 'amber' : 'red');
+
+/** Time from start to submit on a club leaderboard: "45 s", "4 min 12 s". */
+const took = (sec: number | null) => (sec === null ? '-' : sec < 60 ? `${sec} s` : `${Math.floor(sec / 60)} min ${sec % 60} s`);
 
 export default function ReportPage() {
   const { id } = useParams();
@@ -47,6 +51,7 @@ export default function ReportPage() {
   if (rep.isLoading || !r) return rep.error ? <ErrorText error={rep.error} /> : <Loading kind="page" />;
   const s = r.summary;
   const asg = r.assignment;
+  const unit = unitOf(asg.uses_points);
 
   return (
     <>
@@ -62,7 +67,7 @@ export default function ReportPage() {
           }}
         >
           <p className="mt-1">
-            This removes this assignment ({asg.target_labels.join(', ') || 'join code only'}) with <b>{s.started} attempts</b> and their marks. The activity and its questions stay.
+            This removes this assignment ({asg.target_labels.join(', ') || 'join code only'}) with <b>{s.started} attempts</b> and their {unit.many}. The activity and its questions stay.
           </p>
         </DeleteForever>
       )}
@@ -85,7 +90,7 @@ export default function ReportPage() {
             </Button>
             {s.graded && asg.release_mode !== 'immediate' && (
               <Button loading={release.isPending} disabled={!!asg.released_at} onClick={() => release.mutate()}>
-                <Send className="h-4 w-4" /> {asg.released_at ? 'Marks released' : 'Release marks'}
+                <Send className="h-4 w-4" /> {asg.released_at ? `${unit.Many} released` : `Release ${unit.many}`}
               </Button>
             )}
             {user?.role === 'admin' && user.is_superadmin && (
@@ -98,13 +103,13 @@ export default function ReportPage() {
       />
       <ErrorText error={release.error || csv.error || xlsx.error} />
 
-      {asg.is_room && <RoomBanner a={asg} joined={s.assigned} players={r.students.map((p) => p.name)} onChange={refresh} />}
+      {asg.is_room && <RoomBanner a={asg} joined={s.assigned} players={r.students.map((p) => p.display_name ?? p.name)} onChange={refresh} />}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Tile label="Completion" value={`${s.completion}%`} sub={`${s.submitted} of ${s.assigned} submitted, ${s.started - s.submitted} in progress`} />
         {s.graded ? (
           <>
-            <Tile label="Average marks" value={s.avg_score === null ? '-' : `${Number(s.avg_score)} / ${Number(s.max_score)}`} sub={s.avg_accuracy === null ? undefined : `average accuracy ${s.avg_accuracy}%`} />
-            <Tile label="Highest / lowest marks" value={s.high_score === null ? '-' : `${Number(s.high_score)} / ${Number(s.low_score)}`} sub={`out of ${Number(s.max_score)} marks`} />
+            <Tile label={`Average ${unit.many}`} value={s.avg_score === null ? '-' : `${Number(s.avg_score)} / ${Number(s.max_score)}`} sub={s.avg_accuracy === null ? undefined : `average accuracy ${s.avg_accuracy}%`} />
+            <Tile label={`Highest / lowest ${unit.many}`} value={s.high_score === null ? '-' : `${Number(s.high_score)} / ${Number(s.low_score)}`} sub={`out of ${amount(Number(s.max_score), unit)}`} />
             <Tile label="To grade" value={s.pending_grading} sub="students with open answers" />
           </>
         ) : (
@@ -124,21 +129,29 @@ export default function ReportPage() {
         ))}
       </div>
 
+      {r.ranked && (tab === 'overview' || tab === 'students') && (
+        <p className="mb-3 text-sm text-muted">
+          <b>Leaderboard:</b> the most {unit.obtained} first. Equal {unit.many}: whoever took less time from start to submit ranks higher.
+        </p>
+      )}
+
       {tab === 'overview' && <OverviewGrid report={r} onView={setViewAttempt} onUnblock={setUnblock} />}
 
       {tab === 'students' && (
-        <Table head={['Student', 'Status', s.graded ? 'Marks obtained' : '', s.graded ? 'Accuracy' : '', 'Flags', '']}>
+        <Table head={[...(r.ranked ? ['#'] : []), asg.is_room && asg.uses_points ? 'Name / team' : 'Student', 'Status', s.graded ? unit.Obtained : '', s.graded ? 'Accuracy' : '', ...(r.ranked ? ['Time taken'] : []), 'Flags', '']}>
           {r.students.map((st) => (
             <tr key={st.student_id}>
+              {r.ranked && <Td className="font-bold tabular-nums">{st.rank ?? '-'}</Td>}
               <Td>
-                <div className="font-semibold">{st.name}</div>
-                <div className="font-mono text-xs text-muted">{st.usn}</div>
+                <div className="font-semibold">{st.display_name ?? st.name}</div>
+                <div className="font-mono text-xs text-muted">{st.display_name ? `${st.name} | ${st.usn}` : st.usn}</div>
               </Td>
               <Td>
                 <Badge tone={st.status === 'submitted' ? 'green' : st.status === 'in_progress' ? 'amber' : 'neutral'}>{st.status.replace('_', ' ')}</Badge>
               </Td>
               <Td>{s.graded && st.score !== null ? `${Number(st.score)} / ${Number(st.max_score)}` : ''}</Td>
               <Td>{s.graded && st.accuracy !== null && <Badge tone={tone(st.accuracy)}>{st.accuracy}%</Badge>}</Td>
+              {r.ranked && <Td className="whitespace-nowrap tabular-nums">{took(st.time_taken_seconds)}</Td>}
               <Td>
                 <div className="flex flex-wrap gap-1">
                   {st.needs_manual && <Badge tone="brand">to grade</Badge>}
@@ -218,7 +231,7 @@ export default function ReportPage() {
         </div>
       )}
 
-      {tab === 'grading' && <GradingQueue items={queue.data ?? []} onGraded={refresh} />}
+      {tab === 'grading' && <GradingQueue items={queue.data ?? []} unit={unit} onGraded={refresh} />}
 
       {unblock?.blocked_attempt_id && (
         <UnblockDialog
@@ -232,7 +245,7 @@ export default function ReportPage() {
           }}
         />
       )}
-      {viewAttempt && <AttemptModal attemptId={viewAttempt} onClose={() => setViewAttempt(null)} onGraded={refresh} />}
+      {viewAttempt && <AttemptModal attemptId={viewAttempt} unit={unit} onClose={() => setViewAttempt(null)} onGraded={refresh} />}
       {editDue && <DueDialog id={id!} current={asg.due_at} allowLate={asg.allow_late} onClose={() => setEditDue(false)} onDone={refresh} />}
     </>
   );
@@ -244,6 +257,7 @@ function GradeForm({
   marks,
   rubric = [],
   initial,
+  unit = MARKS,
   onDone,
 }: {
   attemptId: string;
@@ -251,6 +265,7 @@ function GradeForm({
   marks: string;
   rubric?: RubricItem[];
   initial?: { score: string | null; feedback: string | null; rubric_scores?: Record<string, string> | null };
+  unit?: Unit;
   onDone: () => void;
 }) {
   const [score, setScore] = useState(initial?.score ?? '');
@@ -283,7 +298,7 @@ function GradeForm({
                 step={0.5}
                 value={parts[r.id ?? ''] ?? ''}
                 onChange={(e) => setParts({ ...parts, [r.id ?? '']: e.target.value })}
-                aria-label={`${r.criterion} marks`}
+                aria-label={`${r.criterion} ${unit.many}`}
               />
               <span className="w-12 text-muted">/ {Number(r.max)}</span>
             </div>
@@ -294,7 +309,7 @@ function GradeForm({
         </div>
       ) : (
         <div className="flex items-center gap-2">
-          <Input className="!w-24" type="number" min={0} max={Number(marks)} step={0.5} placeholder="Marks" value={score} onChange={(e) => setScore(e.target.value)} aria-label="Marks" />
+          <Input className="!w-24" type="number" min={0} max={Number(marks)} step={0.5} placeholder={unit.Many} value={score} onChange={(e) => setScore(e.target.value)} aria-label={unit.Many} />
           <span className="text-sm text-muted">/ {Number(marks)}</span>
         </div>
       )}
@@ -309,7 +324,7 @@ function GradeForm({
   );
 }
 
-function GradingQueue({ items, onGraded }: { items: GradingItem[]; onGraded: () => void }) {
+function GradingQueue({ items, unit, onGraded }: { items: GradingItem[]; unit: Unit; onGraded: () => void }) {
   if (!items.length) return <EmptyState title="Nothing to grade">Open answers appear here after students submit.</EmptyState>;
   return (
     <div className="space-y-3">
@@ -323,7 +338,7 @@ function GradingQueue({ items, onGraded }: { items: GradingItem[]; onGraded: () 
             <ResponseView type={it.type} response={it.response} options={it.options} />
             {it.choice_correct !== null && <Badge tone={it.choice_correct ? 'green' : 'red'}>{it.choice_correct ? 'correct option' : 'wrong option'}</Badge>}
           </div>
-          <GradeForm attemptId={it.attempt_id} questionId={it.question_id} marks={it.marks} rubric={it.rubric} onDone={onGraded} />
+          <GradeForm attemptId={it.attempt_id} questionId={it.question_id} marks={it.marks} rubric={it.rubric} unit={unit} onDone={onGraded} />
         </Card>
       ))}
     </div>
@@ -345,7 +360,7 @@ interface TeacherItem {
   rubric_scores: Record<string, string> | null;
 }
 
-function AttemptModal({ attemptId, onClose, onGraded }: { attemptId: string; onClose: () => void; onGraded: () => void }) {
+function AttemptModal({ attemptId, unit, onClose, onGraded }: { attemptId: string; unit: Unit; onClose: () => void; onGraded: () => void }) {
   const qc = useQueryClient();
   const d = useQuery({
     queryKey: ['attempt-detail', attemptId],
@@ -368,7 +383,7 @@ function AttemptModal({ attemptId, onClose, onGraded }: { attemptId: string; onC
       ) : (
         <div className="max-h-[70vh] space-y-3 overflow-y-auto">
           <p className="text-sm text-muted">
-            Marks obtained {d.data.score === null ? '-' : Number(d.data.score)} / {Number(d.data.max_score)} | {d.data.violations} {d.data.violations === 1 ? 'warning' : 'warnings'}
+            {unit.Obtained} {d.data.score === null ? '-' : Number(d.data.score)} / {Number(d.data.max_score)} | {d.data.violations} {d.data.violations === 1 ? 'warning' : 'warnings'}
             {d.data.submit_reason ? ` | submitted: ${d.data.submit_reason}` : ''}
             {d.data.unblocked_count > 0 ? ` | unblocked ${d.data.unblocked_count}x` : ''}
           </p>
@@ -412,6 +427,7 @@ function AttemptModal({ attemptId, onClose, onGraded }: { attemptId: string; onC
                     marks={it.marks}
                     rubric={it.rubric}
                     initial={{ score: it.manual_score, feedback: it.feedback, rubric_scores: it.rubric_scores }}
+                    unit={unit}
                     onDone={done}
                   />
                 )}
@@ -456,7 +472,7 @@ function OverviewGrid({ report, onView, onUnblock }: { report: Report; onView: (
               </th>
               {graded && (
                 <th scope="col" className="px-3 py-2 font-bold">
-                  Marks obtained
+                  {unitOf(report.assignment.uses_points).Obtained}
                 </th>
               )}
               {qs.map((q, i) => (
@@ -471,8 +487,11 @@ function OverviewGrid({ report, onView, onUnblock }: { report: Report; onView: (
               <tr key={st.student_id} className="hover:bg-brand-50/50">
                 <th scope="row" className="sticky left-0 z-10 border-t border-line bg-card px-4 py-2 text-left font-normal">
                   <button type="button" disabled={!st.attempt_id} onClick={() => st.attempt_id && onView(st.attempt_id)} className="text-left disabled:cursor-default">
-                    <span className="block font-semibold hover:underline">{st.name}</span>
-                    <span className="block text-xs text-muted">{st.status === 'not_started' ? 'not started' : st.status === 'in_progress' ? 'in progress' : st.usn}</span>
+                    <span className="block font-semibold hover:underline">
+                      {st.rank ? <span className="mr-1.5 tabular-nums">{st.rank}.</span> : null}
+                      {st.display_name ?? st.name}
+                    </span>
+                    <span className="block text-xs text-muted">{st.status === 'not_started' ? 'not started' : st.status === 'in_progress' ? 'in progress' : st.display_name ? `${st.name} | ${st.usn}` : st.usn}</span>
                   </button>
                   {st.blocked_attempt_id && (
                     <button type="button" onClick={() => onUnblock(st)} className="mt-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-800 hover:bg-red-200 dark:bg-red-950 dark:text-red-200">

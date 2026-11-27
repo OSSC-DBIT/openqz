@@ -5,6 +5,7 @@ import { ApiError, api } from '../api/client';
 import type { AttemptState, Review } from '../api/types';
 import { ResponseView } from '../components/ResponseView';
 import { Badge, Button, Card, ErrorText, Loading } from '../components/ui';
+import { unitOf } from '../components/units';
 import { AuthImage } from '../components/quiz';
 
 const REASON: Record<string, string> = {
@@ -88,6 +89,7 @@ export default function ReviewPage() {
   const pct = d.score !== null && Number(d.max_score) > 0 ? Math.round((Number(d.score) / Number(d.max_score)) * 100) : null;
   const correct = d.items.filter((i) => i.correct === true).length;
   const wrong = d.items.filter((i) => i.correct === false).length;
+  const unit = unitOf(d.uses_points);
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -100,17 +102,17 @@ export default function ReviewPage() {
           <div className="mt-6 flex flex-col items-center gap-6 sm:flex-row sm:justify-center sm:gap-10">
             <Ring pct={pct} />
             <div className="grid grid-cols-3 gap-3 sm:gap-4">
-              <Stat label="marks obtained" value={`${Number(d.score)} / ${Number(d.max_score)}`} />
+              <Stat label={unit.obtained} value={`${Number(d.score)} / ${Number(d.max_score)}`} />
               <Stat label="correct" value={correct} tone="text-emerald-300" icon={<CheckCircle2 className="h-4 w-4" aria-hidden />} />
               <Stat label="incorrect" value={wrong} tone="text-red-300" icon={<XCircle className="h-4 w-4" aria-hidden />} />
             </div>
           </div>
         ) : (
           <p className="mt-4 text-white/80">
-            {d.submit_reason === 'violations' ? 'Your marks and the answers are shown once this activity is over.' : 'Your teacher will release the marks later.'}
+            {d.submit_reason === 'violations' ? `Your ${unit.many} and the answers are shown once this activity is over.` : d.uses_points ? 'The host will show the points later.' : 'Your teacher will release the marks later.'}
           </p>
         )}
-        {d.scores_visible && d.needs_manual && <p className="mt-4 text-sm text-white/70">Marks so far: some answers are still being graded.</p>}
+        {d.scores_visible && d.needs_manual && <p className="mt-4 text-sm text-white/70">{unit.Many} so far: some answers are still being graded.</p>}
         <Link to="/student">
           <span className="mt-6 inline-block rounded-xl bg-white px-5 py-2.5 font-extrabold text-[#2b0e1e] shadow-[inset_0_-4px_0_rgba(0,0,0,0.15)] hover:bg-white/90">Back to my activities</span>
         </Link>

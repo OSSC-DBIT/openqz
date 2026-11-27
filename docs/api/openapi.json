@@ -191,6 +191,11 @@
             "format": "date-time",
             "title": "Updated At",
             "type": "string"
+          },
+          "uses_points": {
+            "default": false,
+            "title": "Uses Points",
+            "type": "boolean"
           }
         },
         "required": [
@@ -325,6 +330,11 @@
             "format": "date-time",
             "title": "Updated At",
             "type": "string"
+          },
+          "uses_points": {
+            "default": false,
+            "title": "Uses Points",
+            "type": "boolean"
           }
         },
         "required": [
@@ -1291,6 +1301,18 @@
             "title": "Allow Guests",
             "type": "boolean"
           },
+          "instructions": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instructions"
+          },
           "scoring": {
             "$ref": "#/components/schemas/LiveScoring",
             "default": "marks_speed"
@@ -1300,6 +1322,24 @@
           "activity_id"
         ],
         "title": "GameIn",
+        "type": "object"
+      },
+      "GameUpdate": {
+        "properties": {
+          "instructions": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instructions"
+          }
+        },
+        "title": "GameUpdate",
         "type": "object"
       },
       "GoogleLoginIn": {
@@ -2342,6 +2382,17 @@
       },
       "RoomPlayer": {
         "properties": {
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
           "name": {
             "title": "Name",
             "type": "string"
@@ -3497,6 +3548,18 @@
             "pattern": "^[0-9 ]+$",
             "title": "Code",
             "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
           }
         },
         "required": [
@@ -3682,6 +3745,11 @@
               }
             ],
             "title": "Time Limit Seconds"
+          },
+          "uses_points": {
+            "default": false,
+            "title": "Uses Points",
+            "type": "boolean"
           }
         },
         "required": [
@@ -7851,6 +7919,65 @@
           }
         ],
         "summary": "Get Game",
+        "tags": [
+          "live"
+        ]
+      },
+      "patch": {
+        "description": "The host changes the instructions / rules; phones in the lobby show the new text.",
+        "operationId": "update_game_api_v1_live_games__game_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "game_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Game Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GameUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Update Game Api V1 Live Games  Game Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Game",
         "tags": [
           "live"
         ]

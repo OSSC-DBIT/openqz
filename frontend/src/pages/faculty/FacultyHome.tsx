@@ -71,7 +71,7 @@ export default function FacultyHome() {
                 <div className="flex items-center justify-between gap-2 p-3">
                   <div className="min-w-0">
                     <div className="font-bold">{KIND_LABEL[k]}</div>
-                    <div className="truncate text-xs text-muted">{KIND_HINT[k]}</div>
+                    <div className="truncate text-xs text-muted">{user?.role === 'club' && k === 'poll' ? 'Opinions, no points' : KIND_HINT[k]}</div>
                   </div>
                   <ArrowRight className="h-4 w-4 shrink-0 text-muted transition group-hover:translate-x-0.5 group-hover:text-brand-ink" aria-hidden />
                 </div>

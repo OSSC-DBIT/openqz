@@ -4,13 +4,15 @@ import { ArrowLeft, Download, Monitor } from 'lucide-react';
 import { Link, useParams } from 'react-router';
 import { api, downloadFile } from '../api/client';
 import { Badge, Button, Card, ErrorText, Loading, PageHeader, Table, Td } from '../components/ui';
-import { SCORING_LABEL, type LiveScoring, type LiveStatus } from './api';
+import { scoringLabel, type LiveScoring, type LiveStatus } from './api';
+import { PointsRule } from './PointsRule';
 
 interface Results {
   id: string;
   title: string;
   status: LiveStatus;
   scoring: LiveScoring;
+  uses_points: boolean;
   created_at: string;
   total_marks: number | null;
   players: { rank: number; nickname: string; usn: string | null; guest: boolean; points: number; marks?: string; answered: number; correct: number }[];
@@ -35,7 +37,7 @@ export default function LiveResultsPage() {
         <>
           <PageHeader
             title={d.title}
-            subtitle={`Live game | ${SCORING_LABEL[d.scoring]} | ${fmtWhen(d.created_at)}`}
+            subtitle={`Live game | ${scoringLabel(d.scoring, d.uses_points)} | ${fmtWhen(d.created_at)}`}
             actions={
               <div className="flex flex-wrap gap-2">
                 {d.status !== 'ended' && (
@@ -52,6 +54,26 @@ export default function LiveResultsPage() {
             }
           />
           <h2 className="mb-2 font-bold">Players</h2>
+          {d.uses_points ? (
+            <Table head={['#', 'Name / team', 'Points', 'Correct']} cols={[undefined, undefined, undefined, 'hidden sm:table-cell']} compact>
+              {d.players.map((p) => (
+                <tr key={p.rank + p.nickname}>
+                  <Td className="font-bold">{p.rank}</Td>
+                  <Td>
+                    <div className="break-all font-semibold">{p.nickname}</div>
+                    <div className="text-xs text-muted">{p.guest ? <Badge>guest</Badge> : p.usn}</div>
+                  </Td>
+                  <Td className="whitespace-nowrap tabular-nums">
+                    {Number(p.marks ?? 0)}
+                    {d.total_marks !== null ? ` / ${d.total_marks}` : ''}
+                  </Td>
+                  <Td className="hidden sm:table-cell">
+                    {p.correct} / {d.questions.length}
+                  </Td>
+                </tr>
+              ))}
+            </Table>
+          ) : (
           <Table
             head={['#', 'Player', 'Points', fun ? '' : 'Marks obtained', 'Correct']}
             cols={[undefined, undefined, undefined, fun ? 'hidden' : undefined, 'hidden sm:table-cell']}
@@ -74,6 +96,11 @@ export default function LiveResultsPage() {
               </tr>
             ))}
           </Table>
+          )}
+          <Card className="mt-4 !p-4">
+            <h2 className="mb-2 text-sm font-bold">How the ranking works</h2>
+            <PointsRule scoring={d.scoring} usesPoints={d.uses_points} />
+          </Card>
           <h2 className="mb-2 mt-8 font-bold">Questions</h2>
           <div className="grid gap-3 md:grid-cols-2">
             {d.questions.map((q) => (

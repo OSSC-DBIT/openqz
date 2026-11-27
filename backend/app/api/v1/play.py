@@ -25,6 +25,7 @@ from app.models import (
     User,
 )
 from app.services import attempt_service as svc
+from app.services import live_service
 from app.services.attempt_service import AttemptError
 
 router = APIRouter(tags=["play"])
@@ -117,6 +118,7 @@ def attempt_state(att: Attempt) -> dict[str, Any]:
         "require_fullscreen": a.require_fullscreen,
         "instructions": a.instructions,
         "attempt_no": att.attempt_no,
+        "uses_points": a.activity.uses_points,
     }
 
 
@@ -155,6 +157,7 @@ async def my_activities(session: SessionDep, user: CurrentUser) -> dict[str, lis
             "max_score": best.max_score if best else None,
             "pending_grading": bool(best and best.needs_manual),
             "submitted_at": best.submitted_at if best else None,
+            "uses_points": a.activity.uses_points,
         }
         if done and not item["can_start"]:
             completed.append(item)
@@ -272,6 +275,8 @@ async def review(attempt_id: uuid.UUID, session: SessionDep, user: CurrentUser) 
 
 class JoinIn(BaseModel):
     code: str = Field(min_length=6, max_length=8, pattern=r"^[0-9 ]+$")
+    # A club's room: the name or team name for its leaderboard (blank = the student's name).
+    name: str | None = Field(default=None, max_length=40)
 
 
 async def _room(session: AsyncSession, code: str) -> ActivityAssignment:
@@ -309,6 +314,7 @@ async def room_preview(code: str, session: SessionDep, user: CurrentUser) -> dic
     a = await _room(session, code)
     host = await session.get(User, a.activity.owner_id)
     w = svc.window(a)
+    mine = next((t for t in a.targets if t.student_id == user.id), None)
     return {
         "assignment_id": a.id,
         "title": a.activity.title,
@@ -322,6 +328,10 @@ async def room_preview(code: str, session: SessionDep, user: CurrentUser) -> dic
         "window": w.reason or ("late" if w.late else "open"),
         "open": a.accepting_joins and w.open,
         "joined": await svc.is_target(session, a, user),
+        "uses_points": a.activity.uses_points,
+        # A club's room asks for a name or team name for its leaderboard.
+        "ask_name": a.activity.uses_points,
+        "my_name": mine.display_name if mine else None,
     }
 
 
@@ -341,6 +351,7 @@ async def join(body: JoinIn, session: SessionDep, user: CurrentUser) -> dict[str
             status.HTTP_403_FORBIDDEN,
             detail={"code": "room_removed", "message": "The host removed you from this room"},
         )
+    name = _room_name(a, user, body.name)
     if not await svc.is_target(session, a, user):
         if not a.accepting_joins:
             raise HTTPException(
@@ -357,9 +368,34 @@ async def join(body: JoinIn, session: SessionDep, user: CurrentUser) -> dict[str
             raise HTTPException(
                 status.HTTP_403_FORBIDDEN, detail={"code": w.reason, "message": msg}
             )
-        a.targets.append(AssignmentTarget(student_id=user.id))
+        a.targets.append(AssignmentTarget(student_id=user.id, display_name=name))
         await session.commit()
-    return {"assignment_id": a.id, "title": a.activity.title}
+    elif name:
+        mine = next((t for t in a.targets if t.student_id == user.id), None)
+        if mine is not None and mine.display_name != name:
+            mine.display_name = name
+            await session.commit()
+    return {"assignment_id": a.id, "title": a.activity.title, "display_name": name}
+
+
+def _room_name(a: ActivityAssignment, user: User, raw: str | None) -> str | None:
+    """The name or team name for a club's room leaderboard: friendly, and not someone else's.
+    Blank, or a room that is not a club's, means the student's own name is shown."""
+    if not a.activity.uses_points or not raw or not raw.strip():
+        return None
+    name = live_service.clean_nickname(raw)
+    if any(
+        t.student_id != user.id and t.display_name and t.display_name.lower() == name.lower()
+        for t in a.targets
+    ):
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            detail={
+                "code": "name_taken",
+                "message": "That name is taken in this room, pick another",
+            },
+        )
+    return name
 
 
 class ServerTime(BaseModel):

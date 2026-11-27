@@ -129,7 +129,7 @@ export default function StudentHome() {
               <p className="text-sm text-muted">{due(a)}</p>
               {a.score !== null && (
                 <p className="mt-1 text-sm font-semibold">
-                  Marks: {Number(a.score)} / {Number(a.max_score)}
+                  {a.uses_points ? 'Points' : 'Marks'}: {Number(a.score)} / {Number(a.max_score)}
                   {a.pending_grading ? ' (being graded)' : ''}
                 </p>
               )}

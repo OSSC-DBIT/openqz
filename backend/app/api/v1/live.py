@@ -130,6 +130,15 @@ class GameIn(BaseModel):
     activity_id: uuid.UUID
     scoring: LiveScoring = LiveScoring.marks_speed
     allow_guests: bool = False
+    instructions: str | None = Field(default=None, max_length=2000)
+
+
+class GameUpdate(BaseModel):
+    instructions: str | None = Field(default=None, max_length=2000)
+
+
+def _clean_text(s: str | None) -> str | None:
+    return (s or "").strip() or None
 
 
 @router.post("/games", status_code=201)
@@ -149,14 +158,22 @@ async def create_game(body: GameIn, session: SessionDep, user: CreatorUser) -> d
             "Live games use multiple choice, true / false and multi-select questions; this "
             "activity has none",
         )
+    scoring = body.scoring
+    if act.kind == ActivityKind.poll:
+        scoring = LiveScoring.fun
+    elif act.uses_points and scoring == LiveScoring.fun:
+        # A club's quiz counts its points: with or without the speed factor.
+        scoring = LiveScoring.marks
     game = LiveGame(
         activity_id=act.id,
         host_id=user.id,
         title=act.title,
         code=await live.new_code(session),
-        scoring=LiveScoring.fun if act.kind == ActivityKind.poll else body.scoring,
+        scoring=scoring,
         allow_guests=body.allow_guests,
         snapshot=snapshot,
+        uses_points=act.uses_points,
+        instructions=_clean_text(body.instructions),
     )
     session.add(game)
     audit.record(session, "live_game_created", actor_id=user.id, target=str(act.id))
@@ -174,6 +191,8 @@ async def host_view(session: SessionDep, game: LiveGame) -> dict[str, Any]:
         "code": game.code,
         "status": game.status,
         "scoring": game.scoring,
+        "uses_points": game.uses_points,
+        "instructions": game.instructions,
         "allow_guests": game.allow_guests,
         "accepting_joins": game.accepting_joins,
         "index": game.current_index,
@@ -205,7 +224,9 @@ async def host_view(session: SessionDep, game: LiveGame) -> dict[str, Any]:
                 for o in q["options"]
             ],
         }
-        out["answered"] = await live.answered_count(session, game)
+        answered, last_answer_at = await live.answer_progress(session, game)
+        out["answered"] = answered
+        out["question"]["reveal_at"] = live.reveal_at(game, len(players), answered, last_answer_at)
         if revealed:
             rows = await session.scalars(
                 select(LiveAnswer.response).where(
@@ -247,6 +268,7 @@ async def my_games(session: SessionDep, user: CreatorUser) -> list[dict[str, Any
                 "code": g.code,
                 "status": g.status,
                 "scoring": g.scoring,
+                "uses_points": g.uses_points,
                 "players": n,
                 "created_at": g.created_at,
             }
@@ -257,6 +279,19 @@ async def my_games(session: SessionDep, user: CreatorUser) -> list[dict[str, Any
 @router.get("/games/{game_id}")
 async def get_game(game_id: uuid.UUID, session: SessionDep, user: CreatorUser) -> dict[str, Any]:
     return await host_view(session, await hosted(session, game_id, user))
+
+
+@router.patch("/games/{game_id}")
+async def update_game(
+    game_id: uuid.UUID, body: GameUpdate, session: SessionDep, user: CreatorUser
+) -> dict[str, Any]:
+    """The host changes the instructions / rules; phones in the lobby show the new text."""
+    game = await hosted(session, game_id, user)
+    if "instructions" in body.model_fields_set:
+        game.instructions = _clean_text(body.instructions)
+        live.bump(game)
+    await session.commit()
+    return await host_view(session, game)
 
 
 @router.post("/games/{game_id}/{action}")
@@ -332,6 +367,7 @@ async def results(game_id: uuid.UUID, session: SessionDep, user: CreatorUser) ->
         "title": game.title,
         "status": game.status,
         "scoring": game.scoring,
+        "uses_points": game.uses_points,
         "created_at": game.created_at,
         "total_marks": None if game.scoring == LiveScoring.fun else total_marks,
         "players": rows,
@@ -345,6 +381,20 @@ async def results_csv(game_id: uuid.UUID, session: SessionDep, user: CreatorUser
     buf = io.StringIO()
     w = csv.writer(buf)
     fun = data["scoring"] == LiveScoring.fun
+    if data["uses_points"]:
+        # A club's game: the points set per question (with the speed factor if chosen).
+        w.writerow(["Rank", "Name / team", "USN", "Guest", "Points", "Max points", "Answered",
+                    "Correct"])  # fmt: skip
+        for r in data["players"]:
+            w.writerow(safe_row(
+                [r["rank"], r["nickname"], r["usn"] or "", "yes" if r["guest"] else "",
+                 r.get("marks", ""), data["total_marks"], r["answered"], r["correct"]]
+            ))  # fmt: skip
+        return Response(
+            buf.getvalue(),
+            media_type="text/csv",
+            headers=attachment(data["title"], "-live-results.csv"),
+        )
     w.writerow(
         [
             "Rank",
@@ -388,6 +438,10 @@ async def preview(
         "open": game.accepting_joins,
         "allow_guests": game.allow_guests,
         "signed_in": user is not None,
+        # A club's game: signed-in players pick a name or team name too, like guests.
+        "ask_name": game.uses_points,
+        "uses_points": game.uses_points,
+        "instructions": game.instructions,
     }
 
 
@@ -415,17 +469,20 @@ async def join(
     token = None
     # Read now: a failed insert below rolls back, which expires `user`.
     user_id = user.id if user is not None else None
-    if user is not None:
+    # A name the player typed (a guest's nickname, or a team name in a club's game) must be
+    # free; a signed-in player's own name gets "(2)" when two classmates share it.
+    chosen = user is None or bool(game.uses_points and (body.nickname or "").strip())
+    if user is not None and not chosen:
         base = user.full_name.strip()[:36] or user.username
         nick = base
     else:
-        if not game.allow_guests:
+        if user is None and not game.allow_guests:
             raise live.err("sign_in", "Sign in to join this game", 401)
         nick = live.clean_nickname(body.nickname or "")
         base = nick
     for n in range(1, 50):
         candidate = nick if n == 1 else f"{base[:34]} ({n})"
-        if user_id is None and n > 1:
+        if chosen and n > 1:
             raise live.err("nickname_taken", "That nickname is taken in this game, pick another")
         player = LivePlayer(
             game_id=game.id,
@@ -479,6 +536,8 @@ async def state(
         "me": {"nickname": player.nickname, "points": player.points},
         "question": None,
         "my_answer": None,
+        "uses_points": game.uses_points,
+        "instructions": game.instructions,
     }
     if game.scoring != LiveScoring.fun:
         out["me"]["marks"] = str(player.marks)
@@ -496,7 +555,11 @@ async def state(
         if mine:
             out["my_answer"] = {"response": mine.response}
             if revealed:
-                out["my_answer"] |= {"correct": mine.correct, "points": mine.points}
+                out["my_answer"] |= {
+                    "correct": mine.correct,
+                    "points": mine.points,
+                    "marks": str(mine.marks),
+                }
     if game.status in (LiveStatus.leaderboard, LiveStatus.ended):
         board = await live.ranked(session, game)
         rank = next((i + 1 for i, p in enumerate(board) if p.id == player.id), None)

@@ -19,7 +19,7 @@ export default function LiveJoinPage() {
   const [nick, setNick] = useState('');
   const preview = useMutation({ mutationFn: (c: string) => api<LivePreview>(`/live/join/${c}`) });
   const join = useMutation({
-    mutationFn: () => api<{ game_id: string; player_token?: string }>('/live/join', { method: 'POST', json: { code, nickname: user ? null : nick } }),
+    mutationFn: () => api<{ game_id: string; player_token?: string }>('/live/join', { method: 'POST', json: { code, nickname: user && !preview.data?.ask_name ? null : nick.trim() || null } }),
     onSuccess: (r) => {
       if (r.player_token) setPlayerToken(r.game_id, r.player_token);
       nav(`/live/play/${r.game_id}`);
@@ -35,6 +35,13 @@ export default function LiveJoinPage() {
   const p = preview.data;
   const err = (preview.error ?? join.error) as ApiError | null;
   const needSignIn = p && !user && !p.allow_guests;
+  // A club's game asks everyone for a name or team name; a signed-in player starts from their own.
+  const askName = !!p && (!user || p.ask_name);
+  useEffect(() => {
+    if (p?.ask_name && user && !nick) setNick(user.full_name.slice(0, 20));
+    // when a club's game is found, once
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [p?.game_id]);
 
   return (
     <div className="flex min-h-dvh flex-col stage px-4 py-5 text-white">
@@ -90,6 +97,12 @@ export default function LiveJoinPage() {
                   {p.questions} questions
                 </p>
               </div>
+              {p.instructions && (
+                <div className="rounded-xl bg-brand-50 px-3 py-2 text-sm">
+                  <div className="font-bold">Instructions</div>
+                  <p className="mt-1 max-h-40 overflow-y-auto whitespace-pre-wrap break-words">{p.instructions}</p>
+                </div>
+              )}
               {needSignIn ? (
                 <>
                   <p className="text-center text-sm">This game is for signed-in students.</p>
@@ -97,23 +110,23 @@ export default function LiveJoinPage() {
                     Sign in to join
                   </Link>
                 </>
-              ) : user ? (
+              ) : !askName && user ? (
                 <p className="flex items-center justify-center gap-2 rounded-xl bg-brand-50 px-3 py-2 text-sm">
                   <User className="h-4 w-4" aria-hidden /> Joining as <b>{user.full_name}</b>
                 </p>
               ) : (
                 <label className="block">
-                  <span className="text-sm font-semibold">Your nickname</span>
+                  <span className="text-sm font-semibold">{p.ask_name ? 'Your name or team name' : 'Your nickname'}</span>
                   <input
                     autoFocus
                     maxLength={20}
                     value={nick}
                     onChange={(e) => setNick(e.target.value)}
-                    placeholder="e.g. Quiz Ninja"
+                    placeholder={p.ask_name ? 'e.g. Code Ninjas' : 'e.g. Quiz Ninja'}
                     className="mt-1 w-full rounded-xl border-2 border-line bg-surface px-3 py-3 text-lg font-bold outline-none focus:border-brand-500"
                   />
                   <span className="mt-1 block text-xs text-muted">
-                    Shown on the big screen. Keep it friendly. By joining you agree to the{' '}
+                    Shown on the big screen{user ? ` (you are signed in as ${user.full_name})` : ''}. Keep it friendly. By joining you agree to the{' '}
                     <Link to="/privacy" target="_blank" className="underline">
                       Privacy Policy
                     </Link>
@@ -127,7 +140,7 @@ export default function LiveJoinPage() {
                 </p>
               )}
               {!needSignIn && (
-                <Button type="submit" className="w-full !py-3.5 text-base" loading={join.isPending} disabled={!p.open || (!user && nick.trim().length < 2)}>
+                <Button type="submit" className="w-full !py-3.5 text-base" loading={join.isPending} disabled={!p.open || (askName && nick.trim().length < 2)}>
                   {p.open ? 'Join' : 'Closed to new players'}
                 </Button>
               )}

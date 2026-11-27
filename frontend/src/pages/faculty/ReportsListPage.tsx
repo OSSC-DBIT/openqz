@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { api } from '../../api/client';
 import type { AssignmentInfo } from '../../api/types';
-import { SCORING_LABEL, type LiveGameRow } from '../../live/api';
+import { scoringLabel, type LiveGameRow } from '../../live/api';
 import { Badge, EmptyState, ErrorText, Loading, PageHeader, Table, Td } from '../../components/ui';
 import { KIND_LABEL, fmtWhen } from '../../components/quiz';
 
@@ -64,7 +64,7 @@ export default function ReportsListPage() {
                   </Link>
                   <div className="text-xs text-muted">{fmtWhen(g.created_at)}</div>
                 </Td>
-                <Td className="hidden text-sm md:table-cell">{SCORING_LABEL[g.scoring]}</Td>
+                <Td className="hidden text-sm md:table-cell">{scoringLabel(g.scoring, g.uses_points)}</Td>
                 <Td>{g.players}</Td>
                 <Td className="hidden sm:table-cell">
                   <Badge tone={g.status === 'ended' ? 'neutral' : 'green'}>{g.status === 'ended' ? 'ended' : 'live'}</Badge>

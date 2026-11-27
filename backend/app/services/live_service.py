@@ -29,6 +29,8 @@ LIVE_TYPES = ("mcq", "true_false", "multi_select")
 DEFAULT_SECONDS = 20
 GET_READY = timedelta(seconds=3)  # "Get ready" before each question opens
 GRACE = timedelta(seconds=1)  # network delay allowed after the timer
+# Everyone answered: the answer shows this long after the last one (see reveal_at).
+ALL_ANSWERED_PAUSE = timedelta(seconds=2)
 MAX_POINTS = 1000
 
 
@@ -192,8 +194,16 @@ def act(game: LiveGame, action: str) -> None:
 # ---------------------------------------------------------------- answers and scoring
 
 
+def speed_factor(answer_ms: int, seconds: int) -> Decimal:
+    """1 for an instant answer down to 0.5 at the last second (the timer caps the time)."""
+    limit = seconds * 1000
+    return Decimal(1) - Decimal("0.5") * Decimal(min(answer_ms, limit)) / Decimal(limit)
+
+
 def points_for(fraction: Decimal, answer_ms: int, seconds: int) -> int:
-    """Up to 1000 for a correct answer; the full amount when instant, half at the last second."""
+    """points = 1000 x fraction correct x (1 - 0.5 x answer time / timer), answer time capped at
+    the timer: the full amount when instant, half at the last second, 0 when wrong. The faculty
+    guide and the live game screens (PointsRule.tsx) explain this formula; keep them in step."""
     if fraction <= 0:
         return 0
     speed = 1 - 0.5 * min(answer_ms, seconds * 1000) / (seconds * 1000)
@@ -234,6 +244,10 @@ async def answer(
     ms = int((t - game.question_started_at).total_seconds() * 1000)
     pts = points_for(fraction, ms, q["seconds"])
     counted_marks = Decimal("0") if game.scoring == LiveScoring.fun else score
+    if game.uses_points and game.scoring == LiveScoring.marks_speed:
+        # A club's game with the speed option: the question's own points shrink with the time
+        # taken, the same way as points_for (all of them at once, half at the last second).
+        counted_marks = grading.round_marks(score * speed_factor(ms, q["seconds"]))
     ans = LiveAnswer(
         game_id=game.id,
         player_id=player.id,
@@ -264,7 +278,9 @@ async def ranked(session: AsyncSession, game: LiveGame) -> list[LivePlayer]:
             )
         ).all()
     )
-    if game.scoring == LiveScoring.marks:
+    # Marks decide in a "marks only" game and in every club game, where they are the points the
+    # club set per question.
+    if game.scoring == LiveScoring.marks or game.uses_points:
         rows.sort(key=lambda p: (-(p.marks or 0), p.answer_ms_total, p.nickname_key))
     else:
         rows.sort(key=lambda p: (-p.points, p.answer_ms_total, p.nickname_key))
@@ -300,15 +316,31 @@ def player_question(q: dict[str, Any], game: LiveGame, reveal: bool) -> dict[str
     return out
 
 
-async def answered_count(session: AsyncSession, game: LiveGame) -> int:
-    n = await session.scalar(
-        select(func.count())
-        .select_from(LiveAnswer)
-        .join(LivePlayer, LivePlayer.id == LiveAnswer.player_id)
-        .where(
-            LiveAnswer.game_id == game.id,
-            LiveAnswer.question_index == game.current_index,
-            LivePlayer.removed.is_(False),
+async def answer_progress(session: AsyncSession, game: LiveGame) -> tuple[int, datetime | None]:
+    """How many players (still in the game) answered the current question, and when the last
+    of those answers arrived."""
+    row = (
+        await session.execute(
+            select(func.count(), func.max(LiveAnswer.created_at))
+            .select_from(LiveAnswer)
+            .join(LivePlayer, LivePlayer.id == LiveAnswer.player_id)
+            .where(
+                LiveAnswer.game_id == game.id,
+                LiveAnswer.question_index == game.current_index,
+                LivePlayer.removed.is_(False),
+            )
         )
-    )
-    return int(n or 0)
+    ).one()
+    return int(row[0] or 0), row[1]
+
+
+def reveal_at(
+    game: LiveGame, players: int, answered: int, last_answer_at: datetime | None
+) -> datetime | None:
+    """When the host screen shows the answer by itself: when time is up, or ALL_ANSWERED_PAUSE
+    after the last answer once every player has answered, whichever comes first."""
+    ends = game.question_ends_at
+    if players and answered >= players and last_answer_at is not None:
+        early = last_answer_at + ALL_ANSWERED_PAUSE
+        return min(ends, early) if ends else early
+    return ends

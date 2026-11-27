@@ -29,6 +29,11 @@ def _q(x: Decimal) -> Decimal:
     return x.quantize(TWO, rounding=ROUND_HALF_UP)
 
 
+def round_marks(x: Decimal) -> Decimal:
+    """Marks (or a club's points) to two decimals, rounding half up."""
+    return _q(x)
+
+
 def normalize_blank(text: str, case_sensitive: bool) -> str:
     t = re.sub(r"\s+", " ", str(text)).strip()
     t = t.rstrip(".")

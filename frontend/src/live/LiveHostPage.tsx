@@ -1,14 +1,14 @@
 import { useConfirm } from '../components/Confirm';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { BarChart3, Check, Crown, Lock, LockOpen, Maximize, Play, SkipForward, Trophy, Users, X } from 'lucide-react';
+import { BarChart3, Check, Crown, Lock, LockOpen, Maximize, Play, ScrollText, SkipForward, Trophy, Users, X } from 'lucide-react';
 import QRCode from 'qrcode';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { api } from '../api/client';
 import { AuthImage, TILE_COLORS } from '../components/quiz';
-import { Button, cx, Modal } from '../components/ui';
+import { Button, cx, ErrorText, Field, Modal, Textarea } from '../components/ui';
 import { Logo } from '../layouts/AppShell';
-import { SCORING_LABEL, useServerClock, type BoardRow, type HostView } from './api';
+import { boardScore, scoringLabel, useServerClock, type BoardRow, type HostView } from './api';
 
 /** The host's screen, made for a projector: lobby, questions, answer counts, leaderboard, podium. */
 export default function LiveHostPage() {
@@ -27,6 +27,15 @@ export default function LiveHostPage() {
     mutationFn: (playerId: string) => api(`/live/games/${gameId}/players/${playerId}`, { method: 'DELETE' }),
     onSuccess: () => void game.refetch(),
   });
+  // null: the instructions dialog is closed
+  const [rulesText, setRulesText] = useState<string | null>(null);
+  const rules = useMutation({
+    mutationFn: (instructions: string | null) => api<HostView>(`/live/games/${gameId}`, { method: 'PATCH', json: { instructions } }),
+    onSuccess: () => {
+      setRulesText(null);
+      void game.refetch();
+    },
+  });
   const [ask, confirmDialog] = useConfirm();
   const [showPlayers, setShowPlayers] = useState(false);
   /** Signed-in players are shut out for good; a guest could come back under another nickname. */
@@ -39,13 +48,12 @@ export default function LiveHostPage() {
     }).then((ok) => ok && remove.mutate(id));
   const now = useServerClock(g?.server_now, g?.status === 'question');
 
-  // Time up, or everyone answered: show the answer automatically (once per question).
+  // Time up, or 2 seconds after everyone answered (`reveal_at`, worked out by the server): show
+  // the answer automatically (once per question).
   const revealedFor = useRef(-1);
   useEffect(() => {
     if (!g || g.status !== 'question' || !g.question || revealedFor.current === g.index) return;
-    const timeUp = now() >= new Date(g.question.ends_at).getTime();
-    const allIn = g.players.length > 0 && g.answered >= g.players.length;
-    if ((timeUp || allIn) && !act.isPending) {
+    if (now() >= new Date(g.question.reveal_at).getTime() && !act.isPending) {
       const index = g.index;
       revealedFor.current = index;
       act.mutate('reveal', {
@@ -94,7 +102,7 @@ export default function LiveHostPage() {
       </header>
 
       <main className="flex flex-1 flex-col px-4 pb-6 sm:px-8">
-        {g.status === 'lobby' && <Lobby g={g} onStart={() => act.mutate('start')} onLock={() => act.mutate(g.accepting_joins ? 'lock' : 'unlock')} onRemove={kick} busy={act.isPending} />}
+        {g.status === 'lobby' && <Lobby g={g} onStart={() => act.mutate('start')} onLock={() => act.mutate(g.accepting_joins ? 'lock' : 'unlock')} onRemove={kick} onRules={() => setRulesText(g.instructions ?? '')} busy={act.isPending} />}
         {(g.status === 'question' || g.status === 'reveal') && g.question && <QuestionView g={g} now={now} onSkip={() => act.mutate('reveal')} onBoard={() => act.mutate('leaderboard')} onNext={() => act.mutate('next')} last={last} />}
         {g.status === 'leaderboard' && <Leaderboard g={g} onNext={() => act.mutate('next')} last={last} />}
         {g.status === 'ended' && <Podium g={g} />}
@@ -124,6 +132,20 @@ export default function LiveHostPage() {
             <Button onClick={() => setShowPlayers(false)}>Done</Button>
           </div>
         </Modal>
+        <Modal open={rulesText !== null} onClose={() => setRulesText(null)} title="Instructions for players">
+          <Field label="Instructions or rules" hint="Players read them on their phones while they wait for the start. Leave it empty to remove them.">
+            <Textarea rows={5} maxLength={2000} value={rulesText ?? ''} onChange={(e) => setRulesText(e.target.value)} placeholder="Teams of two, one phone per team. No searching online." />
+          </Field>
+          <ErrorText error={rules.error} />
+          <div className="mt-4 flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setRulesText(null)}>
+              Cancel
+            </Button>
+            <Button loading={rules.isPending} onClick={() => rules.mutate((rulesText ?? '').trim() || null)}>
+              Save
+            </Button>
+          </div>
+        </Modal>
         {confirmDialog}
       </main>
     </div>
@@ -134,7 +156,7 @@ function Screen({ children }: { children: React.ReactNode }) {
   return <div className="grid min-h-dvh place-items-center bg-[#1a1240] p-6 text-center text-white">{children}</div>;
 }
 
-function Lobby({ g, onStart, onLock, onRemove, busy }: { g: HostView; onStart: () => void; onLock: () => void; onRemove: (id: string, nick: string, guest: boolean) => void; busy: boolean }) {
+function Lobby({ g, onStart, onLock, onRemove, onRules, busy }: { g: HostView; onStart: () => void; onLock: () => void; onRemove: (id: string, nick: string, guest: boolean) => void; onRules: () => void; busy: boolean }) {
   const link = `${window.location.origin}/live/${g.code}`;
   const [qr, setQr] = useState<string | null>(null);
   useEffect(() => {
@@ -159,11 +181,25 @@ function Lobby({ g, onStart, onLock, onRemove, busy }: { g: HostView; onStart: (
         {qr && <img src={qr} alt={`QR code for ${link}`} className="mx-auto h-36 w-36 rounded-2xl bg-white p-2 md:h-auto md:w-40" />}
       </div>
 
+      <div className="flex flex-wrap items-start justify-between gap-3 rounded-3xl bg-white/10 p-5">
+        <div className="min-w-0 flex-1">
+          <div className="text-xs font-bold uppercase tracking-wide text-white/85">Instructions</div>
+          {g.instructions ? (
+            <p className="mt-1 whitespace-pre-wrap break-words text-lg font-semibold">{g.instructions}</p>
+          ) : (
+            <p className="mt-1 text-sm text-white/85">None yet. Players read them on their phones while they wait.</p>
+          )}
+        </div>
+        <button className="flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2.5 font-bold hover:bg-white/20" onClick={onRules}>
+          <ScrollText className="h-4 w-4" aria-hidden /> {g.instructions ? 'Edit instructions' : 'Add instructions'}
+        </button>
+      </div>
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <span className="grid h-12 w-12 place-items-center rounded-2xl bg-white/15 text-xl font-extrabold">{g.players.length}</span>
           <span className="text-lg font-bold">{g.players.length === 1 ? 'player' : 'players'} joined</span>
-          <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white/80">{SCORING_LABEL[g.scoring]}</span>
+          <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white/80">{scoringLabel(g.scoring, g.uses_points)}</span>
         </div>
         <div className="flex gap-2">
           <button className="flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2.5 font-bold hover:bg-white/20" onClick={onLock}>
@@ -287,7 +323,7 @@ function QuestionView({ g, now, onSkip, onBoard, onNext, last }: { g: HostView; 
   );
 }
 
-function BoardList({ rows, fun }: { rows: BoardRow[]; fun: boolean }) {
+function BoardList({ rows, fun, usesPoints = false }: { rows: BoardRow[]; fun: boolean; usesPoints?: boolean }) {
   return (
     <ol className="space-y-2">
       {rows.map((r) => (
@@ -297,8 +333,8 @@ function BoardList({ rows, fun }: { rows: BoardRow[]; fun: boolean }) {
             {r.nickname}
             {r.guest && <span className="ml-2 text-xs font-semibold opacity-80">guest</span>}
           </span>
-          {!fun && r.marks !== undefined && <span className="text-sm font-semibold opacity-75">{Number(r.marks)} marks</span>}
-          <span className="text-2xl font-extrabold tabular-nums">{r.points}</span>
+          {!fun && !usesPoints && r.marks !== undefined && <span className="text-sm font-semibold opacity-75">{Number(r.marks)} marks</span>}
+          <span className="text-2xl font-extrabold tabular-nums">{boardScore(r, usesPoints)}</span>
         </li>
       ))}
     </ol>
@@ -311,7 +347,7 @@ function Leaderboard({ g, onNext, last }: { g: HostView; onNext: () => void; las
       <h1 className="mb-5 flex items-center justify-center gap-3 text-3xl font-extrabold">
         <Trophy className="h-8 w-8 text-amber-300" /> Leaderboard
       </h1>
-      <BoardList rows={g.leaderboard.slice(0, 5)} fun={g.scoring === 'fun'} />
+      <BoardList rows={g.leaderboard.slice(0, 5)} fun={g.scoring === 'fun'} usesPoints={g.uses_points} />
       <div className="mt-6 flex justify-center">
         <button className="flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-lg font-extrabold text-[#2a1b6e]" onClick={onNext}>
           {last ? 'Finish' : 'Next question'} <SkipForward className="h-5 w-5" />
@@ -335,7 +371,7 @@ function Podium({ g }: { g: HostView }) {
             <div key={r.nickname} className="flex w-1/3 max-w-56 flex-col items-center gap-2">
               {places[i] === 1 && <Crown className="h-10 w-10 text-amber-300" aria-hidden />}
               <div className="w-full truncate text-center text-lg font-extrabold sm:text-2xl">{r.nickname}</div>
-              <div className="text-sm font-semibold text-white/80">{r.points} points</div>
+              <div className="text-sm font-semibold text-white/80">{boardScore(r, g.uses_points)} points</div>
               <div className={cx('grid w-full place-items-center rounded-t-2xl bg-white/90 text-5xl font-extrabold text-[#2a1b6e]', heights[i])}>{places[i]}</div>
             </div>
           ) : (
@@ -345,7 +381,7 @@ function Podium({ g }: { g: HostView }) {
       </div>
       {g.leaderboard.length > 3 && (
         <div className="w-full max-w-2xl">
-          <BoardList rows={g.leaderboard.slice(3, 10)} fun={g.scoring === 'fun'} />
+          <BoardList rows={g.leaderboard.slice(3, 10)} fun={g.scoring === 'fun'} usesPoints={g.uses_points} />
         </div>
       )}
       <div className="flex gap-3">

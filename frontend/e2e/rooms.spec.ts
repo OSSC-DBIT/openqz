@@ -31,11 +31,12 @@ async function hostRoom(page: Page, activityId: string) {
   return ((await codeEl.textContent()) ?? '').replace(/\D/g, '');
 }
 
-async function joinAndPlay(page: Page, code: string) {
+async function joinAndPlay(page: Page, code: string, team?: string) {
   await page.goto('/join');
   await page.getByLabel('Join code').fill(code);
   await page.getByRole('button', { name: 'Join', exact: true }).click();
   await expect(page.getByText('Capital of Karnataka?').or(page.getByRole('button', { name: 'Join and start' }))).toBeVisible();
+  if (team) await page.getByLabel('Your name or team name').fill(team);
   await page.getByRole('button', { name: 'Join and start' }).click();
   await expect(page.getByText('Capital of Karnataka?')).toBeVisible();
   await page.getByRole('button', { name: /Option \d: Bengaluru/ }).click();
@@ -76,6 +77,8 @@ test('faculty hosts a room; a student from another class joins with the code', a
   await joinAndPlay(s, code);
 
   await expect(h.getByText(/1 joined \| 1 finished/)).toBeVisible({ timeout: 15_000 });
+  // a teacher's room is not a leaderboard
+  await expect(h.getByText(/Leaderboard:/)).toHaveCount(0);
 
   // the host takes the student out of the room, then lets them back in
   await h.getByRole('button', { name: 'Players', exact: true }).click();
@@ -120,9 +123,23 @@ test('a club organiser hosts a room', async ({ browser, request }) => {
 
   const actId = await quickQuiz(request, clubEmail, 'Tech fest round 1');
   const code = await hostRoom(c, actId);
+  // rules for the room, shown to students when they enter the code
+  await c.getByRole('button', { name: 'Add instructions' }).click();
+  await c.getByLabel('Instructions or rules').fill('One attempt per team. No searching online.');
+  await c.getByRole('dialog', { name: 'Instructions for this room' }).getByRole('button', { name: 'Save' }).click();
+  await expect(c.getByRole('button', { name: 'Edit instructions' })).toBeVisible();
   const s = await (await browser.newContext()).newPage();
   await login(s, base.stuEmail);
-  await joinAndPlay(s, code);
+  await s.goto(`/join/${code}`);
+  await expect(s.getByText('One attempt per team. No searching online.')).toBeVisible();
+  await joinAndPlay(s, code, 'Tech Titans');
   await expect(c.getByText(/1 joined \| 1 finished/)).toBeVisible({ timeout: 15_000 });
+  // a club's room report is a leaderboard in points: place, team, points, time taken
+  await expect(c.getByText(/Leaderboard:/)).toBeVisible();
+  await c.getByRole('button', { name: 'Participants', exact: true }).click();
+  await expect(c.getByRole('columnheader', { name: 'Time taken' })).toBeVisible();
+  await expect(c.getByRole('columnheader', { name: 'Points' })).toBeVisible();
+  await expect(c.getByRole('row').nth(1).getByRole('cell').first()).toHaveText('1');
+  await expect(c.getByRole('row').nth(1)).toContainText('Tech Titans');
   await cctx.close();
 });
