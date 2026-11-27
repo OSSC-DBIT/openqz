@@ -11,7 +11,8 @@ import {
   uploadImage,
 } from '../../components/quiz';
 import { TimerSelect } from '../../components/TimerSelect';
-import { amount, POINT_PRESETS, unitOf } from '../../components/units';
+import { MARKS_MAX, POINTS_MAX, PointsSelect } from '../../components/PointsSelect';
+import { POINT_PRESETS, unitOf } from '../../components/units';
 
 export function blankQuestion(type: QuestionType, kind: ActivityKind): QuestionData {
   const options: QOption[] =
@@ -105,15 +106,16 @@ export function QuestionToolbar({ kind, usesPoints = false, value, onChange }: {
         />
       )}
       {graded && (
-        <Select className="!w-auto" aria-label={unit.Many} value={String(Number(q.marks))} onChange={(e) => set({ marks: Number(e.target.value) })}>
-          {[...new Set([...(usesPoints ? POINT_PRESETS : MARK_PRESETS), Number(q.marks)])]
-            .sort((a, b) => a - b)
-            .map((p) => (
-              <option key={p} value={p}>
-                {amount(p, unit)}
-              </option>
-            ))}
-        </Select>
+        <PointsSelect
+          className="rounded-xl border border-line bg-card px-3.5 py-2.5 text-sm text-ink outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200"
+          aria-label={unit.Many}
+          value={String(Number(q.marks))}
+          onChange={(v) => set({ marks: Number(v) })}
+          unit={unit}
+          presets={usesPoints ? POINT_PRESETS : MARK_PRESETS}
+          custom={usesPoints}
+          max={usesPoints ? POINTS_MAX : MARKS_MAX}
+        />
       )}
     </div>
   );

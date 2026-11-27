@@ -25,6 +25,12 @@ TIMER_PRESETS = [5, 10, 20, 30, 45, 60, 90, 120, 180, 300, 600]
 BLANK_MARK = "___"
 
 
+# What one question can be worth: marks for teachers, more points for a club (uses_points);
+# activities._check_worth applies the teachers' limit. Keep in step with PointsSelect.tsx.
+MARKS_MAX = Decimal("100")
+POINTS_MAX = Decimal("1000")
+
+
 class OptionIn(BaseModel):
     id: str | None = Field(default=None, max_length=8)
     text: str = Field(default="", max_length=1000)
@@ -35,7 +41,7 @@ class OptionIn(BaseModel):
 class RubricItem(BaseModel):
     id: str | None = Field(default=None, max_length=8)
     criterion: str = Field(min_length=1, max_length=300)
-    max: Decimal = Field(gt=0, le=100)
+    max: Decimal = Field(gt=0, le=POINTS_MAX)
 
 
 class QuestionIn(BaseModel):
@@ -44,7 +50,7 @@ class QuestionIn(BaseModel):
     stem_image_id: uuid.UUID | None = None
     options: list[OptionIn] = Field(default_factory=list, max_length=10)
     answer: dict[str, Any] = Field(default_factory=dict)
-    marks: Decimal = Field(default=Decimal("1"), ge=0, le=100)
+    marks: Decimal = Field(default=Decimal("1"), ge=0, le=POINTS_MAX)
     partial_credit: bool = True
     explanation: str | None = Field(default=None, max_length=5000)
     tags: list[str] = Field(default_factory=list, max_length=10)
@@ -189,7 +195,7 @@ class BulkApplyIn(BaseModel):
 
     time_limit_seconds: int | None = Field(default=None, ge=5, le=3600)
     clear_timer: bool = False
-    marks: Decimal | None = Field(default=None, ge=0, le=100)
+    marks: Decimal | None = Field(default=None, ge=0, le=POINTS_MAX)
 
 
 class AssignIn(BaseModel):
