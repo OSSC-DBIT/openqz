@@ -8,7 +8,9 @@ import { ClassPicker } from '../../components/pieces';
 import { Button, ErrorText, Field, Input, Modal, Select, Textarea, cx } from '../../components/ui';
 import { fromLocalInput, toLocalInput } from '../../components/quiz';
 import { useClassOptions } from './LibraryPage';
-import { SCORING_LABEL, type HostView, type LiveScoring } from '../../live/api';
+import { CLUB_SCORING_LABEL, SCORING_LABEL, type HostView, type LiveScoring } from '../../live/api';
+import { PointsRule } from '../../live/PointsRule';
+import { unitOf } from '../../components/units';
 
 /** "Assign" dialog: to classes, as a room anyone can join with a code, or as a live (host-paced) game. */
 export function AssignDrawer({
@@ -28,11 +30,14 @@ export function AssignDrawer({
   const live = mode === 'live';
   const room = !live && (mode === 'room' || !canUseSections);
   const liveAllowed = activity.kind === 'quiz' || activity.kind === 'poll';
-  const [scoring, setScoring] = useState<LiveScoring>('marks_speed');
+  const points = activity.uses_points;
+  const unit = unitOf(points);
+  const [scoring, setScoring] = useState<LiveScoring>(points ? 'marks' : 'marks_speed');
   const [guests, setGuests] = useState(false);
+  const [rules, setRules] = useState('');
   const nav = useNavigate();
   const startLive = useMutation({
-    mutationFn: () => api<HostView>('/live/games', { method: 'POST', json: { activity_id: activity.id, scoring, allow_guests: guests } }),
+    mutationFn: () => api<HostView>('/live/games', { method: 'POST', json: { activity_id: activity.id, scoring, allow_guests: guests, instructions: rules.trim() || null } }),
     onSuccess: (g) => nav(`/live/host/${g.id}`),
   });
   const graded = activity.kind === 'quiz' || activity.kind === 'assignment';
@@ -141,15 +146,19 @@ export function AssignDrawer({
             {activity.kind === 'quiz' && (
               <Field label="How players are ranked">
                 <Select value={scoring} onChange={(e) => setScoring(e.target.value as LiveScoring)}>
-                  {(Object.keys(SCORING_LABEL) as LiveScoring[]).map((k) => (
+                  {(Object.entries(points ? CLUB_SCORING_LABEL : SCORING_LABEL) as [LiveScoring, string][]).map(([k, label]) => (
                     <option key={k} value={k}>
-                      {SCORING_LABEL[k]}
+                      {label}
                     </option>
                   ))}
                 </Select>
               </Field>
             )}
-            {check('Let guests join with a nickname', guests, setGuests, 'For open events: no account needed. Off: only signed-in students can join. You can remove any player from the lobby.')}
+            <PointsRule scoring={scoring} usesPoints={points} poll={activity.kind === 'poll'} className="rounded-xl border border-line px-3 py-2" />
+            <Field label="Rules or instructions (optional)" hint="Players read them on their phones while they wait for the start, and you can change them in the lobby.">
+              <Textarea rows={3} maxLength={2000} value={rules} onChange={(e) => setRules(e.target.value)} placeholder="Teams of two, one phone per team. No searching online." />
+            </Field>
+            {check(points ? 'Let guests join with a name or team name' : 'Let guests join with a nickname', guests, setGuests, 'For open events: no account needed. Off: only signed-in students can join. You can remove any player from the lobby.')}
           </section>
         ) : (
           <>
@@ -194,8 +203,8 @@ export function AssignDrawer({
           <div className="sm:col-span-2">{check('Allow late submissions', allowLate, setAllowLate, 'Students can still start after the deadline; marked late.')}</div>
         </section>
 
-        <Field label="Instructions for students (optional)" hint="Shown before they start, and in the email. For example: what to keep ready, rules, how marks are given.">
-          <Textarea rows={3} maxLength={5000} value={instructions} onChange={(e) => setInstructions(e.target.value)} placeholder="Keep your calculator ready. No negative marks." />
+        <Field label={room ? 'Instructions or rules (optional)' : 'Instructions for students (optional)'} hint={`Shown before they start${room ? ' and while they wait for a scheduled start; you can change them later from the room banner' : ', and in the email'}. For example: what to keep ready, rules, how ${unit.many} are given.`}>
+          <Textarea rows={3} maxLength={5000} value={instructions} onChange={(e) => setInstructions(e.target.value)} placeholder={`Keep your calculator ready. No negative ${unit.many}.`} />
         </Field>
 
         <section className="grid gap-3 sm:grid-cols-2">
@@ -220,7 +229,7 @@ export function AssignDrawer({
                   <option value="never">Never</option>
                 </Select>
               </Field>
-              <Field label="Show marks">
+              <Field label={`Show ${unit.many}`}>
                 <Select value={release} onChange={(e) => setRelease(e.target.value as typeof release)}>
                   <option value="immediate">Right after submitting</option>
                   <option value="after_due">After the deadline</option>
@@ -229,7 +238,7 @@ export function AssignDrawer({
               </Field>
             </div>
           )}
-          {check('Email students about it', notify, setNotify, 'Sends an email when assigned, when a scheduled start time comes, and when you release marks (if email is set up).')}
+          {check('Email students about it', notify, setNotify, `Sends an email when assigned, when a scheduled start time comes, and when you release ${unit.many} (if email is set up).`)}
           {check('Require full screen', fullscreen, setFullscreen, 'Questions stay hidden until the student is in full screen; leaving it counts as a warning. (iPhone browsers have no full screen, so it is skipped there.)')}
           <Field label="Tab switches / Back / reload allowed before auto-submit (0 = only record)">
             <Input type="number" min={0} max={50} value={maxViol} onChange={(e) => setMaxViol(Number(e.target.value))} />

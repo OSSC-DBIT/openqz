@@ -73,7 +73,7 @@ erDiagram
 | --- | --- |
 | `users` | email (login id), username (USN or employee ID), role, department, password hash, `google_sub`, lockout fields |
 | `import_jobs` | kind, status, header map, preview rows, error rows, credential PDF path |
-| `activities` | owner, kind (quiz, assignment, poll, flashcards), status, department, subject, timer |
+| `activities` | owner, kind (quiz, assignment, poll, flashcards), status, department, subject, timer, `uses_points` (a club's activity, counted in points) |
 | `questions` | type, stem, options, answer key, marks, explanation, tags, timer, rubric |
 | `activity_assignments` | window, shuffle, feedback, review and marks release rules, notify, violation limit, `require_fullscreen`, `join_code`, `accepting_joins` |
 | `attempts` | student, frozen question snapshot, `deadline_at`, linear mode, late, violations, score, `needs_manual`, `unblocked_count` |
@@ -202,6 +202,10 @@ sequenceDiagram
 - **Personal details are encrypted at rest** (`app/core/crypto.py`): `users.email`, `users.phone` and `import_jobs.preview_rows` / `error_rows` use AES-256-GCM column types (`Encrypted`, `EncryptedJSON`, stored as `v1:<base64>`); `users.email_hash` (unique) and `users.phone_hash` are HMAC-SHA256 blind indexes kept up to date by model validators. Every lookup by email (sign-in, Google, reset, imports, CLI) goes through `email_hash`; SQL never compares `users.email`. Migration `0015` encrypted existing rows.
 - The host can take a student out (`POST /activity-assignments/{id}/room/players/{student}/remove`): their `assignment_targets` row goes, a `room_removals` row stops the code letting them back in (`room_removed`), and an attempt in progress is submitted with `submit_reason = removed`. `.../readmit` deletes the removal and adds the target again; a submitted attempt stays (one attempt per student). `GET .../room/players` lists joined and removed students.
 - Club organisers can only host rooms; they never see class lists.
+- **A club's room report is a leaderboard** (`results.build_report`, `leaderboard_key`): when the activity has `uses_points`, the report says `ranked: true` and lists students by points (most first), then `time_taken_seconds` (start to submit of the attempt that counts), then name; submitted students get `rank` 1, 2, 3 and so on. Students in progress, then not started, come after. The CSV and Excel follow the same order, say "points" (`results.unit_words`) and add a **Name / team** column. Reports of teachers' work stay in name order.
+- **Clubs count in points**: `activities.uses_points` is set when a club organiser creates (or duplicates) an activity; migration `0017` set it for what clubs made before. The value per question stays in `questions.marks` and every rule is the same; the API sends `uses_points` (activity, assignment, attempt state, review, home list, room preview, live views) and the screens say "points" instead of "marks" (`frontend/src/components/units.ts`).
+- **Name or team name in a club's room**: `POST /join` takes `name`; for a `uses_points` room it is checked like a live nickname (`live_service.clean_nickname`) and must be free in the room (409 `name_taken`), and is kept in `assignment_targets.display_name`. Joining again changes it. Reports, `room/players` and exports show it with the real name and USN. Teachers' rooms ignore it.
+- **Room instructions** are the assignment's `instructions` (set when hosting, changed later with `PATCH /activity-assignments/{id}` from the room banner); they show on the join preview, on the student home while a scheduled room waits to open, before the start and on the projector lobby.
 
 ## Live games (Kahoot-style)
 
@@ -222,7 +226,7 @@ sequenceDiagram
         A->>A: status question, starts_at = now + 3 s, ends_at = starts_at + timer
         P->>A: GET /live/play/{id} every second: options only, no question text, no key
         P->>A: POST /live/play/{id}/answer (graded on arrival, once per question)
-        H->>A: reveal (auto at time up or when all answered), leaderboard
+        H->>A: reveal (auto at time up, or 2 s after everyone answered), leaderboard
         P->>A: GET /live/play/{id}: correct_ids, my points, my rank
     end
     H->>A: end, then results and CSV
@@ -230,7 +234,11 @@ sequenceDiagram
 
 - Tables: `live_games` (status `lobby`, `question`, `reveal`, `leaderboard`, `ended`; `scoring`; `allow_guests`; frozen `snapshot` with the key; `version` bumped on every change), `live_players` (user or guest with a hashed token; nickname unique per game; points, marks, total answer time; `removed`), `live_answers` (one per player and question).
 - Only `mcq`, `true_false` and `multi_select` questions are played; polls are always scored "for fun".
-- Points: `1000 x fraction correct x (1 - 0.5 x answer time / timer)`. Marks use the normal grader (`grading.grade`), so partial credit for multi-select works the same. "Fun" scoring records no marks.
+- Points (`live_service.points_for`): `1000 x fraction correct x (1 - 0.5 x answer time / timer)`, answer time measured on the server from `starts_at` and capped at the timer, so a right answer earns 500 to 1000. Marks use the normal grader (`grading.grade`), so partial credit for multi-select works the same. "Fun" scoring records no marks. Polls have no right answer, so they earn no points. The faculty guide and `frontend/src/live/PointsRule.tsx` (shown in the share dialog and on the results page) explain the same formula: keep the three in step.
+- Order (`live_service.ranked`): `marks_speed` and `fun` by points, `marks` by marks; ties by total answer time, then nickname.
+- **A club's game** (`live_games.uses_points`, copied from the activity): the score is the points set per question, kept in `live_players.marks` / `live_answers.marks`. `marks` scoring gives `P x C`; `marks_speed` gives `P x C x speed_factor`, where `speed_factor = 1 - 0.5 x answer time / timer` (`live_service.speed_factor`, the same curve as `points_for`), rounded to 0.01. A club cannot pick `fun` for a quiz (it becomes `marks`). The order is always by these points. Signed-in players may send a `nickname` (a name or team name), which must be free like a guest's. The 1000-scale `points` are still stored but not shown.
+- **Instructions**: `live_games.instructions` (set in `POST /live/games`, changed with `PATCH /live/games/{id}`, which bumps `version`), shown on the host lobby, the join preview and the phones.
+- Automatic reveal: the host view sends `question.reveal_at`, which is `ends_at`, or 2 s (`ALL_ANSWERED_PAUSE`) after the last answer once every player still in the game has answered, whichever is first (`live_service.reveal_at`). The host screen calls `reveal` at that moment on its server-synced clock.
 - Rules on the server: answers only between `starts_at` and `ends_at` + 1 s, once per question; the key reaches phones only after the reveal; guests only when allowed; nicknames filtered (`live_service.clean_nickname`); joins and code lookups rate-limited per user or per IP; the host can remove a player.
 - Capacity: polling at 1 s is about one light request per player per second; fine for a class or an event hall. Server-sent events would be the next step for very large audiences.
 

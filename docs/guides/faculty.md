@@ -53,7 +53,7 @@ Then give it a **title** and choose **which classes** it is for:
 
 You can change the classes later with **Edit classes** in the editor header. In the **Library**, the sections on the left (All activities, Published, Drafts, Previously used, Archived), the search box, the type, semester and section filters and the sort help you find things. Each row has **Edit**, **Assign** and **Duplicate**.
 
-**Club organisers** do not pick classes: their activities are shared only through a room code (see section 5).
+**Club organisers** do not pick classes: their activities are shared only through a room code (see section 5). A club's activities count in **points** instead of marks: give each question its points in the editor (the list goes up to 100), and the editor, reports, exports and the students' screens all say points.
 
 ## 3. The editor
 
@@ -141,6 +141,8 @@ After **Host room**, the report page opens with a large banner:
 - a live count: *joined*, *finished*, and whether the room is open,
 - **Present**: a full-screen lobby for the projector with the address, the big code, the QR code and the names of players as they join (Esc or **Close** to leave).
 - **Players**: everyone who joined, with *not started*, *answering* or *finished*. **Remove** takes a student out: the room leaves their list and the code no longer lets them back in. If they are answering, what they have answered so far is submitted (the report shows it). **Let back in** undoes it; one attempt is still one attempt.
+- **Add instructions** / **Edit instructions**: rules for the room. Students read them when they enter the code, while they wait for a scheduled start and before they begin; **Present** shows them on the projector too.
+- **Club rooms ask for a name or team name** when a student joins (it starts with their own name and must be free in the room). The leaderboard, the players list and the exports show it, with the student's real name and USN under it.
 
 The participant list updates every few seconds while you have the page open. All the other settings (deadline, attempts, timers, warnings, scores) work exactly as for a class assignment.
 
@@ -160,15 +162,30 @@ flowchart LR
 ```
 
 1. Open a quiz or poll, press **Assign or host**, choose **Live game**.
-2. Pick the **Scoring**:
-   - **Marks + speed bonus**: marks as usual; on the leaderboard, faster correct answers earn more points (up to 1000 per question, half at the last second).
-   - **Marks only**: ranked by marks, ties by total answer time.
-   - **Just for fun**: points only, nothing counted as marks. Polls are always "just for fun".
-3. **Let guests join with a nickname**: tick it for open events (no account needed). Leave it off for class games, so only signed-in students with real names can play. Nicknames are checked for rude words and must be unique in the game.
-4. Press **Start live game**. The lobby shows `.../live`, the 6-digit code and a QR code. Players appear as they join; click a name to remove someone. **Stop new joins** closes the door. A removed student cannot join again; a guest could come back with a new nickname, so stop new joins first if that matters.
-5. Press **Start**. Each question gets a 3-second "get ready", then its timer (the question's own timer, or 20 seconds). The answer is shown automatically when time is up or everyone has answered; **Show answer** ends it early. During the game, **Players** (top right) lists everyone, removes a player at any time and stops or allows new joins.
-6. After each question: **Leaderboard** (top 5) or straight to **Next**. After the last one, **Finish** shows the podium.
-7. **View results** (also under **Reports, Live games**): every player's rank, points, **marks obtained**, correct answers, per-question stats and a CSV export.
+2. Pick **How players are ranked** (the dialog explains the choice you pick, with the formula below):
+   - **Marks + speed bonus**: marks as usual; the leaderboard is ordered by **points**, and a faster right answer earns more.
+   - **Marks only**: ordered by **marks obtained**. Points are still shown, but marks decide the order.
+   - **Just for fun**: ordered by points; nothing is saved as marks. Polls are always "just for fun", and as a poll has no right answer, it earns no points.
+
+   **How points are worked out**, for each question: `points = 1000 x C x (1 - 0.5 x t / T)`, where
+
+   - **C** is how right the answer is: 1 when right, 0 when wrong. For multi-select with partial credit: (right options picked - wrong options picked) / number of right options, never below 0; without partial credit, 1 only when exactly right.
+   - **t** is the seconds from the question opening (after the 3-second get ready) until the answer arrives, at most T.
+   - **T** is the question's timer (20 seconds when it has none).
+
+   So a right answer earns 500 to 1000 points (1000 at once, 500 at the last second) and a wrong or missing answer 0. Example: right after 5 seconds of a 20-second question gives 1000 x 1 x (1 - 0.5 x 5 / 20) = 875 points. Marks are the question's marks times C, so a partly right multi-select gets its share. With equal points (or equal marks), the player with less total answer time comes first, then by name.
+
+   **A club's game** counts the points the club set on each question (**P**) instead of the 1000-point scale. The club picks one of two:
+   - **Points per question**: `points = P x C`. A right answer earns all of P, however fast. Example: a 10-point question answered right gives 10 points.
+   - **Points per question, faster answers keep more**: `points = P x C x (1 - 0.5 x t / T)`, with C, t and T as above: all of P when instant, half at the last second. Example: a 10-point question answered right after 5 seconds of 20 gives 10 x 1 x (1 - 0.5 x 5 / 20) = 8.75 points.
+
+   The leaderboard orders by these points; equal points, less total answer time first, then by name.
+3. **Rules or instructions** (optional): players read them on their phones while they wait in the lobby, and the lobby on the big screen shows them too. **Add instructions** / **Edit instructions** in the lobby changes them before the start.
+4. **Let guests join with a nickname** (**with a name or team name** for clubs): tick it for open events (no account needed). Leave it off for class games, so only signed-in students with real names can play. Nicknames are checked for rude words and must be unique in the game. In a club's game, signed-in students pick a name or team name too (it starts with their own name).
+5. Press **Start live game**. The lobby shows `.../live`, the 6-digit code and a QR code. Players appear as they join; click a name to remove someone. **Stop new joins** closes the door. A removed student cannot join again; a guest could come back with a new nickname, so stop new joins first if that matters.
+6. Press **Start**. Each question gets a 3-second "get ready", then its timer (the question's own timer, or 20 seconds). The answer is shown automatically when time is up, or 2 seconds after the last player answers (so the room sees that every answer is in); **Show answer** ends it early. During the game, **Players** (top right) lists everyone, removes a player at any time and stops or allows new joins.
+7. After each question: **Leaderboard** (top 5) or straight to **Next**. After the last one, **Finish** shows the podium.
+8. **View results** (also under **Reports, Live games**): every player's rank, points, **marks obtained** (for a club: the points), correct answers, per-question stats, a CSV export and **How the ranking works** (the order and the formula for the game's ranking).
 
 Live games use the **multiple choice, true / false and multi-select** questions of the activity; other types are skipped. Integrity checks (full screen, tab switches) do not apply: the game is paced on the big screen.
 
@@ -179,6 +196,7 @@ Live games use the **multiple choice, true / false and multi-select** questions 
 - **Tiles:** completion, average marks (with average accuracy), highest / lowest marks, how many still need marking.
 - **Overview:** each student's **marks obtained** (out of the total, with accuracy), then a grid of every student against every question: green correct, amber partly correct, red incorrect, blue to grade, grey not answered. Click a name to open the attempt.
 - **Participants:** each student's status, **marks obtained**, accuracy and flags (*to grade*, *late*, *N violations*, *auto-submitted*). **View** opens the full attempt.
+- **Club rooms are a leaderboard.** In a room hosted by a club organiser, **Overview** and **Participants** list the students by **points**, most first, with their place (**#**), the **name or team name** they gave, and the **time taken** from start to submit. With equal points, the quicker one ranks higher. Students still answering, and then those who have not started, come after. The Excel and CSV files keep the same order, say points and add a **Name / team** column. Teachers' reports stay in name order.
 - **Questions:** accuracy per question, average marks, the correct answer (marked in green) and, for options, how many students chose each one. Low accuracy questions show what to re-teach.
 - **Grading:** every written answer waiting for marks. Enter marks (per criterion if there is a rubric) and optional feedback, then **Save**.
 

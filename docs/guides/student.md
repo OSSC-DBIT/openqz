@@ -77,8 +77,10 @@ A **late** badge means the deadline has passed but your teacher still accepts la
 Teachers and clubs (for example a tech fest quiz) can host a **room** and share a **6-digit code**, a link or a QR code. Anyone signed in to OpenQZ can join, even if it is not your class.
 
 1. On the home page, type the code in **Got a join code?** and press **Join**. Or press **Join** at the top, or open the link / scan the QR code.
-2. Check the title and the host on the card, then press **Join and start**.
+2. Check the title, the host and any **instructions** on the card. A club's room also asks for **your name or team name** (it starts with your own name); it is what the club's leaderboard shows, and two players in one room cannot use the same one. Then press **Join and start**.
 3. The activity now also appears under **Pending** and **Completed** like any other.
+
+A club's activities count in **points** instead of marks: the same idea, another word.
 
 "No activity with that code" means a digit is wrong or the host made a new code. "Not accepting players" means the host has stopped new joins; ask them to allow joins again.
 
@@ -127,9 +129,9 @@ If your quiz was submitted because of warnings and it was a mistake, tell your t
 In a live game the **question is on the big screen** and your phone shows only the coloured answers.
 
 1. Open `.../live` (or type the code in **Enter a join code** on your home page, or scan the QR code).
-2. Enter the 6-digit code. If you are signed in you join with your name; at open events you can join as a guest with a nickname.
-3. Wait for **You're in!**. When the host starts, you get a 3-second "get ready", then tap your answer before the timer runs out. For "pick all that apply" questions, tap the answers and press **Submit**.
-4. After each question your phone turns green (**Correct!** with your points) or red. Faster correct answers earn more points.
+2. Enter the 6-digit code. If you are signed in you join with your name; at open events you can join as a guest with a nickname. In a club's game everyone picks a **name or team name** (signed in, it starts with your own name).
+3. Wait for **You're in!**. The host's **instructions** (rules) appear under it while you wait. When the host starts, you get a 3-second "get ready", then tap your answer before the timer runs out. For "pick all that apply" questions, tap the answers and press **Submit**.
+4. After each question your phone turns green (**Correct!** with your points) or red. In a teacher's game, faster correct answers earn more points. In a club's game you earn the points the club set for the question, and when the club chose the speed option, a faster answer keeps more of them (all of them at once, half at the last second).
 5. At the end you see your place and the top three.
 
 ## 6. Results and review

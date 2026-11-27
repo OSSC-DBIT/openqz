@@ -49,6 +49,7 @@ async def assignment_out(session: AsyncSession, a: ActivityAssignment) -> Assign
         host_name=(await session.get(User, a.activity.owner_id)).full_name  # type: ignore[union-attr]
         if a.activity.owner_id
         else None,
+        uses_points=a.activity.uses_points,
         section_ids=[t.section_id for t in a.targets if t.section_id],
         student_ids=[t.student_id for t in a.targets if t.student_id],
         target_labels=await target_labels(session, a),

@@ -6,10 +6,10 @@ from typing import Any
 
 import pytest
 from httpx import AsyncClient
-from sqlalchemy import update
+from sqlalchemy import func, select, update
 
 from app.core.db import SessionLocal
-from app.models import LiveGame, Role
+from app.models import LiveAnswer, LiveGame, Role
 from app.services import live_service as live
 from tests.conftest import login, make_user
 from tests.test_activities import make_quiz, setup_class
@@ -200,11 +200,60 @@ async def test_fun_scoring_counts_no_marks(client: AsyncClient) -> None:
     assert res["total_marks"] is None and "marks" not in res["players"][0]
 
 
+async def test_the_answer_shows_two_seconds_after_everyone_answered(client: AsyncClient) -> None:
+    c = await setup_class(client)
+    g = await new_game(client, c["fac"], allow_guests=True)
+    for h in (c["s1"], c["s2"]):
+        await client.post(f"{A}/live/join", headers=h, json={"code": g["code"]})
+    await client.post(f"{A}/live/join", json={"code": g["code"], "nickname": "Slow Guest"})
+    await client.post(f"{A}/live/games/{g['id']}/start", headers=c["fac"])
+    await open_now(g["id"])
+    async with SessionLocal() as s:
+        game = await s.get(LiveGame, g["id"])
+        assert game is not None
+        right = correct_id(game.snapshot[0])
+
+    async def host() -> dict[str, Any]:
+        r = await client.get(f"{A}/live/games/{g['id']}", headers=c["fac"])
+        return dict(r.json())
+
+    q = (await host())["question"]
+    assert q["reveal_at"] == q["ends_at"]  # nobody answered yet: at time up
+    for h in (c["s1"], c["s2"]):
+        await client.post(
+            f"{A}/live/play/{g['id']}/answer",
+            headers=h,
+            json={"index": 0, "response": {"choice": right}},
+        )
+    view = await host()
+    assert view["answered"] == 2 and view["question"]["reveal_at"] == view["question"]["ends_at"]
+
+    # the guest who has not answered leaves: everyone still playing has answered
+    guest = next(p for p in view["players"] if p["guest"])
+    await client.delete(f"{A}/live/games/{g['id']}/players/{guest['id']}", headers=c["fac"])
+    view = await host()
+    async with SessionLocal() as s:
+        last = await s.scalar(
+            select(func.max(LiveAnswer.created_at)).where(LiveAnswer.game_id == g["id"])
+        )
+    assert last is not None
+    reveal = datetime.fromisoformat(view["question"]["reveal_at"])
+    assert reveal == last + timedelta(seconds=2)
+    assert reveal < datetime.fromisoformat(view["question"]["ends_at"])
+
+    # time up comes first when the timer ran out before those 2 seconds
+    await open_now(g["id"], seconds=-5)
+    q = (await host())["question"]
+    assert q["reveal_at"] == q["ends_at"]
+
+
 def test_points_and_nicknames() -> None:
     assert live.points_for(Decimal("1"), 0, 20) == 1000
     assert live.points_for(Decimal("1"), 20_000, 20) == 500
     assert live.points_for(Decimal("0.5"), 0, 20) == 500
     assert live.points_for(Decimal("0"), 0, 20) == 0
+    # the worked example in the faculty guide and on the screens: right after 5 s of 20 s
+    assert live.points_for(Decimal("1"), 5_000, 20) == 875
     assert live.clean_nickname("  Priya   N ") == "Priya N"
     for name in ("Dickens", "Lund Bergman"[:4] + "berg", "Mitchell"):  # real names stay allowed
         assert live.clean_nickname(name)
@@ -244,3 +293,126 @@ async def test_host_removes_a_player_in_the_middle_of_a_question(client: AsyncCl
     # a removed student cannot join again with the code
     again = await client.post(f"{A}/live/join", headers=c["s2"], json={"code": g["code"]})
     assert again.status_code == 403 and again.json()["detail"]["code"] == "removed"
+
+
+async def club_game(client: AsyncClient, club: dict[str, str], **extra: Any) -> dict[str, Any]:
+    """A club's one-question quiz worth 10 points, hosted as a live game."""
+    act = (await client.post(f"{A}/activities", headers=club, json={"title": "Fest final"})).json()
+    q = await client.post(
+        f"{A}/activities/{act['id']}/questions",
+        headers=club,
+        json={
+            "type": "mcq",
+            "stem": "Fastest land animal?",
+            "marks": 10,
+            "time_limit_seconds": 20,
+            "options": [{"text": "Lion"}, {"text": "Cheetah", "correct": True}],
+        },
+    )
+    assert q.status_code == 201, q.text
+    r = await client.post(f"{A}/live/games", headers=club, json={"activity_id": act["id"], **extra})
+    assert r.status_code == 201, r.text
+    return dict(r.json())
+
+
+async def test_club_game_counts_the_points_set_per_question(client: AsyncClient) -> None:
+    c = await setup_class(client)
+    await make_user("CLUB1", Role.club, full_name="OSSC Club")
+    club = await login(client, "CLUB1")
+    # "just for fun" is not a choice for a club's quiz: it counts its points
+    g = await club_game(client, club, scoring="fun", instructions="  Teams of two. No phones.  ")
+    assert g["scoring"] == "marks" and g["uses_points"] is True
+    assert g["instructions"] == "Teams of two. No phones."
+
+    # signed-in players pick a name or team name, which must be free
+    pv = (await client.get(f"{A}/live/join/{g['code']}", headers=c["s1"])).json()
+    assert pv["ask_name"] is True and pv["instructions"] == "Teams of two. No phones."
+    me = await client.post(
+        f"{A}/live/join", headers=c["s1"], json={"code": g["code"], "nickname": "Team Rocket"}
+    )
+    assert me.json()["nickname"] == "Team Rocket"
+    taken = await client.post(
+        f"{A}/live/join", headers=c["s2"], json={"code": g["code"], "nickname": "team rocket"}
+    )
+    assert taken.json()["detail"]["code"] == "nickname_taken"
+    other = await client.post(f"{A}/live/join", headers=c["s2"], json={"code": g["code"]})
+    assert other.json()["nickname"] == "Bharath"  # blank: their own name
+
+    # the rules on the phones while they wait; the host can change them in the lobby
+    lobby = (await client.get(f"{A}/live/play/{g['id']}", headers=c["s1"])).json()
+    assert lobby["instructions"] == "Teams of two. No phones." and lobby["uses_points"] is True
+    upd = await client.patch(
+        f"{A}/live/games/{g['id']}", headers=club, json={"instructions": "Answer alone."}
+    )
+    assert upd.status_code == 200 and upd.json()["instructions"] == "Answer alone."
+    fresh = await client.get(
+        f"{A}/live/play/{g['id']}", headers=c["s1"], params={"since": lobby["version"]}
+    )
+    assert fresh.json()["instructions"] == "Answer alone."  # not "unchanged"
+    assert (
+        await client.patch(
+            f"{A}/live/games/{g['id']}", headers=c["fac"], json={"instructions": "x"}
+        )
+    ).status_code in (403, 404)
+
+    await client.post(f"{A}/live/games/{g['id']}/start", headers=club)
+    await open_now(g["id"])
+    async with SessionLocal() as s:
+        game = await s.get(LiveGame, g["id"])
+        assert game is not None
+        right = correct_id(game.snapshot[0])
+        wrong = next(o["id"] for o in game.snapshot[0]["options"] if not o.get("correct"))
+    for h, choice in ((c["s1"], right), (c["s2"], wrong)):
+        await client.post(
+            f"{A}/live/play/{g['id']}/answer",
+            headers=h,
+            json={"index": 0, "response": {"choice": choice}},
+        )
+    await client.post(f"{A}/live/games/{g['id']}/reveal", headers=club)
+    mine = (await client.get(f"{A}/live/play/{g['id']}", headers=c["s1"])).json()
+    assert mine["my_answer"]["marks"] == "10.00"  # the question's 10 points, no speed bonus
+    board = (await client.post(f"{A}/live/games/{g['id']}/leaderboard", headers=club)).json()
+    assert [(r["nickname"], r["marks"]) for r in board["leaderboard"]] == [
+        ("Team Rocket", "10.00"),
+        ("Bharath", "0.00"),
+    ]
+    head = (await client.get(f"{A}/live/games/{g['id']}/results.csv", headers=club)).text
+    assert head.splitlines()[0].startswith("Rank,Name / team,USN,Guest,Points,Max points")
+
+
+async def test_club_game_with_the_speed_option_shrinks_the_points(client: AsyncClient) -> None:
+    c = await setup_class(client)
+    await make_user("CLUB1", Role.club, full_name="OSSC Club")
+    club = await login(client, "CLUB1")
+    g = await club_game(client, club, scoring="marks_speed")
+    assert g["scoring"] == "marks_speed" and g["uses_points"] is True
+    await client.post(f"{A}/live/join", headers=c["s1"], json={"code": g["code"]})
+    await client.post(f"{A}/live/games/{g['id']}/start", headers=club)
+    # the question opened 5 seconds ago (of 20)
+    async with SessionLocal() as s:
+        t = datetime.now(UTC)
+        await s.execute(
+            update(LiveGame)
+            .where(LiveGame.id == g["id"])
+            .values(
+                question_started_at=t - timedelta(seconds=5),
+                question_ends_at=t + timedelta(seconds=15),
+            )
+        )
+        await s.commit()
+        game = await s.get(LiveGame, g["id"])
+        assert game is not None
+        right = correct_id(game.snapshot[0])
+    await client.post(
+        f"{A}/live/play/{g['id']}/answer",
+        headers=c["s1"],
+        json={"index": 0, "response": {"choice": right}},
+    )
+    await client.post(f"{A}/live/games/{g['id']}/reveal", headers=club)
+    got = Decimal(
+        (await client.get(f"{A}/live/play/{g['id']}", headers=c["s1"])).json()["my_answer"]["marks"]
+    )
+    # 10 x 1 x (1 - 0.5 x 5 / 20) = 8.75, a little less for the time the request took
+    assert Decimal("8.5") < got <= Decimal("8.75")
+    assert live.speed_factor(5_000, 20) == Decimal("0.875")
+    assert live.speed_factor(0, 20) == 1 and live.speed_factor(30_000, 20) == Decimal("0.5")

@@ -36,6 +36,9 @@ test('host runs a live game; a student and a guest play on phones', async ({ bro
   await host.getByRole('button', { name: 'Assign or host' }).click();
   await host.getByRole('radio', { name: /Live game/ }).click();
   await host.getByLabel('How players are ranked').selectOption('marks_speed');
+  // the dialog explains how points are counted
+  await expect(host.getByText('points = 1000 x C x (1 - 0.5 x t / T)')).toBeVisible();
+  await host.getByLabel('Rules or instructions (optional)').fill('Answer on your own phone.');
   await host.getByLabel(/Let guests join/).check();
   await host.getByRole('button', { name: 'Start live game' }).click();
   const codeEl = host.getByLabel(/^Join code /);
@@ -52,6 +55,8 @@ test('host runs a live game; a student and a guest play on phones', async ({ bro
   await expect(stu.getByText(/Joining as/)).toBeVisible();
   await stu.getByRole('button', { name: 'Join', exact: true }).click();
   await expect(stu.getByRole('heading', { name: "You're in!" })).toBeVisible();
+  // the rules wait on the phone with the player
+  await expect(stu.getByText('Answer on your own phone.')).toBeVisible();
 
   // ---- a guest with no account joins with a nickname
   const guest = await (await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })).newPage();
@@ -76,7 +81,7 @@ test('host runs a live game; a student and a guest play on phones', async ({ bro
   await axe(guest);
   await guest.getByRole('button', { name: 'Answer 1: Mysuru' }).click({ timeout: 15_000 });
 
-  // everyone answered: the host screen reveals by itself; phones learn how they did
+  // everyone answered: 2 seconds later the host screen reveals by itself; phones learn how they did
   await expect(host.getByRole('button', { name: 'Leaderboard' })).toBeVisible({ timeout: 10_000 });
   await expect(stu.getByRole('heading', { name: 'Correct!' })).toBeVisible({ timeout: 5_000 });
   await expect(guest.getByRole('heading', { name: 'Not this time' })).toBeVisible({ timeout: 5_000 });
@@ -112,4 +117,5 @@ test('host runs a live game; a student and a guest play on phones', async ({ bro
   await expect(host.getByRole('heading', { name: 'Live fest round' })).toBeVisible();
   await expect(host.getByRole('cell', { name: '2 / 2' }).first()).toBeVisible();
   await expect(host.getByText('Guest Ninja')).toBeVisible();
+  await expect(host.getByRole('heading', { name: 'How the ranking works' })).toBeVisible();
 });

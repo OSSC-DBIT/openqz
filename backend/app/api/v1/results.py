@@ -130,6 +130,7 @@ class RoomPlayer(BaseModel):
     name: str
     usn: str
     status: str  # joined | in_progress | finished | removed
+    display_name: str | None = None  # name or team name typed at a club room's join
 
 
 class RoomPlayers(BaseModel):
@@ -187,8 +188,15 @@ async def room_players(
             if att.status == AttemptStatus.in_progress
             else "finished"
         )
-        return RoomPlayer(student_id=sid, name=u.full_name, usn=u.username, status=state)
+        return RoomPlayer(
+            student_id=sid,
+            name=u.full_name,
+            usn=u.username,
+            status=state,
+            display_name=names.get(sid),
+        )
 
+    names = {t.student_id: t.display_name for t in a.targets if t.student_id and t.display_name}
     joined = [r for sid in joined_ids if (r := row(sid, False))]
     removed = [r for sid in removed_ids if (r := row(sid, True))]
     return RoomPlayers(
@@ -289,6 +297,17 @@ def _pct(x: Decimal | None, y: Decimal) -> float | None:
     return round(float(x) / float(y) * 100, 1)
 
 
+def unit_words(text: str, points: bool) -> str:
+    """A club's reports count in points: the same columns, with the word changed."""
+    if not points:
+        return text
+    return (
+        text.replace("Marks obtained", "Points")
+        .replace("marks", "points")
+        .replace("Marks", "Points")
+    )
+
+
 def best_attempt(attempts: list[Attempt]) -> Attempt | None:
     done = [a for a in attempts if a.status == AttemptStatus.submitted]
     if not done:
@@ -319,6 +338,15 @@ def cell_state(snap: dict[str, Any], ans: Any, graded: bool) -> str:
     return "partial" if final > 0 else "wrong"
 
 
+def leaderboard_key(s: dict[str, Any]) -> tuple[Any, ...]:
+    """Club leaderboard order: the most marks first; equal marks, the one who took less time;
+    then by name. Students still answering come next, then those who have not started."""
+    if s["status"] == "submitted" and s["score"] is not None:
+        took = s["time_taken_seconds"]
+        return (0, -s["score"], took if took is not None else float("inf"), s["name"].lower())
+    return (1 if s["status"] == "in_progress" else 2, Decimal("0"), 0, s["name"].lower())
+
+
 async def build_report(session: AsyncSession, a: ActivityAssignment) -> dict[str, Any]:
     graded = svc.is_graded(a.activity.kind)
     student_ids = await svc.target_student_ids(session, a)
@@ -333,6 +361,8 @@ async def build_report(session: AsyncSession, a: ActivityAssignment) -> dict[str
         u.id: u
         for u in (await session.scalars(select(User).where(User.id.in_(student_ids)))).unique()
     }
+    # name or team name typed when joining a club's room with the code
+    team = {t.student_id: t.display_name for t in a.targets if t.student_id and t.display_name}
 
     students: list[dict[str, Any]] = []
     best_list: list[Attempt] = []
@@ -344,6 +374,11 @@ async def build_report(session: AsyncSession, a: ActivityAssignment) -> dict[str
             best_list.append(best)
         latest = atts[-1] if atts else None
         blocked = latest if latest is not None and svc.can_unblock(latest) else None
+        took = (
+            round((best.submitted_at - best.started_at).total_seconds())
+            if best and best.submitted_at
+            else None
+        )
         st = (
             "submitted"
             if best
@@ -355,6 +390,7 @@ async def build_report(session: AsyncSession, a: ActivityAssignment) -> dict[str
             {
                 "student_id": sid,
                 "name": u.full_name if u else "?",
+                "display_name": team.get(sid),
                 "usn": u.username if u else "?",
                 "email": u.email if u else None,
                 "status": st,
@@ -368,11 +404,24 @@ async def build_report(session: AsyncSession, a: ActivityAssignment) -> dict[str
                 "submit_reason": best.submit_reason if best else None,
                 "late": bool(best and best.late),
                 "submitted_at": best.submitted_at if best else None,
+                "time_taken_seconds": took,
                 "blocked_attempt_id": blocked.id if blocked else None,
                 "unblocked": sum(x.unblocked_count for x in atts),
+                "rank": None,
             }
         )
-    students.sort(key=lambda s: (s["status"] != "submitted", s["name"]))
+    # A club's room is a competition: a leaderboard by points. Class work stays in name order,
+    # which a teacher reads like a register.
+    ranked = graded and a.activity.uses_points
+    if ranked:
+        students.sort(key=leaderboard_key)
+        place = 0
+        for srow in students:
+            if srow["status"] == "submitted" and srow["score"] is not None:
+                place += 1
+                srow["rank"] = place
+    else:
+        students.sort(key=lambda s: (s["status"] != "submitted", s["name"]))
 
     # per question, from the best attempt of each student
     questions: dict[str, dict[str, Any]] = {}
@@ -463,6 +512,7 @@ async def build_report(session: AsyncSession, a: ActivityAssignment) -> dict[str
     return {
         "assignment": await assignment_out(session, a),
         "summary": summary,
+        "ranked": ranked,
         "questions": qrows,
         "students": students,
     }
@@ -481,23 +531,28 @@ async def results_csv(
 ) -> StreamingResponse:
     a = await owned(session, assignment_id, user)
     report = await build_report(session, a)
+    pts = a.activity.uses_points
     buf = io.StringIO()
     w = csv.writer(buf)
     w.writerow(
         [
-            "USN/ID",
-            "Name",
-            "Email",
-            "Status",
-            "Attempts",
-            "Marks obtained",
-            "Max marks",
-            "Accuracy %",
-            "Pending grading",
-            "Violations",
-            "Submit reason",
-            "Late",
-            "Submitted at",
+            unit_words(h, pts)
+            for h in [
+                "USN/ID",
+                "Name",
+                *(["Name / team"] if pts else []),
+                "Email",
+                "Status",
+                "Attempts",
+                "Marks obtained",
+                "Max marks",
+                "Accuracy %",
+                "Pending grading",
+                "Violations",
+                "Submit reason",
+                "Late",
+                "Submitted at",
+            ]
         ]
     )
     for s in report["students"]:
@@ -506,6 +561,7 @@ async def results_csv(
                 [
                     s["usn"],
                     s["name"],
+                    *([s["display_name"] or ""] if pts else []),
                     s["email"] or "",
                     s["status"],
                     s["attempts"],
@@ -763,6 +819,7 @@ def _xlsx(
 
     wb = Workbook()
     s = report["summary"]
+    pts = a.activity.uses_points
     ws = wb.active
     ws.title = "Summary"
     info = [
@@ -782,15 +839,17 @@ def _xlsx(
         ("Exported", datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")),
     ]
     for k, v in info:
-        ws.append(safe_row([k, v]))
+        ws.append(safe_row([unit_words(k, pts), v]))
         ws.cell(ws.max_row, 1).font = Font(bold=True)
     ws.column_dimensions["A"].width = 22
     ws.column_dimensions["B"].width = 60
 
+    team = [""] if pts else []
     st_rows = [
         [
             x["usn"],
             x["name"],
+            *([x["display_name"] or ""] if pts else []),
             x["email"] or "",
             x["status"].replace("_", " "),
             x["attempts"],
@@ -809,28 +868,33 @@ def _xlsx(
     table(
         ws2,
         [
-            "USN / ID",
-            "Name",
-            "Email",
-            "Status",
-            "Attempts",
-            "Marks obtained",
-            "Max marks",
-            "Accuracy",
-            "To grade",
-            "Violations",
-            "Submitted by",
-            "Late",
-            "Submitted at (UTC)",
+            unit_words(h, pts)
+            for h in [
+                "USN / ID",
+                "Name",
+                *(["Name / team"] if pts else []),
+                "Email",
+                "Status",
+                "Attempts",
+                "Marks obtained",
+                "Max marks",
+                "Accuracy",
+                "To grade",
+                "Violations",
+                "Submitted by",
+                "Late",
+                "Submitted at (UTC)",
+            ]
         ],
         st_rows,
-        [14, 26, 30, 12, 9, 9, 10, 10, 9, 10, 13, 6, 18],
+        [14, 26, *([22] if pts else []), 30, 12, 9, 9, 10, 10, 9, 10, 13, 6, 18],
     )
-    for row in ws2.iter_rows(min_row=2, min_col=8, max_col=8):
+    accuracy_col = 8 + len(team)
+    for row in ws2.iter_rows(min_row=2, min_col=accuracy_col, max_col=accuracy_col):
         for c in row:
             c.number_format = "0.0%"
 
-    ws3 = wb.create_sheet("Marks by question")
+    ws3 = wb.create_sheet(unit_words("Marks by question", pts))
     table(
         ws3,
         ["USN / ID", "Name", *[f"Q{i + 1}" for i in range(qcount)], "Total"],
@@ -854,7 +918,19 @@ def _xlsx(
     ws4 = wb.create_sheet("Questions")
     table(
         ws4,
-        ["#", "Type", "Question", "Marks", "Answered", "Accuracy", "Avg marks", "To grade"],
+        [
+            unit_words(h, pts)
+            for h in [
+                "#",
+                "Type",
+                "Question",
+                "Marks",
+                "Answered",
+                "Accuracy",
+                "Avg marks",
+                "To grade",
+            ]
+        ],
         q_rows,
         [5, 16, 70, 8, 10, 10, 10, 9],
     )

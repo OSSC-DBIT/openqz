@@ -213,6 +213,8 @@ export interface ActivitySummary {
   time_limit_seconds: number | null;
   question_count: number;
   total_marks: string;
+  /** A club's activity: the same values, called points instead of marks. */
+  uses_points: boolean;
   assignment_count: number;
   created_at: string;
   updated_at: string;
@@ -246,6 +248,7 @@ export interface AssignmentInfo {
   join_code: string | null;
   accepting_joins: boolean;
   host_name: string | null;
+  uses_points: boolean;
   section_ids: number[];
   student_ids: string[];
   target_labels: string[];
@@ -276,6 +279,7 @@ export interface MyActivity {
   max_score: string | null;
   pending_grading: boolean;
   submitted_at: string | null;
+  uses_points: boolean;
   missed?: boolean;
 }
 
@@ -298,6 +302,7 @@ export interface AttemptState {
   max_violations: number;
   require_fullscreen: boolean;
   attempt_no: number;
+  uses_points: boolean;
 }
 
 export interface Feedback {
@@ -355,12 +360,15 @@ export interface Review {
   max_score: string;
   needs_manual: boolean;
   violations: number;
+  uses_points: boolean;
   items: ReviewItem[];
 }
 
 export interface ReportStudent {
   student_id: string;
   name: string;
+  /** Name or team name typed when joining a club's room (null: shown by their own name). */
+  display_name: string | null;
   usn: string;
   email: string | null;
   status: 'submitted' | 'in_progress' | 'not_started';
@@ -374,9 +382,13 @@ export interface ReportStudent {
   submit_reason: string | null;
   late: boolean;
   submitted_at: string | null;
+  /** Seconds from start to submit of the attempt that counts (null until submitted). */
+  time_taken_seconds: number | null;
   /** Set when the latest attempt was auto-submitted for too many warnings. */
   blocked_attempt_id: string | null;
   unblocked: number;
+  /** Place on the leaderboard of a club's room (`Report.ranked`); null otherwise or until submitted. */
+  rank: number | null;
   /** Overview grid: question id -> correct | partial | wrong | pending | blank | answered */
   cells?: Record<string, string>;
 }
@@ -412,6 +424,8 @@ export interface Report {
     pending_grading: number;
     graded: boolean;
   };
+  /** A club's room: students come as a leaderboard (most marks, then less time), with `rank`. */
+  ranked: boolean;
   questions: ReportQuestion[];
   students: ReportStudent[];
 }
@@ -482,6 +496,11 @@ export interface RoomPreview {
   window: string;
   open: boolean;
   joined: boolean;
+  uses_points: boolean;
+  /** A club's room: ask for a name or team name for its leaderboard. */
+  ask_name: boolean;
+  /** The name or team name this student gave when they joined, if any. */
+  my_name: string | null;
 }
 
 // ---------------------------------------------------------------- admin statistics

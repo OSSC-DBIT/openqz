@@ -1,17 +1,18 @@
 import { createPortal } from 'react-dom';
 import { useConfirm } from '../../components/Confirm';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Check, Copy, Monitor, RefreshCw, UserCheck, UserX, Users, X } from 'lucide-react';
+import { Check, Copy, Monitor, RefreshCw, ScrollText, UserCheck, UserX, Users, X } from 'lucide-react';
 import QRCode from 'qrcode';
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../../api/client';
 import type { AssignmentInfo } from '../../api/types';
-import { Badge, Button, Loading, Modal } from '../../components/ui';
+import { Badge, Button, ErrorText, Field, Loading, Modal, Textarea } from '../../components/ui';
 
 /** Big join code for the host: copy link, QR, stop/allow joins, new code. */
 export function RoomBanner({ a, joined, players, onChange }: { a: AssignmentInfo; joined: number; players: string[]; onChange: () => void }) {
   const [present, setPresent] = useState(false);
   const [managing, setManaging] = useState(false);
+  const [editingRules, setEditingRules] = useState(false);
   const link = `${window.location.origin}/join/${a.join_code}`;
   const [qr, setQr] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -56,6 +57,9 @@ export function RoomBanner({ a, joined, players, onChange }: { a: AssignmentInfo
             <Button variant="secondary" onClick={() => setManaging(true)}>
               <Users className="h-4 w-4" /> Players
             </Button>
+            <Button variant="secondary" onClick={() => setEditingRules(true)}>
+              <ScrollText className="h-4 w-4" /> {a.instructions ? 'Edit instructions' : 'Add instructions'}
+            </Button>
             <Button variant="secondary" loading={regen.isPending} onClick={() => void ask({ title: 'Make a new code?', body: 'The old code stops working. Students who already joined keep access.', action: 'New code' }).then((ok) => ok && regen.mutate())}>
               <RefreshCw className="h-4 w-4" /> New code
             </Button>
@@ -68,6 +72,7 @@ export function RoomBanner({ a, joined, players, onChange }: { a: AssignmentInfo
       </div>
       {present && <Lobby a={a} link={link} qr={qr} players={players} onClose={() => setPresent(false)} />}
       {managing && <RoomPlayers a={a} onClose={() => setManaging(false)} />}
+      {editingRules && <RulesDialog a={a} onClose={() => setEditingRules(false)} onSaved={onChange} />}
       {confirmDialog}
     </div>
   );
@@ -113,6 +118,14 @@ function Lobby({ a, link, qr, players, onClose }: { a: AssignmentInfo; link: str
         </div>
         {qr && <img src={qr} alt={`QR code for ${link}`} className="mx-auto h-44 w-44 rounded-3xl bg-white p-3 md:mx-0" />}
       </div>
+      {a.instructions && (
+        <div className="mx-auto mt-6 w-full max-w-5xl px-6">
+          <div className="rounded-3xl bg-white/10 p-5">
+            <div className="text-sm font-bold uppercase tracking-wide text-white/70">Instructions</div>
+            <p className="mt-1 whitespace-pre-wrap break-words text-lg font-semibold">{a.instructions}</p>
+          </div>
+        </div>
+      )}
       <div className="mx-auto mt-10 w-full max-w-5xl flex-1 px-6 pb-10">
         <div className="mb-4 flex items-center gap-3" aria-live="polite">
           <span className="rounded-xl bg-white/10 px-4 py-2 text-2xl font-extrabold tabular-nums">{players.length}</span>
@@ -141,6 +154,8 @@ interface RoomPlayer {
   name: string;
   usn: string;
   status: 'joined' | 'in_progress' | 'finished' | 'removed';
+  /** Name or team name typed when joining a club's room. */
+  display_name: string | null;
 }
 
 const STATE: Record<RoomPlayer['status'], [string, 'neutral' | 'amber' | 'green' | 'red']> = {
@@ -162,7 +177,7 @@ function RoomPlayers({ a, onClose }: { a: AssignmentInfo; onClose: () => void })
   const [ask, confirmDialog] = useConfirm();
   const take = (p: RoomPlayer) =>
     void ask({
-      title: `Remove ${p.name} from this room?`,
+      title: `Remove ${p.display_name ?? p.name} from this room?`,
       body: `${p.status === 'in_progress' ? 'What they have answered so far is submitted now. ' : ''}They lose access and cannot join again with the code. Finished work stays in the report, and you can let them back in later.`,
       action: 'Remove',
       danger: true,
@@ -170,9 +185,9 @@ function RoomPlayers({ a, onClose }: { a: AssignmentInfo; onClose: () => void })
   const row = (p: RoomPlayer, action: React.ReactNode) => (
     <li key={p.student_id} className="flex items-center justify-between gap-3 px-3 py-2">
       <span className="min-w-0">
-        <span className="block truncate font-semibold">{p.name}</span>
+        <span className="block truncate font-semibold">{p.display_name ?? p.name}</span>
         <span className="flex items-center gap-2 text-xs text-muted">
-          {p.usn} <Badge tone={STATE[p.status][1]}>{STATE[p.status][0]}</Badge>
+          {p.display_name ? `${p.name} | ${p.usn}` : p.usn} <Badge tone={STATE[p.status][1]}>{STATE[p.status][0]}</Badge>
         </span>
       </span>
       {action}
@@ -217,6 +232,35 @@ function RoomPlayers({ a, onClose }: { a: AssignmentInfo; onClose: () => void })
         <Button onClick={onClose}>Done</Button>
       </div>
       {confirmDialog}
+    </Modal>
+  );
+}
+
+/** Instructions or rules for the room: shown on the join screen, while students wait for a
+ * scheduled start, before they begin, and on the projector lobby. */
+function RulesDialog({ a, onClose, onSaved }: { a: AssignmentInfo; onClose: () => void; onSaved: () => void }) {
+  const [text, setText] = useState(a.instructions ?? '');
+  const save = useMutation({
+    mutationFn: () => api(`/activity-assignments/${a.id}`, { method: 'PATCH', json: { instructions: text.trim() || null } }),
+    onSuccess: () => {
+      onSaved();
+      onClose();
+    },
+  });
+  return (
+    <Modal open onClose={onClose} title="Instructions for this room">
+      <Field label="Instructions or rules" hint="Students read them when they enter the code, while they wait for the start and before they begin. Leave it empty to remove them.">
+        <Textarea rows={5} maxLength={5000} value={text} onChange={(e) => setText(e.target.value)} placeholder="One attempt each. No searching online. The fastest right answers win ties." />
+      </Field>
+      <ErrorText error={save.error} />
+      <div className="mt-4 flex justify-end gap-2">
+        <Button variant="secondary" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button loading={save.isPending} onClick={() => save.mutate()}>
+          Save
+        </Button>
+      </div>
     </Modal>
   );
 }

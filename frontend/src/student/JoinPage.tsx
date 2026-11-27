@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { api, ApiError } from '../api/client';
 import type { AttemptState, RoomPreview } from '../api/types';
+import { useAuth } from '../auth/AuthProvider';
 import { KindCover } from '../components/pieces';
 import { KIND_LABEL, fmtSeconds, fmtWhen } from '../components/quiz';
 import { Button } from '../components/ui';
@@ -16,6 +17,7 @@ const pretty = (v: string) => (v.length > 3 ? `${v.slice(0, 3)} ${v.slice(3)}` :
 /** Enter a join code, see what it is, join and start. */
 export default function JoinPage() {
   const { code: fromUrl } = useParams();
+  const { user } = useAuth();
   const nav = useNavigate();
   const [code, setCode] = useState(digits(fromUrl ?? ''));
   const preview = useMutation({
@@ -37,11 +39,18 @@ export default function JoinPage() {
   });
   const go = useMutation({
     mutationFn: async () => {
-      const j = await api<{ assignment_id: string }>('/join', { method: 'POST', json: { code } });
+      const j = await api<{ assignment_id: string }>('/join', { method: 'POST', json: { code, name: preview.data?.ask_name ? name.trim() || null : null } });
       return api<AttemptState>(`/me/assignments/${j.assignment_id}/start`, { method: 'POST' });
     },
     onSuccess: (s) => nav(`/play/${s.attempt_id}`),
   });
+  // A club's room puts a name or team name on its leaderboard: start from the one given before,
+  // or the student's own name.
+  const [name, setName] = useState('');
+  const shown = preview.data;
+  useEffect(() => {
+    if (shown?.ask_name) setName((shown.my_name ?? user?.full_name ?? '').slice(0, 20));
+  }, [shown?.assignment_id, shown?.ask_name, shown?.my_name, user?.full_name]);
 
   useEffect(() => {
     if (fromUrl && digits(fromUrl).length === 6) preview.mutate(digits(fromUrl));
@@ -117,6 +126,19 @@ export default function JoinPage() {
                     <p className="mt-1 max-h-40 overflow-y-auto whitespace-pre-wrap break-words">{p.instructions}</p>
                   </div>
                 )}
+                {p.ask_name && (
+                  <label className="block">
+                    <span className="text-sm font-semibold">Your name or team name</span>
+                    <input
+                      maxLength={20}
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="e.g. Code Ninjas"
+                      className="mt-1 w-full rounded-xl border-2 border-line bg-surface px-3 py-2.5 text-base font-bold outline-none focus:border-brand-500"
+                    />
+                    <span className="mt-1 block text-xs text-muted">Shown on the host's leaderboard. Keep it friendly.</span>
+                  </label>
+                )}
                 {p.window === 'not_started' ? (
                   <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">Not started yet. It opens {fmtWhen(p.start_at)}.</p>
                 ) : (
@@ -127,7 +149,7 @@ export default function JoinPage() {
                     {err.message}
                   </p>
                 )}
-                <Button className="w-full !py-3.5 text-base" loading={go.isPending} disabled={(!p.open && !p.joined) || p.window === 'not_started'} onClick={() => {
+                <Button className="w-full !py-3.5 text-base" loading={go.isPending} disabled={(!p.open && !p.joined) || p.window === 'not_started' || (p.ask_name && name.trim().length < 2)} onClick={() => {
                   enterFullscreen();
                   go.mutate();
                 }}>
